@@ -1,0 +1,24 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/yorkin/CLionProjects/evoBasic/Lexer.cpp
+Lexer.h
+/home/yorkin/CLionProjects/evoBasic/Lexer.h
+iostream
+-
+
+/home/yorkin/CLionProjects/evoBasic/Lexer.h
+istream
+-
+string
+-
+map
+-
+vector
+-
+

@@ -1,0 +1,3 @@
+function aBC123(byval a4 as long)as byte
+    return 1+5-10
+end function

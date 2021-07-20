@@ -1,0 +1,4 @@
+/usr/share/clion-2020.1.1/bin/cmake/linux/bin/cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=/usr/bin/clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -G "CodeBlocks - Unix Makefiles" /home/yorkin/CLionProjects/evoBasic
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/yorkin/CLionProjects/evoBasic/cmake-build-debug
