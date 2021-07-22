@@ -231,6 +231,33 @@ Parser.cpp.s:
 	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Parser.cpp.s
 .PHONY : Parser.cpp.s
 
+Semantic.o: Semantic.cpp.o
+
+.PHONY : Semantic.o
+
+# target to build an object file
+Semantic.cpp.o:
+	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Semantic.cpp.o
+.PHONY : Semantic.cpp.o
+
+Semantic.i: Semantic.cpp.i
+
+.PHONY : Semantic.i
+
+# target to preprocess a source file
+Semantic.cpp.i:
+	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Semantic.cpp.i
+.PHONY : Semantic.cpp.i
+
+Semantic.s: Semantic.cpp.s
+
+.PHONY : Semantic.s
+
+# target to generate assembly for a file
+Semantic.cpp.s:
+	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Semantic.cpp.s
+.PHONY : Semantic.cpp.s
+
 SymbolTable.o: SymbolTable.cpp.o
 
 .PHONY : SymbolTable.o
@@ -333,6 +360,9 @@ help:
 	@echo "... Parser.o"
 	@echo "... Parser.i"
 	@echo "... Parser.s"
+	@echo "... Semantic.o"
+	@echo "... Semantic.i"
+	@echo "... Semantic.s"
 	@echo "... SymbolTable.o"
 	@echo "... SymbolTable.i"
 	@echo "... SymbolTable.s"

@@ -12,15 +12,16 @@
 namespace evoBasic{
     using namespace std;
     class Type;
+    class FunctionType;
 
     class Domain{
-        Domain* parent;
+        Domain* parent=nullptr;
         map<string,Type*> childs;
     public:
         Domain()=default;
         Type* lookUp(const string& name);
-        void add(const string& name,Type* type);
-        Type* find(const string& name);
+        virtual void add(const string& name,Type* type);
+        virtual Type* find(const string& name);
     };
 
     class Type{
@@ -28,6 +29,18 @@ namespace evoBasic{
         virtual bool equal(Type* type)=0;
         virtual string toString()=0;
         Domain* domain{};
+    };
+
+    enum class AccessFlag{Public,Private,Friend,Static};
+    enum class MethodFlag{Virtual,Override,Normal};
+    struct Method{
+
+    };
+
+    class ClassType:public Type,public Domain{
+    public:
+        ClassType(string name);
+        const map<string,tuple<AccessFlag,MethodFlag,FunctionType*>>& getMethodMap();
     };
 
     class Symbol:public Type{
@@ -49,20 +62,27 @@ namespace evoBasic{
     };
 
     class RecordType:public Type{
+        vector<pair<string,Type*>> fields;
+        string name;
     public:
-        RecordType(const string& name,vector<pair<string,Type*>> fields);
+        RecordType(string  name,vector<pair<string,Type*>> fields);
         bool equal(Type* type)override;
         string toString()override;
+        const vector<pair<string,Type*>>& getFields();
     };
 
     class PointerType:public Type{
+        Type *element;
     public:
-        PointerType(Type* elementType);
+        explicit PointerType(Type* elementType);
         bool equal(Type* type)override;
         string toString()override;
+        Type *getElementType();
     };
 
     class ArrayType:public Type{
+        Type *element;
+        int size;
     public:
         ArrayType(Type* elementType,int size);
         bool equal(Type* type)override;
@@ -72,18 +92,22 @@ namespace evoBasic{
     struct Parameter{
         bool isByval,isOptional;
         Type* type;
-        Parameter(bool isByval,bool isOptional,Type* type)
-            :isByval(isByval),isOptional(isOptional),type(type){}
+        string name;
+        Parameter(bool isByval,bool isOptional,Type* type,string name)
+            :isByval(isByval),isOptional(isOptional),type(type),name(move(name)){}
     };
 
     class FunctionType:public Type{
+        vector<Parameter> params;
+        map<string,Parameter> optionalMap;
+        Type *retType;
     public:
-        FunctionType(vector<Parameter> paramsType,Type* retType);
+        FunctionType(const vector<Parameter>& paramsType,Type* retType);
         bool equal(Type* type)override;
         string toString()override;
         Type* getReturnType();
         const vector<Parameter>& getParamsType();
-        const vector<Parameter>& getOptionalType();
+        Parameter *findOptionalType(const string& name);
     };
 
 

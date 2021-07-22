@@ -10,7 +10,7 @@ int main() {
     Token token;
     Logger logger(cout);
     Domain domain;
-    Parser parser(lexer,logger,domain);
+    Parser parser(lexer,domain);
     auto node = parser.parse();
     node->print("","*",true,cout);
 }

@@ -12,11 +12,11 @@ namespace evoBasic{
 
     }
 
-    void Logger::error(Token& token, string message){
-
+    void Logger::error(Token* token, string message){
+        cout<<"error("<<token->y<<","<<token->x<<","<<Token::TokenToString[(int)token->token]<<"): "<<message<<endl;
     }
 
-    void Logger::warning(Token& token, string message){
+    void Logger::warning(Token* token, string message){
         cout<<"warning: "<<message<<endl;
     }
 }

@@ -19,7 +19,12 @@ namespace evoBasic{
             out<<prefix<<mark<<"─nullptr";
             return;
         }
-        out<<prefix<<mark<<"─"<<TagToString[(int)tag];
+        if(tag==Tag::Error){
+            const string RedBegin = "\033[31m";
+            const string ColorEnd = "\033[0m";
+            out<<prefix<<mark<<"─"<<RedBegin<<TagToString[(int)tag]<<ColorEnd;
+        }
+        else out<<prefix<<mark<<"─"<<TagToString[(int)tag];
         if(!attr.empty()){
             out<<" {";
             bool firstAttr = true;
@@ -59,7 +64,8 @@ namespace evoBasic{
             "ParameterList","Parameter","Generic","Locating",
             "ID","Digit","Decimal","String","Char",
             "ClassMember","ModuleMember",
-            "Public","Private","Friend","Static","Virtual","Override"
+            "Public","Private","Friend","Static","Virtual","Override",
+            "<Syntax Error>"
     };
 
     vector<string> Node::AttrToString{
@@ -67,4 +73,22 @@ namespace evoBasic{
     };
 
     Node::Node(Tag tag):tag(tag){}
+
+    void Visitor::on(Tag tag, Callback callback) {
+        if(subscribe.contains(tag))throw "subscribe exist";
+        subscribe.insert(make_pair(tag,callback));
+    }
+
+    void Visitor::visit(Node *ast) {
+        list<Node*> st{ast};
+        while(!st.empty()){
+            auto node = st.front();
+            st.pop_front();
+            auto target = subscribe.find(node->tag);
+            if(target!=subscribe.end()){
+                target->second(node);
+                for(auto child:node->child)st.push_back(child);
+            }
+        }
+    }
 }

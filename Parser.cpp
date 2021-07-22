@@ -4,6 +4,10 @@
 
 #include "Parser.h"
 
+#define stmtFollows Token::if_,Token::while_,Token::select_,Token::let_,Token::ID,\
+Token::return_,Token::exit_,Token::continue_,Token::for_,Token::not_,Token::MINUS,\
+Token::ADD,Token::DIGIT,Token::DECIMAL,Token::STRING,Token::CHAR,Token::LB,Token::ID
+
 namespace evoBasic{
     Node *Parser::moduleDecl(){
         lexer.match(Token::module_);
@@ -210,28 +214,35 @@ namespace evoBasic{
         return ret;
     }
 
-    Node *Parser::expr(){
-        auto lhs = cmp();
-        Node *rhs;
-        while(true){
-            switch(lexer.getNextToken().token){
-                case Token::and_:
-                    lexer.match(Token::and_);
-                    rhs = cmp();
-                    lhs = new Node(Tag::And,{lhs,rhs});
-                    break;
-                case Token::or_:
-                    lexer.match(Token::or_);
-                    rhs = cmp();
-                    lhs = new Node(Tag::Or,{lhs,rhs});
-                    break;
-                case Token::xor_:
-                    lexer.match(Token::xor_);
-                    rhs = cmp();
-                    lhs = new Node(Tag::Xor,{lhs,rhs});
-                    break;
-                default: return lhs;
+    Node *Parser::expr(set<Token::Enum> follows){
+        try{
+            auto lhs = cmp();
+            Node *rhs;
+            while(true){
+                switch(lexer.getNextToken().token){
+                    case Token::and_:
+                        lexer.match(Token::and_);
+                        rhs = cmp();
+                        lhs = new Node(Tag::And,{lhs,rhs});
+                        break;
+                    case Token::or_:
+                        lexer.match(Token::or_);
+                        rhs = cmp();
+                        lhs = new Node(Tag::Or,{lhs,rhs});
+                        break;
+                    case Token::xor_:
+                        lexer.match(Token::xor_);
+                        rhs = cmp();
+                        lhs = new Node(Tag::Xor,{lhs,rhs});
+                        break;
+                    default: return lhs;
+                }
             }
+        }
+        catch(SyntaxException e){
+            Logger::error(e.token,"缺少表达式");
+            lexer.skipUntilFollow(follows);
+            return new Node(Tag::Error);
         }
     }
 
@@ -348,8 +359,8 @@ namespace evoBasic{
             }
         }
 
-        if(alertMinus!=nullptr)logger.warning(*alertMinus,"傻逼吗 写了那么多负号干什么");
-        if(alertAdd!=nullptr)logger.warning(*alertMinus,"傻逼吗 多写正号干什么");
+        if(alertMinus!=nullptr)Logger::warning(alertMinus,"傻逼吗 写了那么多负号干什么");
+        if(alertAdd!=nullptr)Logger::warning(alertMinus,"傻逼吗 多写正号干什么");
 
         if(minusCount%2==1)lhs = new Node(Tag::SelfNeg,{terminal()});
         else lhs = terminal();
@@ -395,7 +406,7 @@ namespace evoBasic{
                 lexer.match(Token::RB);
                 return tmp;
             default:
-                throw "unimplement";//TODO report error
+                throw SyntaxException(&lexer.getNextToken());
         }
     }
 
@@ -506,17 +517,17 @@ namespace evoBasic{
     Node *Parser::selectStmt(){
         lexer.match(Token::select_);
         lexer.match(Token::case_);
-        auto cond = expr();
+        auto cond = expr({Token::case_,Token::end_,Token::select_});
         auto ret = new Node(Tag::Select,{cond});
-        while(lexer.getNextToken().token==Token::case_){
-            lexer.match(Token::case_);
+        while(lexer.getNextToken().token!=Token::end_){
+            lexer.match(Token::case_,{Token::case_,stmtFollows},"缺少case关键字");
             if(lexer.getNextToken().token==Token::else_){
-                lexer.match(Token::else_);
+                lexer.match(Token::else_,{Token::else_,stmtFollows,Token::end_,Token::select_},"缺少else关键字");
                 auto stmts = stmtSet();
                 ret->child.push_back(new Node(Tag::DefaultCase,{stmts}));
             }
             else{
-                auto exp = expr();
+                auto exp = expr({Token::case_,stmtFollows,Token::end_,Token::select_});
                 auto stmts = stmtSet();
                 ret->child.push_back(new Node(Tag::Case,{exp,stmts}));
             }
@@ -529,16 +540,15 @@ namespace evoBasic{
     Node *Parser::stmtSet(){
         auto ret = new Node(Tag::Statements);
         auto t = lexer.getNextToken().token;
-        set<Token::Enum> follow = {Token::if_,Token::while_,Token::select_,Token::let_,Token::ID,
-                           Token::return_,Token::exit_,Token::continue_,Token::for_};
-        while(follow.contains(lexer.getNextToken().token)){
+        set<Token::Enum> stmtfollow = {stmtFollows};
+        while(stmtfollow.contains(lexer.getNextToken().token)){
             ret->child.push_back(stmt());
         }
         return ret;
     }
 
     Node *Parser::stmt(){
-        switch (lexer.getNextToken().token) {
+         switch(lexer.getNextToken().token) {
             case Token::if_: return ifStmt();
             case Token::while_: return loopStmt();
             case Token::let_: return variableDecl();
@@ -548,7 +558,17 @@ namespace evoBasic{
             case Token::return_:
             case Token::exit_:
                     return controlStmt();
-            default: return expr();
+            case Token::not_:
+            case Token::MINUS:
+            case Token::ADD:
+            case Token::DIGIT:
+            case Token::DECIMAL:
+            case Token::STRING:
+            case Token::CHAR:
+            case Token::LB:
+            case Token::ID:
+                    return expr();
+            default:throw "233";
         }
     }
 
@@ -556,6 +576,6 @@ namespace evoBasic{
         return moduleDecl();
     }
 
-    Parser::Parser(Lexer &lexer, Logger &logger, Domain& domain)
-        :lexer(lexer),logger(logger),global(domain){}
+    Parser::Parser(Lexer &lexer, Domain& domain)
+        :lexer(lexer),global(domain){}
 }

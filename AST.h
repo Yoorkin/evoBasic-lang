@@ -27,7 +27,8 @@ namespace evoBasic{
         ParameterList,Parameter,Generic,Locating,
         ID,Digit,Decimal,String,Char,
         ClassMember,ModuleMember,
-        Public,Private,Friend,Static,Virtual,Override
+        Public,Private,Friend,Static,Virtual,Override,
+        Error
     };
 
 
@@ -67,6 +68,13 @@ namespace evoBasic{
         void print(string prefix,string mark,bool isLast,ostream& out);
     };
 
+    typedef void (*Callback)(Node* node);
+    class Visitor{
+        map<Tag,Callback> subscribe;
+    public:
+        void on(Tag tag,Callback callback);
+        void visit(Node* ast);
+    };
 }
 
 

@@ -104,6 +104,12 @@
 		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Parser.h">
 			<Option target="evoBasic"/>
 		</Unit>
+		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Semantic.cpp">
+			<Option target="evoBasic"/>
+		</Unit>
+		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Semantic.h">
+			<Option target="evoBasic"/>
+		</Unit>
 		<Unit filename="/home/yorkin/CLionProjects/evoBasic/SymbolTable.cpp">
 			<Option target="evoBasic"/>
 		</Unit>

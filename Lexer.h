@@ -1,12 +1,15 @@
 //
 // Created by yorkin on 7/11/21.
 //
+
+#ifndef EVOBASIC_LEXER_H
+#define EVOBASIC_LEXER_H
 #include<istream>
 #include<string>
 #include<map>
 #include<vector>
-#ifndef EVOBASIC_LEXER_H
-#define EVOBASIC_LEXER_H
+#include<set>
+#include"Logger.h"
 using namespace std;
 namespace evoBasic{
     class Token{
@@ -23,14 +26,16 @@ namespace evoBasic{
         Token(string lexeme,Enum token,int x,int y):lexeme(move(lexeme)),token(token),x(x),y(y){}
         explicit Token(Enum token){this->token=token;}
         Token()=default;
+        static vector<string> TokenToString;
     };
 
     class Lexer {
-        int x=0,y=1,beginX=0;
+        int x=1,y=1,beginX,beginY;
         Token nextToken;
         Token token;
         char c;
-        istream& stream;
+        istream &stream;
+        void increaseX(char c);
     public:
         Token LL();
         map<string,Token> reserved;
@@ -39,6 +44,8 @@ namespace evoBasic{
         Token& getToken();
         bool match(string lexeme);
         bool match(Token::Enum token);
+        bool match(Token::Enum token,set<Token::Enum> follows,string errorMessage);
+        void skipUntilFollow(set<Token::Enum>& follows);
     };
 
 }

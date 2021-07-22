@@ -8,18 +8,18 @@
 #include"AST.h"
 #include"Type.h"
 #include"Logger.h"
+#include<exception>
 #include<set>
 namespace evoBasic{
 
     class Parser {
         Lexer& lexer;
-        Logger& logger;
         Domain& global;
     public:
-        Parser(Lexer& lexer,Logger& logger,Domain& domain);
+        Parser(Lexer& lexer,Domain& domain);
         Node* parse();
 
-        Node *expr();
+        Node *expr(set<Token::Enum> follows={});
 
         Node *cmp();
 
@@ -80,6 +80,16 @@ namespace evoBasic{
         Node *classMember();
 
         Node *moduleMember();
+    };
+
+    class SyntaxException:public exception{
+    public:
+        SyntaxException(Token* token):token(token){};
+        Token* token;
+        const char *what() const throw ()
+        {
+            return "test";
+        }
     };
 
 }

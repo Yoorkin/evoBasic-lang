@@ -1,14 +1,16 @@
 Module myModule
-
     public class MyClass
-
+/*
         function myFunction(byval a4 as long)AS byte //commentasdfasdfsd
-            return /*comment comment2*/1+5-10/9-(100*3.1415e-10+13E10)
-        end function
+            return 1+5-10/9-(100*3.1415e-10+13E10)
+        end function*/
 
         public virtual sub mySub(p as int)
             if p>=100 then
                 myFunction(100)
+                if p.toString()=="100" then
+                    print(123455)
+                end if
             elseif p<90 then
                 path1.path2.anotherFunction(20)
             else
@@ -18,9 +20,10 @@ Module myModule
             while state<>someEnum.Succeed
                 print("啦啦啦")
             wend
-            select case state
-                case someEnum.succeed print("ok")
-                case else
+            select case
+                casr asdfsdaf
+                    print(233)
+                case asdf
                     for i=0 to state.data.size step 1
                         if state.data.onError then exit for end if
                         print(state.data(i)+1+2+3+4+5+-6+---7++8---9)
@@ -46,4 +49,5 @@ Module myModule
     module myModule2
 
     end module
+
 End Module

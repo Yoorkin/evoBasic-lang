@@ -4,8 +4,8 @@
 
 #include "Lexer.h"
 #include<iostream>
-#define ReturnWithoutForward(token) {stream.putback(c);return Token(lexeme,token,beginX,y);}
-#define ReturnWithForward(token) {lexeme.push_back(c);return Token(lexeme,token,beginX,y);}
+#define ReturnWithoutForward(token) {stream.putback(c);return Token(lexeme,token,beginX,beginY);}
+#define ReturnWithForward(token) {increaseX(c);lexeme.push_back(c);return Token(lexeme,token,beginX,beginY);}
 namespace evoBasic{
     bool isDigit(char c){
         return c<='9' && c>='0';
@@ -26,16 +26,24 @@ namespace evoBasic{
         if(c>='A'&&c<='Z') return c-'A'+'a';
         else return c;
     }
+    void Lexer::increaseX(char c){
+        if(isNewLine(c)){
+            y++;
+            x=1;
+        }
+        else x++;
+    }
     Token Lexer::LL(){
         string lexeme;
         enum {START,NUM,POINT,E1,E2,ID1,ID2,COM1,COM2,CB1,CB2,STR,CHAR1,CHAR2,L,E,G}state=START;
-        beginX=x;
+
         while(true){
-            x++;
             char c = ToLower(stream.get());
             if(stream.eof())c=-1;
             switch(state){
                 case START:
+                    beginX=x;
+                    beginY=y;
                     lexeme="";
                     if(isDigit(c))state=NUM;
                     else if(isLetter(c))state=ID1;
@@ -51,13 +59,7 @@ namespace evoBasic{
                     else if(c=='-')ReturnWithForward(Token::MINUS)
                     else if(c=='.')ReturnWithForward(Token::DOT)
                     else if(c==',')ReturnWithForward(Token::COMMA)
-                    else if(isWhiteSpace(c)){
-                        if(isNewLine(c)){
-                            beginX=x=0;
-                            y++;
-                        }
-                        state=START;
-                    }
+                    else if(isWhiteSpace(c))state=START;
                     else if(c=='<')state=L;
                     else if(c=='=')state=E;
                     else if(c=='>')state=G;
@@ -144,6 +146,7 @@ namespace evoBasic{
                     break;
             }
             lexeme.push_back(c);
+            increaseX(c);
         }
 
     }
@@ -199,6 +202,8 @@ namespace evoBasic{
         return token;
     }
 
+
+
     bool Lexer::match(string lexeme){
         if(lexeme==nextToken.lexeme){
             this->token=nextToken;
@@ -218,7 +223,41 @@ namespace evoBasic{
             std::cout<<nextToken.lexeme<<' '<<nextToken.y<<':'<<nextToken.x<<endl;
             cout.unsetf(ios::left);
             return true;
-        }else throw "unimplement";//TODO
+        }
+        else throw "unimplement";
         return false;
     }
+
+    bool Lexer::match(Token::Enum token,set<Token::Enum> follows,string errorMessage){
+        if(token==nextToken.token){
+            this->token=nextToken;
+            nextToken=LL();
+            cout.width(20);
+            cout.setf(ios::left);
+            cout.fill(' ');
+            std::cout<<nextToken.lexeme<<' '<<nextToken.y<<':'<<nextToken.x<<endl;
+            cout.unsetf(ios::left);
+            return true;
+        }
+        else{
+            Logger::error(&nextToken,errorMessage);
+            skipUntilFollow(follows);
+        }
+        return false;
+    }
+
+    void Lexer::skipUntilFollow(set<Token::Enum> &follows) {
+        while(!follows.contains(nextToken.token) && nextToken.token!=Token::EOF_){
+            this->token=nextToken;
+            std::cout<<"skip: "<<nextToken.lexeme<<' '<<nextToken.y<<':'<<nextToken.x<<endl;
+            nextToken=LL();
+        }
+    }
+
+    vector<string> Token::TokenToString{"ID","DIGIT","DECIMAL","STRING","CHAR",
+        "DOT","COMMA","LE","GE","EQ","LT","GT","NE","LB","RB","MUL","DIV","FDIV","MINUS","ADD","ASSIGN","EOF",
+        "module","class","public","private","friend","static","virtual","override",
+        "function","sub","byval","byref","optional","as","let","end","enum","type",
+        "select","case","for","to","step","while","wend","if","then","elseif","else",
+        "and","or","xor","not","return","continue","exit","next"};
 }
