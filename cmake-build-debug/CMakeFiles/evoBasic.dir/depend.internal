@@ -31,6 +31,9 @@ CMakeFiles/evoBasic.dir/Semantic.cpp.o
 CMakeFiles/evoBasic.dir/SymbolTable.cpp.o
  /home/yorkin/CLionProjects/evoBasic/SymbolTable.cpp
 CMakeFiles/evoBasic.dir/Type.cpp.o
+ /home/yorkin/CLionProjects/evoBasic/AST.h
+ /home/yorkin/CLionProjects/evoBasic/Lexer.h
+ /home/yorkin/CLionProjects/evoBasic/Logger.h
  /home/yorkin/CLionProjects/evoBasic/Type.cpp
  /home/yorkin/CLionProjects/evoBasic/Type.h
 CMakeFiles/evoBasic.dir/main.cpp.o
@@ -38,5 +41,6 @@ CMakeFiles/evoBasic.dir/main.cpp.o
  /home/yorkin/CLionProjects/evoBasic/Lexer.h
  /home/yorkin/CLionProjects/evoBasic/Logger.h
  /home/yorkin/CLionProjects/evoBasic/Parser.h
+ /home/yorkin/CLionProjects/evoBasic/Semantic.h
  /home/yorkin/CLionProjects/evoBasic/Type.h
  /home/yorkin/CLionProjects/evoBasic/main.cpp

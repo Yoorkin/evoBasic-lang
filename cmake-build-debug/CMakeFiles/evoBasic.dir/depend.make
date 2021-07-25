@@ -30,6 +30,9 @@ CMakeFiles/evoBasic.dir/Semantic.cpp.o: ../Type.h
 
 CMakeFiles/evoBasic.dir/SymbolTable.cpp.o: ../SymbolTable.cpp
 
+CMakeFiles/evoBasic.dir/Type.cpp.o: ../AST.h
+CMakeFiles/evoBasic.dir/Type.cpp.o: ../Lexer.h
+CMakeFiles/evoBasic.dir/Type.cpp.o: ../Logger.h
 CMakeFiles/evoBasic.dir/Type.cpp.o: ../Type.cpp
 CMakeFiles/evoBasic.dir/Type.cpp.o: ../Type.h
 
@@ -37,6 +40,7 @@ CMakeFiles/evoBasic.dir/main.cpp.o: ../AST.h
 CMakeFiles/evoBasic.dir/main.cpp.o: ../Lexer.h
 CMakeFiles/evoBasic.dir/main.cpp.o: ../Logger.h
 CMakeFiles/evoBasic.dir/main.cpp.o: ../Parser.h
+CMakeFiles/evoBasic.dir/main.cpp.o: ../Semantic.h
 CMakeFiles/evoBasic.dir/main.cpp.o: ../Type.h
 CMakeFiles/evoBasic.dir/main.cpp.o: ../main.cpp
 

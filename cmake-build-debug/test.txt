@@ -1,14 +1,17 @@
 Module myModule
     public class MyClass
+
+    end class
+    public class MyClass
 /*
         function myFunction(byval a4 as long)AS byte //commentasdfasdfsd
             return 1+5-10/9-(100*3.1415e-10+13E10)
         end function*/
 
-        public virtual sub mySub(p as int)
+        public sub mySub(p as int)
             if p>=100 then
                 myFunction(100)
-                if p.toString()=="100" then
+                if p.toString()==100 then
                     print(123455)
                 end if
             elseif p<90 then
@@ -18,7 +21,7 @@ Module myModule
             end if
             let state = print(obj.myFunction(p-10).toString(),100)
             while state<>someEnum.Succeed
-                print("啦啦啦")
+                print(234234)
             wend
             select case
                 casr asdfsdaf
@@ -37,17 +40,32 @@ Module myModule
         member2 as long
     end type
 
+    type myType
+        member1 as integer
+        member2 as long
+    end type
+
     private enum MyEnum
         member1=10
 
             member2
     end enum
 
-    let a = 100,b as string="string test",c=100\8+5.5
+    private enum MyEnum
+        member1=10
+
+            member2
+    end enum
+
+    public let a = 100,c=100\8+5.5
 
 
-    module myModule2
+    public module myModule2
 
     end module
 
 End Module
+
+Module myModule
+
+end module
