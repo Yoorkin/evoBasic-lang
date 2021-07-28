@@ -1,12 +1,9 @@
 Module myModule
-    public class MyClass
-
-    end class
-    public class MyClass
-/*
-        function myFunction(byval a4 as long)AS byte //commentasdfasdfsd
+    public Module MyModule
+        public let a as i64
+        function myFunction(byval a4 as i64)AS u16 //commentasdfasdfsd
             return 1+5-10/9-(100*3.1415e-10+13E10)
-        end function*/
+        end function
 
         public sub mySub(p as int)
             if p>=100 then
@@ -23,9 +20,7 @@ Module myModule
             while state<>someEnum.Succeed
                 print(234234)
             wend
-            select case
-                casr asdfsdaf
-                    print(233)
+            select case abcVar
                 case asdf
                     for i=0 to state.data.size step 1
                         if state.data.onError then exit for end if
@@ -33,16 +28,16 @@ Module myModule
                     next
             end select
         end sub
-    end class
+    end Module
 
     type MyType
-        member1 as integer
-        member2 as long
+        member1 as i32
+        member2 as i64
     end type
 
     type myType
-        member1 as integer
-        member2 as long
+        member1 as i32
+        member2 as i64
     end type
 
     private enum MyEnum
@@ -57,15 +52,21 @@ Module myModule
             member2
     end enum
 
-    public let a = 100,c=100\8+5.5
+    public let a as MyContainer.NameSpace1.i32 = 100,c=a
 
 
     public module myModule2
 
     end module
 
+    public module MyModule
+
+    end module
+
 End Module
 
-Module myModule
+Module myModule2
 
 end module
+
+let ins as myModule.MyType

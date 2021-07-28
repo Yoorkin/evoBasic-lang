@@ -4,7 +4,6 @@ file(REMOVE_RECURSE
   "CMakeFiles/evoBasic.dir/Logger.cpp.o"
   "CMakeFiles/evoBasic.dir/Parser.cpp.o"
   "CMakeFiles/evoBasic.dir/Semantic.cpp.o"
-  "CMakeFiles/evoBasic.dir/SymbolTable.cpp.o"
   "CMakeFiles/evoBasic.dir/Type.cpp.o"
   "CMakeFiles/evoBasic.dir/main.cpp.o"
   "evoBasic"

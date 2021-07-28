@@ -109,22 +109,9 @@ CMakeFiles/evoBasic.dir/Parser.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/evoBasic.dir/Parser.cpp.s"
 	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/yorkin/CLionProjects/evoBasic/Parser.cpp -o CMakeFiles/evoBasic.dir/Parser.cpp.s
 
-CMakeFiles/evoBasic.dir/SymbolTable.cpp.o: CMakeFiles/evoBasic.dir/flags.make
-CMakeFiles/evoBasic.dir/SymbolTable.cpp.o: ../SymbolTable.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/evoBasic.dir/SymbolTable.cpp.o"
-	/usr/bin/clang++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/evoBasic.dir/SymbolTable.cpp.o -c /home/yorkin/CLionProjects/evoBasic/SymbolTable.cpp
-
-CMakeFiles/evoBasic.dir/SymbolTable.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/evoBasic.dir/SymbolTable.cpp.i"
-	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /home/yorkin/CLionProjects/evoBasic/SymbolTable.cpp > CMakeFiles/evoBasic.dir/SymbolTable.cpp.i
-
-CMakeFiles/evoBasic.dir/SymbolTable.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/evoBasic.dir/SymbolTable.cpp.s"
-	/usr/bin/clang++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /home/yorkin/CLionProjects/evoBasic/SymbolTable.cpp -o CMakeFiles/evoBasic.dir/SymbolTable.cpp.s
-
 CMakeFiles/evoBasic.dir/Logger.cpp.o: CMakeFiles/evoBasic.dir/flags.make
 CMakeFiles/evoBasic.dir/Logger.cpp.o: ../Logger.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/evoBasic.dir/Logger.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/evoBasic.dir/Logger.cpp.o"
 	/usr/bin/clang++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/evoBasic.dir/Logger.cpp.o -c /home/yorkin/CLionProjects/evoBasic/Logger.cpp
 
 CMakeFiles/evoBasic.dir/Logger.cpp.i: cmake_force
@@ -137,7 +124,7 @@ CMakeFiles/evoBasic.dir/Logger.cpp.s: cmake_force
 
 CMakeFiles/evoBasic.dir/Type.cpp.o: CMakeFiles/evoBasic.dir/flags.make
 CMakeFiles/evoBasic.dir/Type.cpp.o: ../Type.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/evoBasic.dir/Type.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object CMakeFiles/evoBasic.dir/Type.cpp.o"
 	/usr/bin/clang++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/evoBasic.dir/Type.cpp.o -c /home/yorkin/CLionProjects/evoBasic/Type.cpp
 
 CMakeFiles/evoBasic.dir/Type.cpp.i: cmake_force
@@ -150,7 +137,7 @@ CMakeFiles/evoBasic.dir/Type.cpp.s: cmake_force
 
 CMakeFiles/evoBasic.dir/Semantic.cpp.o: CMakeFiles/evoBasic.dir/flags.make
 CMakeFiles/evoBasic.dir/Semantic.cpp.o: ../Semantic.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object CMakeFiles/evoBasic.dir/Semantic.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object CMakeFiles/evoBasic.dir/Semantic.cpp.o"
 	/usr/bin/clang++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/evoBasic.dir/Semantic.cpp.o -c /home/yorkin/CLionProjects/evoBasic/Semantic.cpp
 
 CMakeFiles/evoBasic.dir/Semantic.cpp.i: cmake_force
@@ -167,7 +154,6 @@ evoBasic_OBJECTS = \
 "CMakeFiles/evoBasic.dir/Lexer.cpp.o" \
 "CMakeFiles/evoBasic.dir/AST.cpp.o" \
 "CMakeFiles/evoBasic.dir/Parser.cpp.o" \
-"CMakeFiles/evoBasic.dir/SymbolTable.cpp.o" \
 "CMakeFiles/evoBasic.dir/Logger.cpp.o" \
 "CMakeFiles/evoBasic.dir/Type.cpp.o" \
 "CMakeFiles/evoBasic.dir/Semantic.cpp.o"
@@ -179,13 +165,12 @@ evoBasic: CMakeFiles/evoBasic.dir/main.cpp.o
 evoBasic: CMakeFiles/evoBasic.dir/Lexer.cpp.o
 evoBasic: CMakeFiles/evoBasic.dir/AST.cpp.o
 evoBasic: CMakeFiles/evoBasic.dir/Parser.cpp.o
-evoBasic: CMakeFiles/evoBasic.dir/SymbolTable.cpp.o
 evoBasic: CMakeFiles/evoBasic.dir/Logger.cpp.o
 evoBasic: CMakeFiles/evoBasic.dir/Type.cpp.o
 evoBasic: CMakeFiles/evoBasic.dir/Semantic.cpp.o
 evoBasic: CMakeFiles/evoBasic.dir/build.make
 evoBasic: CMakeFiles/evoBasic.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Linking CXX executable evoBasic"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Linking CXX executable evoBasic"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/evoBasic.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.

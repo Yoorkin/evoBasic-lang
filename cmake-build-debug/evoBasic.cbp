@@ -110,12 +110,6 @@
 		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Semantic.h">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/SymbolTable.cpp">
-			<Option target="evoBasic"/>
-		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/SymbolTable.h">
-			<Option target="evoBasic"/>
-		</Unit>
 		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Type.cpp">
 			<Option target="evoBasic"/>
 		</Unit>

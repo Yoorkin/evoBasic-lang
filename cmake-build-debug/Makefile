@@ -258,33 +258,6 @@ Semantic.cpp.s:
 	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Semantic.cpp.s
 .PHONY : Semantic.cpp.s
 
-SymbolTable.o: SymbolTable.cpp.o
-
-.PHONY : SymbolTable.o
-
-# target to build an object file
-SymbolTable.cpp.o:
-	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/SymbolTable.cpp.o
-.PHONY : SymbolTable.cpp.o
-
-SymbolTable.i: SymbolTable.cpp.i
-
-.PHONY : SymbolTable.i
-
-# target to preprocess a source file
-SymbolTable.cpp.i:
-	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/SymbolTable.cpp.i
-.PHONY : SymbolTable.cpp.i
-
-SymbolTable.s: SymbolTable.cpp.s
-
-.PHONY : SymbolTable.s
-
-# target to generate assembly for a file
-SymbolTable.cpp.s:
-	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/SymbolTable.cpp.s
-.PHONY : SymbolTable.cpp.s
-
 Type.o: Type.cpp.o
 
 .PHONY : Type.o
@@ -363,9 +336,6 @@ help:
 	@echo "... Semantic.o"
 	@echo "... Semantic.i"
 	@echo "... Semantic.s"
-	@echo "... SymbolTable.o"
-	@echo "... SymbolTable.i"
-	@echo "... SymbolTable.s"
 	@echo "... Type.o"
 	@echo "... Type.i"
 	@echo "... Type.s"
