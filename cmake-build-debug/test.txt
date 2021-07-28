@@ -28,6 +28,7 @@ Module myModule
                     next
             end select
         end sub
+        let ins,b as long=100,c=100
     end Module
 
     type MyType
@@ -69,4 +70,4 @@ Module myModule2
 
 end module
 
-let ins as myModule.MyType
+let ins,b as long=100,c=100

@@ -4,9 +4,15 @@
 CMakeFiles/evoBasic.dir/AST.cpp.o
  /home/yorkin/CLionProjects/evoBasic/AST.cpp
  /home/yorkin/CLionProjects/evoBasic/AST.h
+ /home/yorkin/CLionProjects/evoBasic/Exception.h
  /home/yorkin/CLionProjects/evoBasic/Lexer.h
  /home/yorkin/CLionProjects/evoBasic/Logger.h
  /home/yorkin/CLionProjects/evoBasic/Type.h
+CMakeFiles/evoBasic.dir/Exception.cpp.o
+ /home/yorkin/CLionProjects/evoBasic/Exception.cpp
+ /home/yorkin/CLionProjects/evoBasic/Exception.h
+ /home/yorkin/CLionProjects/evoBasic/Lexer.h
+ /home/yorkin/CLionProjects/evoBasic/Logger.h
 CMakeFiles/evoBasic.dir/Lexer.cpp.o
  /home/yorkin/CLionProjects/evoBasic/Lexer.cpp
  /home/yorkin/CLionProjects/evoBasic/Lexer.h
@@ -17,6 +23,7 @@ CMakeFiles/evoBasic.dir/Logger.cpp.o
  /home/yorkin/CLionProjects/evoBasic/Logger.h
 CMakeFiles/evoBasic.dir/Parser.cpp.o
  /home/yorkin/CLionProjects/evoBasic/AST.h
+ /home/yorkin/CLionProjects/evoBasic/Exception.h
  /home/yorkin/CLionProjects/evoBasic/Lexer.h
  /home/yorkin/CLionProjects/evoBasic/Logger.h
  /home/yorkin/CLionProjects/evoBasic/Parser.cpp
@@ -24,6 +31,7 @@ CMakeFiles/evoBasic.dir/Parser.cpp.o
  /home/yorkin/CLionProjects/evoBasic/Type.h
 CMakeFiles/evoBasic.dir/Semantic.cpp.o
  /home/yorkin/CLionProjects/evoBasic/AST.h
+ /home/yorkin/CLionProjects/evoBasic/Exception.h
  /home/yorkin/CLionProjects/evoBasic/Lexer.h
  /home/yorkin/CLionProjects/evoBasic/Logger.h
  /home/yorkin/CLionProjects/evoBasic/Semantic.cpp
@@ -31,12 +39,14 @@ CMakeFiles/evoBasic.dir/Semantic.cpp.o
  /home/yorkin/CLionProjects/evoBasic/Type.h
 CMakeFiles/evoBasic.dir/Type.cpp.o
  /home/yorkin/CLionProjects/evoBasic/AST.h
+ /home/yorkin/CLionProjects/evoBasic/Exception.h
  /home/yorkin/CLionProjects/evoBasic/Lexer.h
  /home/yorkin/CLionProjects/evoBasic/Logger.h
  /home/yorkin/CLionProjects/evoBasic/Type.cpp
  /home/yorkin/CLionProjects/evoBasic/Type.h
 CMakeFiles/evoBasic.dir/main.cpp.o
  /home/yorkin/CLionProjects/evoBasic/AST.h
+ /home/yorkin/CLionProjects/evoBasic/Exception.h
  /home/yorkin/CLionProjects/evoBasic/Lexer.h
  /home/yorkin/CLionProjects/evoBasic/Logger.h
  /home/yorkin/CLionProjects/evoBasic/Parser.h

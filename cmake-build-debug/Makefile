@@ -150,6 +150,33 @@ AST.cpp.s:
 	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/AST.cpp.s
 .PHONY : AST.cpp.s
 
+Exception.o: Exception.cpp.o
+
+.PHONY : Exception.o
+
+# target to build an object file
+Exception.cpp.o:
+	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Exception.cpp.o
+.PHONY : Exception.cpp.o
+
+Exception.i: Exception.cpp.i
+
+.PHONY : Exception.i
+
+# target to preprocess a source file
+Exception.cpp.i:
+	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Exception.cpp.i
+.PHONY : Exception.cpp.i
+
+Exception.s: Exception.cpp.s
+
+.PHONY : Exception.s
+
+# target to generate assembly for a file
+Exception.cpp.s:
+	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Exception.cpp.s
+.PHONY : Exception.cpp.s
+
 Lexer.o: Lexer.cpp.o
 
 .PHONY : Lexer.o
@@ -324,6 +351,9 @@ help:
 	@echo "... AST.o"
 	@echo "... AST.i"
 	@echo "... AST.s"
+	@echo "... Exception.o"
+	@echo "... Exception.i"
+	@echo "... Exception.s"
 	@echo "... Lexer.o"
 	@echo "... Lexer.i"
 	@echo "... Lexer.s"

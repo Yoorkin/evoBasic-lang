@@ -1,5 +1,6 @@
 file(REMOVE_RECURSE
   "CMakeFiles/evoBasic.dir/AST.cpp.o"
+  "CMakeFiles/evoBasic.dir/Exception.cpp.o"
   "CMakeFiles/evoBasic.dir/Lexer.cpp.o"
   "CMakeFiles/evoBasic.dir/Logger.cpp.o"
   "CMakeFiles/evoBasic.dir/Parser.cpp.o"

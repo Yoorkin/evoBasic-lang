@@ -29,8 +29,24 @@ stack
 -
 memory
 -
+functional
+-
+typeindex
+-
+stdexcept
+-
+Exception.h
+/home/yorkin/CLionProjects/evoBasic/Exception.h
 AST.h
 /home/yorkin/CLionProjects/evoBasic/AST.h
+
+/home/yorkin/CLionProjects/evoBasic/Exception.h
+exception
+-
+string
+-
+Lexer.h
+/home/yorkin/CLionProjects/evoBasic/Lexer.h
 
 /home/yorkin/CLionProjects/evoBasic/Lexer.h
 istream
@@ -57,10 +73,14 @@ vector
 -
 iomanip
 -
+sstream
+-
 
 /home/yorkin/CLionProjects/evoBasic/Parser.cpp
 Parser.h
 /home/yorkin/CLionProjects/evoBasic/Parser.h
+Exception.h
+/home/yorkin/CLionProjects/evoBasic/Exception.h
 
 /home/yorkin/CLionProjects/evoBasic/Parser.h
 Lexer.h
@@ -79,6 +99,8 @@ set
 /home/yorkin/CLionProjects/evoBasic/Semantic.cpp
 Semantic.h
 /home/yorkin/CLionProjects/evoBasic/Semantic.h
+Exception.h
+/home/yorkin/CLionProjects/evoBasic/Exception.h
 
 /home/yorkin/CLionProjects/evoBasic/Semantic.h
 Type.h
@@ -95,6 +117,10 @@ memory
 /home/yorkin/CLionProjects/evoBasic/Type.cpp
 Type.h
 /home/yorkin/CLionProjects/evoBasic/Type.h
+Exception.h
+/home/yorkin/CLionProjects/evoBasic/Exception.h
+utility
+-
 
 /home/yorkin/CLionProjects/evoBasic/Type.h
 map

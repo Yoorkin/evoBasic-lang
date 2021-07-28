@@ -86,6 +86,12 @@
 		<Unit filename="/home/yorkin/CLionProjects/evoBasic/AST.h">
 			<Option target="evoBasic"/>
 		</Unit>
+		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Exception.cpp">
+			<Option target="evoBasic"/>
+		</Unit>
+		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Exception.h">
+			<Option target="evoBasic"/>
+		</Unit>
 		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Lexer.cpp">
 			<Option target="evoBasic"/>
 		</Unit>
