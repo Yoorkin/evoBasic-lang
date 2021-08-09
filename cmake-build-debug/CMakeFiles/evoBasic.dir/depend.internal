@@ -14,9 +14,15 @@ CMakeFiles/evoBasic.dir/Exception.cpp.o
  /home/yorkin/CLionProjects/evoBasic/Lexer.h
  /home/yorkin/CLionProjects/evoBasic/Logger.h
 CMakeFiles/evoBasic.dir/Lexer.cpp.o
+ /home/yorkin/CLionProjects/evoBasic/Exception.h
  /home/yorkin/CLionProjects/evoBasic/Lexer.cpp
  /home/yorkin/CLionProjects/evoBasic/Lexer.h
  /home/yorkin/CLionProjects/evoBasic/Logger.h
+CMakeFiles/evoBasic.dir/Link.cpp.o
+ /home/yorkin/CLionProjects/evoBasic/Link.cpp
+ /home/yorkin/CLionProjects/evoBasic/Link.h
+ /home/yorkin/CLionProjects/evoBasic/Logger.h
+ /home/yorkin/CLionProjects/evoBasic/config.h
 CMakeFiles/evoBasic.dir/Logger.cpp.o
  /home/yorkin/CLionProjects/evoBasic/Lexer.h
  /home/yorkin/CLionProjects/evoBasic/Logger.cpp
@@ -44,12 +50,18 @@ CMakeFiles/evoBasic.dir/Type.cpp.o
  /home/yorkin/CLionProjects/evoBasic/Logger.h
  /home/yorkin/CLionProjects/evoBasic/Type.cpp
  /home/yorkin/CLionProjects/evoBasic/Type.h
+CMakeFiles/evoBasic.dir/cmdDistribute.cpp.o
+ /home/yorkin/CLionProjects/evoBasic/cmdDistribute.cpp
+ /home/yorkin/CLionProjects/evoBasic/cmdDistribute.h
 CMakeFiles/evoBasic.dir/main.cpp.o
  /home/yorkin/CLionProjects/evoBasic/AST.h
  /home/yorkin/CLionProjects/evoBasic/Exception.h
  /home/yorkin/CLionProjects/evoBasic/Lexer.h
+ /home/yorkin/CLionProjects/evoBasic/Link.h
  /home/yorkin/CLionProjects/evoBasic/Logger.h
  /home/yorkin/CLionProjects/evoBasic/Parser.h
  /home/yorkin/CLionProjects/evoBasic/Semantic.h
  /home/yorkin/CLionProjects/evoBasic/Type.h
+ /home/yorkin/CLionProjects/evoBasic/cmdDistribute.h
+ /home/yorkin/CLionProjects/evoBasic/config.h
  /home/yorkin/CLionProjects/evoBasic/main.cpp

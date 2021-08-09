@@ -98,6 +98,12 @@
 		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Lexer.h">
 			<Option target="evoBasic"/>
 		</Unit>
+		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Link.cpp">
+			<Option target="evoBasic"/>
+		</Unit>
+		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Link.h">
+			<Option target="evoBasic"/>
+		</Unit>
 		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Logger.cpp">
 			<Option target="evoBasic"/>
 		</Unit>
@@ -120,6 +126,15 @@
 			<Option target="evoBasic"/>
 		</Unit>
 		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Type.h">
+			<Option target="evoBasic"/>
+		</Unit>
+		<Unit filename="/home/yorkin/CLionProjects/evoBasic/cmdDistribute.cpp">
+			<Option target="evoBasic"/>
+		</Unit>
+		<Unit filename="/home/yorkin/CLionProjects/evoBasic/cmdDistribute.h">
+			<Option target="evoBasic"/>
+		</Unit>
+		<Unit filename="/home/yorkin/CLionProjects/evoBasic/config.h">
 			<Option target="evoBasic"/>
 		</Unit>
 		<Unit filename="/home/yorkin/CLionProjects/evoBasic/main.cpp">

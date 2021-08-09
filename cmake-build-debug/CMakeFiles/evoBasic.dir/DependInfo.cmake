@@ -7,10 +7,12 @@ set(CMAKE_DEPENDS_CHECK_CXX
   "/home/yorkin/CLionProjects/evoBasic/AST.cpp" "/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles/evoBasic.dir/AST.cpp.o"
   "/home/yorkin/CLionProjects/evoBasic/Exception.cpp" "/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles/evoBasic.dir/Exception.cpp.o"
   "/home/yorkin/CLionProjects/evoBasic/Lexer.cpp" "/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles/evoBasic.dir/Lexer.cpp.o"
+  "/home/yorkin/CLionProjects/evoBasic/Link.cpp" "/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles/evoBasic.dir/Link.cpp.o"
   "/home/yorkin/CLionProjects/evoBasic/Logger.cpp" "/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles/evoBasic.dir/Logger.cpp.o"
   "/home/yorkin/CLionProjects/evoBasic/Parser.cpp" "/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles/evoBasic.dir/Parser.cpp.o"
   "/home/yorkin/CLionProjects/evoBasic/Semantic.cpp" "/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles/evoBasic.dir/Semantic.cpp.o"
   "/home/yorkin/CLionProjects/evoBasic/Type.cpp" "/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles/evoBasic.dir/Type.cpp.o"
+  "/home/yorkin/CLionProjects/evoBasic/cmdDistribute.cpp" "/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles/evoBasic.dir/cmdDistribute.cpp.o"
   "/home/yorkin/CLionProjects/evoBasic/main.cpp" "/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/CMakeFiles/evoBasic.dir/main.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "Clang")

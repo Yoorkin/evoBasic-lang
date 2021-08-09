@@ -13,9 +13,15 @@ CMakeFiles/evoBasic.dir/Exception.cpp.o: ../Exception.h
 CMakeFiles/evoBasic.dir/Exception.cpp.o: ../Lexer.h
 CMakeFiles/evoBasic.dir/Exception.cpp.o: ../Logger.h
 
+CMakeFiles/evoBasic.dir/Lexer.cpp.o: ../Exception.h
 CMakeFiles/evoBasic.dir/Lexer.cpp.o: ../Lexer.cpp
 CMakeFiles/evoBasic.dir/Lexer.cpp.o: ../Lexer.h
 CMakeFiles/evoBasic.dir/Lexer.cpp.o: ../Logger.h
+
+CMakeFiles/evoBasic.dir/Link.cpp.o: ../Link.cpp
+CMakeFiles/evoBasic.dir/Link.cpp.o: ../Link.h
+CMakeFiles/evoBasic.dir/Link.cpp.o: ../Logger.h
+CMakeFiles/evoBasic.dir/Link.cpp.o: ../config.h
 
 CMakeFiles/evoBasic.dir/Logger.cpp.o: ../Lexer.h
 CMakeFiles/evoBasic.dir/Logger.cpp.o: ../Logger.cpp
@@ -44,12 +50,18 @@ CMakeFiles/evoBasic.dir/Type.cpp.o: ../Logger.h
 CMakeFiles/evoBasic.dir/Type.cpp.o: ../Type.cpp
 CMakeFiles/evoBasic.dir/Type.cpp.o: ../Type.h
 
+CMakeFiles/evoBasic.dir/cmdDistribute.cpp.o: ../cmdDistribute.cpp
+CMakeFiles/evoBasic.dir/cmdDistribute.cpp.o: ../cmdDistribute.h
+
 CMakeFiles/evoBasic.dir/main.cpp.o: ../AST.h
 CMakeFiles/evoBasic.dir/main.cpp.o: ../Exception.h
 CMakeFiles/evoBasic.dir/main.cpp.o: ../Lexer.h
+CMakeFiles/evoBasic.dir/main.cpp.o: ../Link.h
 CMakeFiles/evoBasic.dir/main.cpp.o: ../Logger.h
 CMakeFiles/evoBasic.dir/main.cpp.o: ../Parser.h
 CMakeFiles/evoBasic.dir/main.cpp.o: ../Semantic.h
 CMakeFiles/evoBasic.dir/main.cpp.o: ../Type.h
+CMakeFiles/evoBasic.dir/main.cpp.o: ../cmdDistribute.h
+CMakeFiles/evoBasic.dir/main.cpp.o: ../config.h
 CMakeFiles/evoBasic.dir/main.cpp.o: ../main.cpp
 

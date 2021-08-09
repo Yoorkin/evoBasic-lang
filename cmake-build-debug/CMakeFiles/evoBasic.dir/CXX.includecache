@@ -6,12 +6,6 @@
 
 #IncludeRegexTransform: 
 
-/home/yorkin/CLionProjects/evoBasic/AST.cpp
-AST.h
-/home/yorkin/CLionProjects/evoBasic/AST.h
-Type.h
-/home/yorkin/CLionProjects/evoBasic/Type.h
-
 /home/yorkin/CLionProjects/evoBasic/AST.h
 Lexer.h
 /home/yorkin/CLionProjects/evoBasic/Lexer.h
@@ -59,6 +53,20 @@ vector
 -
 set
 -
+list
+-
+Logger.h
+/home/yorkin/CLionProjects/evoBasic/Logger.h
+
+/home/yorkin/CLionProjects/evoBasic/Link.h
+string
+-
+map
+-
+vector
+-
+filesystem
+-
 Logger.h
 /home/yorkin/CLionProjects/evoBasic/Logger.h
 
@@ -75,12 +83,8 @@ iomanip
 -
 sstream
 -
-
-/home/yorkin/CLionProjects/evoBasic/Parser.cpp
-Parser.h
-/home/yorkin/CLionProjects/evoBasic/Parser.h
-Exception.h
-/home/yorkin/CLionProjects/evoBasic/Exception.h
+fstream
+-
 
 /home/yorkin/CLionProjects/evoBasic/Parser.h
 Lexer.h
@@ -96,12 +100,6 @@ exception
 set
 -
 
-/home/yorkin/CLionProjects/evoBasic/Semantic.cpp
-Semantic.h
-/home/yorkin/CLionProjects/evoBasic/Semantic.h
-Exception.h
-/home/yorkin/CLionProjects/evoBasic/Exception.h
-
 /home/yorkin/CLionProjects/evoBasic/Semantic.h
 Type.h
 /home/yorkin/CLionProjects/evoBasic/Type.h
@@ -112,14 +110,6 @@ Logger.h
 tuple
 -
 memory
--
-
-/home/yorkin/CLionProjects/evoBasic/Type.cpp
-Type.h
-/home/yorkin/CLionProjects/evoBasic/Type.h
-Exception.h
-/home/yorkin/CLionProjects/evoBasic/Exception.h
-utility
 -
 
 /home/yorkin/CLionProjects/evoBasic/Type.h
@@ -144,10 +134,30 @@ memory
 AST.h
 /home/yorkin/CLionProjects/evoBasic/AST.h
 
+/home/yorkin/CLionProjects/evoBasic/cmdDistribute.h
+functional
+-
+string
+-
+map
+-
+
+/home/yorkin/CLionProjects/evoBasic/config.h
+string
+-
+
 /home/yorkin/CLionProjects/evoBasic/main.cpp
 iostream
 -
 fstream
+-
+filesystem
+-
+map
+-
+string
+-
+utility
 -
 Lexer.h
 /home/yorkin/CLionProjects/evoBasic/Lexer.h
@@ -155,4 +165,10 @@ Parser.h
 /home/yorkin/CLionProjects/evoBasic/Parser.h
 Semantic.h
 /home/yorkin/CLionProjects/evoBasic/Semantic.h
+cmdDistribute.h
+/home/yorkin/CLionProjects/evoBasic/cmdDistribute.h
+Link.h
+/home/yorkin/CLionProjects/evoBasic/Link.h
+config.h
+/home/yorkin/CLionProjects/evoBasic/config.h
 

@@ -204,6 +204,33 @@ Lexer.cpp.s:
 	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Lexer.cpp.s
 .PHONY : Lexer.cpp.s
 
+Link.o: Link.cpp.o
+
+.PHONY : Link.o
+
+# target to build an object file
+Link.cpp.o:
+	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Link.cpp.o
+.PHONY : Link.cpp.o
+
+Link.i: Link.cpp.i
+
+.PHONY : Link.i
+
+# target to preprocess a source file
+Link.cpp.i:
+	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Link.cpp.i
+.PHONY : Link.cpp.i
+
+Link.s: Link.cpp.s
+
+.PHONY : Link.s
+
+# target to generate assembly for a file
+Link.cpp.s:
+	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Link.cpp.s
+.PHONY : Link.cpp.s
+
 Logger.o: Logger.cpp.o
 
 .PHONY : Logger.o
@@ -312,6 +339,33 @@ Type.cpp.s:
 	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/Type.cpp.s
 .PHONY : Type.cpp.s
 
+cmdDistribute.o: cmdDistribute.cpp.o
+
+.PHONY : cmdDistribute.o
+
+# target to build an object file
+cmdDistribute.cpp.o:
+	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/cmdDistribute.cpp.o
+.PHONY : cmdDistribute.cpp.o
+
+cmdDistribute.i: cmdDistribute.cpp.i
+
+.PHONY : cmdDistribute.i
+
+# target to preprocess a source file
+cmdDistribute.cpp.i:
+	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/cmdDistribute.cpp.i
+.PHONY : cmdDistribute.cpp.i
+
+cmdDistribute.s: cmdDistribute.cpp.s
+
+.PHONY : cmdDistribute.s
+
+# target to generate assembly for a file
+cmdDistribute.cpp.s:
+	$(MAKE) -f CMakeFiles/evoBasic.dir/build.make CMakeFiles/evoBasic.dir/cmdDistribute.cpp.s
+.PHONY : cmdDistribute.cpp.s
+
 main.o: main.cpp.o
 
 .PHONY : main.o
@@ -357,6 +411,9 @@ help:
 	@echo "... Lexer.o"
 	@echo "... Lexer.i"
 	@echo "... Lexer.s"
+	@echo "... Link.o"
+	@echo "... Link.i"
+	@echo "... Link.s"
 	@echo "... Logger.o"
 	@echo "... Logger.i"
 	@echo "... Logger.s"
@@ -369,6 +426,9 @@ help:
 	@echo "... Type.o"
 	@echo "... Type.i"
 	@echo "... Type.s"
+	@echo "... cmdDistribute.o"
+	@echo "... cmdDistribute.i"
+	@echo "... cmdDistribute.s"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"

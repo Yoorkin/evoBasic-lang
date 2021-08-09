@@ -1,0 +1,8 @@
+import std.io
+
+public declare sub Beep Lib "user" (Byval N as integer)
+public declare sub getMessage Lib "user" Alias "getMessageA"(Byval hWnd as long) as long
+
+sub main()
+
+end sub
