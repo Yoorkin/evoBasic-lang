@@ -8,139 +8,142 @@
 		<Option virtualFolders="CMake Files\;"/>
 		<Build>
 			<Target title="all">
-				<Option working_dir="/home/yorkin/CLionProjects/evoBasic/cmake-build-debug"/>
+				<Option working_dir="/home/CLionProjects/evoBasic/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
-					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="rebuild_cache">
-				<Option working_dir="/home/yorkin/CLionProjects/evoBasic/cmake-build-debug"/>
+				<Option working_dir="/home/CLionProjects/evoBasic/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
-					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="edit_cache">
-				<Option working_dir="/home/yorkin/CLionProjects/evoBasic/cmake-build-debug"/>
+				<Option working_dir="/home/CLionProjects/evoBasic/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
-					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="evoBasic">
-				<Option output="/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/evoBasic" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="/home/yorkin/CLionProjects/evoBasic/cmake-build-debug"/>
+				<Option output="/home/CLionProjects/evoBasic/cmake-build-debug/evoBasic" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/CLionProjects/evoBasic/cmake-build-debug"/>
 				<Option object_output="./"/>
 				<Option type="1"/>
 				<Option compiler="clang"/>
 				<Compiler>
-					<Add directory="/usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/10.2.0/../../../../include/c++/10.2.0"/>
-					<Add directory="/usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/10.2.0/../../../../include/c++/10.2.0/x86_64-pc-linux-gnu"/>
-					<Add directory="/usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/10.2.0/../../../../include/c++/10.2.0/backward"/>
+					<Add directory="/usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0"/>
+					<Add directory="/usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/x86_64-pc-linux-gnu"/>
+					<Add directory="/usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/backward"/>
 					<Add directory="/usr/local/include"/>
-					<Add directory="/usr/lib/clang/11.1.0/include"/>
+					<Add directory="/usr/lib/clang/12.0.1/include"/>
 					<Add directory="/usr/include"/>
 				</Compiler>
 				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 evoBasic"/>
-					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 evoBasic"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="evoBasic/fast">
-				<Option output="/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/evoBasic" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="/home/yorkin/CLionProjects/evoBasic/cmake-build-debug"/>
+				<Option output="/home/CLionProjects/evoBasic/cmake-build-debug/evoBasic" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/CLionProjects/evoBasic/cmake-build-debug"/>
 				<Option object_output="./"/>
 				<Option type="1"/>
 				<Option compiler="clang"/>
 				<Compiler>
-					<Add directory="/usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/10.2.0/../../../../include/c++/10.2.0"/>
-					<Add directory="/usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/10.2.0/../../../../include/c++/10.2.0/x86_64-pc-linux-gnu"/>
-					<Add directory="/usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/10.2.0/../../../../include/c++/10.2.0/backward"/>
+					<Add directory="/usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0"/>
+					<Add directory="/usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/x86_64-pc-linux-gnu"/>
+					<Add directory="/usr/bin/../lib64/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/backward"/>
 					<Add directory="/usr/local/include"/>
-					<Add directory="/usr/lib/clang/11.1.0/include"/>
+					<Add directory="/usr/lib/clang/12.0.1/include"/>
 					<Add directory="/usr/include"/>
 				</Compiler>
 				<MakeCommands>
-					<Build command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 evoBasic/fast"/>
-					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="/usr/bin/make -j8 -f &quot;/home/yorkin/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 evoBasic/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/home/CLionProjects/evoBasic/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/AST.cpp">
+		<Unit filename="/home/CLionProjects/evoBasic/src/frontend/AST.cpp">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/AST.h">
+		<Unit filename="/home/CLionProjects/evoBasic/src/frontend/AST.h">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Exception.cpp">
+		<Unit filename="/home/CLionProjects/evoBasic/src/frontend/Exception.cpp">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Exception.h">
+		<Unit filename="/home/CLionProjects/evoBasic/src/frontend/Exception.h">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Lexer.cpp">
+		<Unit filename="/home/CLionProjects/evoBasic/src/frontend/Lexer.cpp">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Lexer.h">
+		<Unit filename="/home/CLionProjects/evoBasic/src/frontend/Lexer.h">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Link.cpp">
+		<Unit filename="/home/CLionProjects/evoBasic/src/frontend/Parser.cpp">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Link.h">
+		<Unit filename="/home/CLionProjects/evoBasic/src/frontend/Parser.h">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Logger.cpp">
+		<Unit filename="/home/CLionProjects/evoBasic/src/frontend/Semantic.cpp">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Logger.h">
+		<Unit filename="/home/CLionProjects/evoBasic/src/frontend/Semantic.h">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Parser.cpp">
+		<Unit filename="/home/CLionProjects/evoBasic/src/frontend/Type.cpp">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Parser.h">
+		<Unit filename="/home/CLionProjects/evoBasic/src/frontend/Type.h">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Semantic.cpp">
+		<Unit filename="/home/CLionProjects/evoBasic/src/main.cpp">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Semantic.h">
+		<Unit filename="/home/CLionProjects/evoBasic/src/utils/Formator.h">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Type.cpp">
+		<Unit filename="/home/CLionProjects/evoBasic/src/utils/Link.cpp">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/Type.h">
+		<Unit filename="/home/CLionProjects/evoBasic/src/utils/Link.h">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/cmdDistribute.cpp">
+		<Unit filename="/home/CLionProjects/evoBasic/src/utils/Logger.cpp">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/cmdDistribute.h">
+		<Unit filename="/home/CLionProjects/evoBasic/src/utils/Logger.h">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/config.h">
+		<Unit filename="/home/CLionProjects/evoBasic/src/utils/cmdDistribute.cpp">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/main.cpp">
+		<Unit filename="/home/CLionProjects/evoBasic/src/utils/cmdDistribute.h">
 			<Option target="evoBasic"/>
 		</Unit>
-		<Unit filename="/home/yorkin/CLionProjects/evoBasic/CMakeLists.txt">
+		<Unit filename="/home/CLionProjects/evoBasic/src/utils/stringEnum.h">
+			<Option target="evoBasic"/>
+		</Unit>
+		<Unit filename="/home/CLionProjects/evoBasic/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\"/>
 		</Unit>
 	</Project>

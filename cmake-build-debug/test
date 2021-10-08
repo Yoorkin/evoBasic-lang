@@ -1,19 +1,38 @@
 import std.io
 
 public declare sub Beep Lib "user" (Byval N as integer)
-public declare sub getMessage Lib "user" Alias "getMessageA"(Byval hWnd as long) as long
+public declare function getMessage Lib "user" Alias "getMessageA"(Byval hWnd as long) as long
+
 /*
     commemt block 1
     /*
         commemt block 2
         sadfasdf
-    */
+
     asdfasdf
     asdfasdfsd
     adsfgew //wrwea
     adf
 */
 
-sub main()
+Module MYMODULEA
 
-end
+    sub main(a as long)
+
+    end sub
+
+    function test(a as byte,b as variant)as long
+
+    end function
+
+end module
+
+type myType
+    a as long
+    b as integer
+end type
+
+enum myEnum
+    enum1 = 5
+    enum2
+end enum
