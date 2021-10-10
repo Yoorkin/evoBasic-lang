@@ -42,6 +42,7 @@ namespace evoBasic::Type{
     class Function;
     class Instantiatable;
     class DeclarationSymbol;
+    class Variant;
 
     void strToLowerByRef(string& str);
 
@@ -70,13 +71,18 @@ namespace evoBasic::Type{
     class Member{
     public:
         Member(AccessFlag flag,shared_ptr<DeclarationSymbol> symbol)
-                :access(flag),symbol(std::move(symbol)){}
+                :access(flag),symbol(std::move(symbol)),method(MethodFlag::Normal),isMethod(false){}
+
+        Member(AccessFlag flag,MethodFlag method,shared_ptr<DeclarationSymbol> symbol)
+                :access(flag),symbol(std::move(symbol)),method(method),isMethod(true){}
+
         shared_ptr<DeclarationSymbol> symbol;
         AccessFlag access;
+        bool isMethod;
+        MethodFlag method;
         static Member Empty;
         bool operator==(const Member& rhs) const;
     };
-
 
 
     class DeclarationSymbol{
@@ -100,12 +106,11 @@ namespace evoBasic::Type{
     public:
         Domain(const Domain&)=delete;
         explicit Domain(DeclarationEnum kind): DeclarationSymbol(kind){};
-        virtual void add(AccessFlag flag,shared_ptr<DeclarationSymbol> child)=0;
+        virtual void add(Member member)=0;
         virtual Member find(const string& name)=0; //search object in members
         virtual Member lookUp(const string& name); //search object in members and importedModule
         virtual void addImport(const shared_ptr<DeclarationSymbol>& child)=0;
     };
-
 
     class Module : public Domain{
         std::map<string,Member> members;
@@ -113,7 +118,7 @@ namespace evoBasic::Type{
     public:
         Module(const Module&)=delete;
         explicit Module(): Domain(DeclarationEnum::Module){}
-        void add(AccessFlag flag,shared_ptr<DeclarationSymbol> child)override;
+        void add(Member member)override;
         Member find(const string& name)override;
         void addImport(const shared_ptr<DeclarationSymbol>& child)override;
         weak_ptr<Domain> getParent()override;
@@ -122,20 +127,48 @@ namespace evoBasic::Type{
     class Class : public Domain,
                   public Instantiatable,
                   public Comparable{
-        std::map<string,Member> members;
-        std::map<string,int> memberPosition;
+        std::map<std::string,Member> members;
+        std::map<std::string,int> memberPosition;
         std::vector<std::string> layout;
+        std::list<std::pair<int,Node>> initialize_rules;
+        std::map<std::string,Member> virtual_table;
+        std::list<std::shared_ptr<DeclarationSymbol>> inherit_list;
     public:
         Class(const Class&)=delete;
         explicit Class(): Domain(DeclarationEnum::Class){}
-        void add(AccessFlag flag,shared_ptr<DeclarationSymbol> child)override;
+        void add(Member member)override;
         shared_ptr<Instance> newInstance()override;
         bool equal(shared_ptr<Comparable> ptr)override;
         Member find(const string& name)override;
+        //void addInitializeRule(int layout_index,)
         void addImport(const shared_ptr<DeclarationSymbol>& child)override;
         weak_ptr<Domain> getParent()override;
+        void addInherit(std::shared_ptr<Class> base);
     };
 
+    namespace primitive{
+        class VariantClass : public Class{
+        public:
+            explicit VariantClass();
+            shared_ptr<Instance> newInstance()override;
+        };
+
+        class Integer : public Class{
+        public:
+            explicit Integer();
+            shared_ptr<Instance> newInstance()override;
+        };
+
+//        class Boolean : public Class{
+//
+//            shared_ptr<Instance> newInstance()override;
+//        };
+//
+//        class Long : public Class{
+//            shared_ptr<Instance> newInstance()override;
+//        };
+
+    }
 
 
     class Function: public DeclarationSymbol,
@@ -230,10 +263,12 @@ namespace evoBasic::Type{
             bool boolean_;
             Object* object_;
         }data{};
+        weak_ptr<Instantiatable> prototype;
     public:
         Variant(const Variant&)=delete;
-        explicit Variant(bool isConstant);
+        explicit Variant();
         weak_ptr<Instantiatable> getPrototype()override;
+        void setPrototype(weak_ptr<Instantiatable> ptr)override;
     };
 
     class Object:public Variable{

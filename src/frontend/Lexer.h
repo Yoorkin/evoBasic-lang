@@ -18,6 +18,14 @@ namespace evoBasic{
         int x,y,w;
         Position(int x,int y,int w):x(x),y(y),w(w){}
         Position():x(-1),y(-1){}
+        static Position accross(const Position& begin,const Position& end){
+            if(begin.y!=end.y || begin.x>=end.x+end.w)throw "error";
+            Position ret;
+            ret.x = begin.x;
+            ret.y = begin.y;
+            ret.w = end.x - begin.x + end.w;
+            return ret;
+        }
     };
 
 #define E(x) x
@@ -28,7 +36,7 @@ namespace evoBasic{
     E_(function),E_(sub),E_(byval),E_(byref),E_(optional),E_(as),E_(let),E_(end),E_(enum),E_(type),\
     E_(select),E_(case),E_(for),E_(to),E_(step),E_(while),E_(wend),E_(if),E_(then),E_(elseif),E_(else),\
     E_(and),E_(or),E_(xor),E_(not),E_(return),E_(continue),E_(exit),E_(next),E_(false),E_(true),\
-    E(end_if),E(end_function),E(end_sub),E(end_module),E(end_class),E(end_type),E(end_enum),E(end_select),E(import),E(declare),E(lib),E(alias)
+    E(end_if),E(end_function),E(end_sub),E(end_module),E(end_class),E(end_type),E(end_enum),E(end_select),E(import),E(declare),E(lib),E(alias),E(impl)
 
     class Token{
     public:

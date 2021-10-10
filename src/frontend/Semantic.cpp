@@ -4,7 +4,7 @@
 
 #include "Semantic.h"
 #include "Exception.h"
-#include<stack>
+#include <stack>
 #include <utility>
 
 namespace evoBasic{
@@ -46,7 +46,7 @@ namespace evoBasic{
                 if(next_domain){
                     next_list.push_back(make_pair(next_domain,tree));
                 }
-                domain->add(access,ptr);
+                domain->add(Type::Member(access,ptr));
             }
         }
     }
@@ -60,11 +60,14 @@ namespace evoBasic{
             for(const auto& tree:current_ast->child) {
                 auto tag = tree->tag;
                 if(tag == Tag::Import){
-                    if(auto target = visitPath(domain,tree->child[0])){
+
+                    if(auto target = get<0>(visitPath(domain,tree->child[0]))){
                         domain->addImport(target);
                     }
+
                 }
                 else if(tag == Tag::ExternalFunction){
+
                     auto c0 = tree->child[0];
                     auto c1 = tree->child[1];
                     auto c2 = tree->child[2];
@@ -75,27 +78,30 @@ namespace evoBasic{
                     func->setName(c0->get<std::string>(Attr::Lexeme));
                     visitParameterList(domain,func,tree->child[3]);
                     if(tree->child[4]->tag!=Tag::Empty){
-                        auto ptr = visitPath(domain,tree->child[4]);
+                        auto ptr = get<0>(visitPath(domain,tree->child[4]));
                         func->setRetSignature(ptr);
                     }
                     auto access = tree->get<AccessFlag>(Attr::AccessFlag);
-                    domain->add(access,func);
+                    domain->add(Type::Member(access,func));
                 }
                 else if(tag == Tag::Function){
+
                     auto func = std::make_shared<Type::UserFunction>(tree->child[3]);
                     func->setName(tree->child[0]->get<std::string>(Attr::Lexeme));
                     visitParameterList(domain,func,tree->child[1]);
                     if(tree->child[2]->tag!=Tag::Empty){
-                        auto ptr = visitPath(domain,tree->child[2]->child[0]);
+                        auto ptr = get<0>(visitPath(domain,tree->child[2]->child[0]));
                         func->setRetSignature(ptr);
                     }
                     else if(!entrance && func->getName()=="main" && domain->getName()=="global"){
                         entrance = func;
                     }
                     auto access = tree->get<AccessFlag>(Attr::AccessFlag);
-                    domain->add(access,func);
+                    domain->add(Type::Member(access,func));
+
                 }
                 else if(tag == Tag::Enum){
+
                     auto em = std::make_shared<Type::Enumeration>();
                     em->setName(tree->child[0]->get<std::string>(Attr::Lexeme));
                     int value = 0;
@@ -107,26 +113,70 @@ namespace evoBasic{
                         value++;
                     }
                     auto access = tree->get<AccessFlag>(Attr::AccessFlag);
-                    domain->add(access,em);
+                    domain->add(Type::Member(access,em));
+
                 }
                 else if(tag == Tag::Type){
                     //TODO
                 }
+                else if(tag == Tag::Let){
+
+                    auto access = tree->get<AccessFlag>(Attr::AccessFlag);
+                    for(auto variable_node:tree->child){
+                        auto name = variable_node->child[0]->get<string>(Attr::Lexeme);
+                        auto annotation_node = variable_node->child[1];
+                        shared_ptr<Type::DeclarationSymbol> target_type;
+                        if(annotation_node->tag == Tag::Empty){
+                            target_type = variant_class;
+                        }
+                        else{
+                            target_type = get<0>(visitAnnotation(domain,annotation_node));
+                        }
+                        if(target_type){
+                            auto tmp = dynamic_pointer_cast<Type::Instantiatable>(target_type);
+                            if(tmp){
+                                auto field = make_shared<Type::Field>(tmp);
+                                field->setName(name);
+                                domain->add(Type::Member(access,field));
+                            }
+                            else{
+                                logger->error(variable_node->child[0]->pos(),"无法实例化的类型");
+                            }
+                        }
+                    }
+
+                }
                 else if(tag == Tag::Class){
+
                     auto symbol = tree->get<shared_ptr<Type::DeclarationSymbol>>(Attr::DeclarationSymbol);
                     auto cls = dynamic_pointer_cast<Type::Class>(symbol);
                     cls->setName(tree->child[0]->get<std::string>(Attr::Lexeme));
+                    auto impl_node = tree->child[1];
+                    for(const auto& path:impl_node->child){
+                        auto info = visitPath(domain,path);
+                        if(!get<0>(info))continue;
+                        auto base_class = dynamic_pointer_cast<Type::Class>(get<0>(info));
+                        if(base_class){
+                            cls->addInherit(base_class);
+                        }
+                        else{
+                            logger->error(get<1>(info),Format()<<"'"<<get<2>(info)<<"'不是一个类");
+                        }
+                    }
                     next_list.emplace_back(cls,tree);
                     auto access = tree->get<AccessFlag>(Attr::AccessFlag);
-                    domain->add(access,cls);
+                    domain->add(Type::Member(access,cls));
+
                 }
                 else if(tag == Tag::Module){
+
                     auto symbol = tree->get<shared_ptr<Type::DeclarationSymbol>>(Attr::DeclarationSymbol);
                     auto mod = dynamic_pointer_cast<Type::Module>(symbol);
                     mod->setName(tree->child[0]->get<std::string>(Attr::Lexeme));
                     next_list.emplace_back(mod,tree);
                     auto access = tree->get<AccessFlag>(Attr::AccessFlag);
-                    domain->add(access,mod);
+                    domain->add(Type::Member(access,mod));
+
                 }
             }
         }
@@ -134,6 +184,9 @@ namespace evoBasic{
 
     SymbolTable::SymbolTable(const vector<AST>& ast_list): global(new Type::Module) {
         global->setName("global");
+        variant_class = make_shared<Type::primitive::VariantClass>();
+        global->add(Type::Member(AccessFlag::Public,variant_class));
+
         for(auto& ast:ast_list){
             logger = ast.logger;
             collectSymbol(ast.root);
@@ -153,10 +206,12 @@ namespace evoBasic{
         return ls;
     }
 
-    std::shared_ptr<Type::DeclarationSymbol>
+    std::tuple<std::shared_ptr<Type::DeclarationSymbol>,Position,std::string>
     SymbolTable::visitPath(std::shared_ptr<Type::Domain> domain, const std::shared_ptr<Node> path_node) {
         shared_ptr<Type::DeclarationSymbol> target;
         auto path = getPositionLexemeListFromDot(path_node->child[0]);
+        auto path_position = Position::accross(path.front().first,path.back().first);
+        auto last_string = path.back().second;
         auto beginMember = domain->lookUp(path.begin()->second);
         if(beginMember==Type::Member::Empty){
             logger->error(path.begin()->first,Format()<<"找不到对象'"<<path.begin()->second<<"'");
@@ -183,23 +238,24 @@ namespace evoBasic{
                 break;
             }
         }
-        return target;
+        if(path.empty())target = beginMember.symbol;
+        return make_tuple(target,path_position,last_string);
     }
 
 
-    std::shared_ptr<Type::DeclarationSymbol>
-    SymbolTable::visitAnnotation(std::shared_ptr<Type::Domain> domain, const std::shared_ptr<Node> path) {
-        return visitPath(domain,path->child[0]);
+    std::tuple<std::shared_ptr<Type::DeclarationSymbol>,Position,std::string>
+    SymbolTable::visitAnnotation(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> path) {
+        return visitPath(std::move(domain),path->child[0]);
     }
 
 
     void SymbolTable::visitParameterList(std::shared_ptr<Type::Domain> domain, std::shared_ptr<Type::Function> function,
-                                         const std::shared_ptr<Node> parameter_list) {
+                                         std::shared_ptr<Node> parameter_list) {
         for(auto param : parameter_list->child){
             auto isByval = param->get<bool>(Attr::IsByval);
             auto isOptional = param->get<bool>(Attr::IsOptional);
             auto name = param->child[0]->get<string>(Attr::Lexeme);
-            auto symbol = visitAnnotation(domain,param->child[1]);
+            auto symbol = get<0>(visitAnnotation(domain,param->child[1]));
             function->addArgument(Type::Function::Argument(name,symbol,isByval,isOptional));
         }
     }

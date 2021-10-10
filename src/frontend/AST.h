@@ -34,7 +34,7 @@ namespace evoBasic{
         ID,Digit,Decimal,String,Char,
         ClassMember,ModuleMember,
         Public,Private,Friend,Static,Virtual,Override,Normal,Global,
-        Error,Empty,Cast,Exprssion,Import,ExternalFunction,Path
+        Error,Empty,Cast,Exprssion,Import,ExternalFunction,Path,Impl
     };
 
     enum class MethodFlag{Virtual,Override,Normal,Static};

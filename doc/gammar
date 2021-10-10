@@ -1,10 +1,18 @@
 //非终结符小驼峰,终结符大写,e代表空串,语义写在花括号里
 
-moduleDecl -> accessFlag moduleMember 
+globalDecl -> accessFlag moduleMember
+
+moduleDecl -> MODULE ID
+                 (accessFlag moduleMember)*
+              END MODULE
+
 accessFlag -> PUBLIC | PRIVATE | FRIEND | e
 moduleMember -> functionDecl | subDecl | typeDecl | enumDecl | variableDecl | classDecl | moduleDecl
 
-classDecl -> accessFlag classMember
+classDecl -> CLASS ID (IMPLEMENTS locating(,locating)*)*
+                (accessFlag classMember)*
+             END CLASS
+
 classMember -> methodFlag classMethod | typeDecl | enumDecl | variableDecl 
 methodFlag -> STATIC | VIRTUAL | OVERRIDE | e
 classMethod -> functionDecl | subDecl

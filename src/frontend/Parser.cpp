@@ -66,6 +66,19 @@ namespace evoBasic{
         shared_ptr<Node> ret(new Node(Tag::Class));
         ret->child.push_back(ID());
         ret->set(Attr::Position,ret->child[0]->pos());
+
+        if(lexer.getNextToken().kind == Token::impl){
+            lexer.match(Token::impl);
+            auto impl_node = make_node(Tag::Impl);
+            impl_node->child.emplace_back(locating(addition));
+            while(lexer.getNextToken().kind == Token::COMMA){
+                lexer.match(Token::COMMA);
+                impl_node->child.emplace_back(locating(addition));
+            }
+            ret->child.push_back(impl_node);
+        }
+        else ret->child.push_back(Node::Empty);
+
         while(memberFollow.contains(lexer.getNextToken().kind)){
             auto access = accessFlag();
             auto method = methodFlag();

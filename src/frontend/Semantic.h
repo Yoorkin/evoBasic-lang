@@ -13,11 +13,16 @@ namespace evoBasic{
 
     class SymbolTable{
         std::shared_ptr<Logger> logger;
-        std::shared_ptr<Type::DeclarationSymbol> visitPath(std::shared_ptr<Type::Domain> domain,const std::shared_ptr<Node> path);
-        std::shared_ptr<Type::DeclarationSymbol> visitAnnotation(std::shared_ptr<Type::Domain> domain,const std::shared_ptr<Node> path);
-        void visitParameterList(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Type::Function> function,
-                                        const std::shared_ptr<Node> parameter_list);
+        std::tuple<std::shared_ptr<Type::DeclarationSymbol>,Position,std::string>
+            visitPath(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> path);
 
+        std::tuple<std::shared_ptr<Type::DeclarationSymbol>,Position,std::string>
+            visitAnnotation(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> path);
+
+        void visitParameterList(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Type::Function> function,
+                                        std::shared_ptr<Node> parameter_list);
+
+        std::shared_ptr<Type::primitive::VariantClass> variant_class;
     public:
         explicit SymbolTable(const vector<AST>& ast_list);
 
@@ -30,6 +35,7 @@ namespace evoBasic{
          *  collect information of Module,Class,Global,Type,Enum
          */
         void collectSymbol(const shared_ptr<Node>& ast);
+
 
         shared_ptr<Type::Module> global;
         shared_ptr<Type::Function> entrance;

@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
 
     //Analyzer::check(table,trees);
     auto ma = dynamic_pointer_cast<Type::Domain>(table.global->find("mymodulea").symbol);
-    cout<<233<<endl;
+
     trees.front().logger->error(Position(5,5,5),"testsetsetsetsetsetset");
 }
 

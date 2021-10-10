@@ -33,10 +33,16 @@ namespace evoBasic::Type{
     }
 
     weak_ptr<Instantiatable> Variant::getPrototype() {
-        return weak_ptr<Instantiatable>();//TODO
+        return prototype;
     }
 
-    Variant::Variant(bool isConstant): Variable(InstanceEnum::Variant){}
+    void Variant::setPrototype(weak_ptr<Instantiatable> ptr) {
+        prototype = ptr;
+    }
+
+    Variant::Variant(): Variable(InstanceEnum::Variant){}
+
+
 
     Object::Object() : Variable(InstanceEnum::Object) {}
 
@@ -52,9 +58,9 @@ namespace evoBasic::Type{
         this->prototype = dynamic_pointer_cast<Class>(ptr.lock());
     }
 
-    void Module::add(AccessFlag flag,shared_ptr<DeclarationSymbol> child) {
-        this->members.insert(make_pair(child->getName(),Member(flag,child)));
-        child->setParent(shared_from_this());
+    void Module::add(Member member) {
+        this->members.insert(make_pair(member.symbol->getName(),member));
+        member.symbol->setParent(shared_from_this());
     }
 
     void Module::addImport(const shared_ptr<DeclarationSymbol>& child) {
@@ -66,11 +72,16 @@ namespace evoBasic::Type{
         }
     }
 
-    void Class::add(AccessFlag flag,shared_ptr<DeclarationSymbol> child) {
-        this->members.insert(make_pair(child->getName(),Member(flag,child)));
-        this->memberPosition.insert(make_pair(child->getName(),layout.size()));
-        this->layout.push_back(child->getName());
-        child->setParent(shared_from_this());
+    void Class::add(Member member) {
+        if(member.isMethod){
+            if(member.method==MethodFlag::Virtual||member.method==MethodFlag::Override){
+                virtual_table.insert({member.symbol->getName(),member});
+            }
+        }
+        this->members.insert(make_pair(member.symbol->getName(),member));
+        this->memberPosition.insert(make_pair(member.symbol->getName(),layout.size()));
+        this->layout.push_back(member.symbol->getName());
+        member.symbol->setParent(shared_from_this());
     }
 
     shared_ptr<Instance> Class::newInstance() {
@@ -252,5 +263,26 @@ namespace evoBasic::Type{
         return Member::Empty;
     }
 
+    void Class::addInherit(std::shared_ptr<Class> base) {
+        this->inherit_list.push_back(base);
+    }
+
+    namespace primitive{
+        shared_ptr<Instance> VariantClass::newInstance() {
+            return make_shared<Variant>();
+        }
+
+        VariantClass::VariantClass() {
+            setName("variant");
+        }
+
+        Integer::Integer() {
+            setName("integer");
+        }
+
+        shared_ptr<Instance> Integer::newInstance() {
+            throw "unimplemented";//TODO
+        }
+    }
 
 }
