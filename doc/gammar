@@ -42,7 +42,7 @@ variableDecl  -> LET ID  typeAnnotation initial variableDecl_
 variableDecl_ -> , ID  typeAnnotation initial variableDecl_1   
                | e 
 
-importDecl -> 
+importDecl -> locating
 
 initial -> = expr 
          | e   

@@ -639,7 +639,7 @@ namespace evoBasic{
             rhs = ID(addition);
             lhs = make_node(Tag::Dot,{lhs,rhs});
         }
-        return lhs;
+        return make_node(Tag::Path,{lhs});
     }
 
     shared_ptr<Node> Parser::ifStmt(set<Token::Enum> follow){

@@ -12,12 +12,24 @@
 namespace evoBasic{
 
     class SymbolTable{
-
+        Logger* logger=nullptr;
+        std::shared_ptr<Type::DeclarationSymbol> visitPath(std::shared_ptr<Type::Domain> domain,const std::shared_ptr<Node> path);
+        std::shared_ptr<Type::DeclarationSymbol> visitAnnotation(std::shared_ptr<Type::Domain> domain,const std::shared_ptr<Node> path);
+        void visitParameterList(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Type::Function> function,
+                                        const std::shared_ptr<Node> parameter_list);
 
     public:
-        explicit SymbolTable(vector<AST> ast_list);
-        void collectDetail(shared_ptr<Node> ast);
-        void collectSymbol(const shared_ptr<Node>& ast) const;
+        explicit SymbolTable(const vector<AST>& ast_list);
+
+        /*
+         * collect information of Function,Declare,Type Member,Enum Member
+         */
+        void collectDetail(AST ast);
+
+        /*
+         *  collect information of Module,Class,Global,Type,Enum
+         */
+        void collectSymbol(const shared_ptr<Node>& ast);
 
         shared_ptr<Type::Module> global;
         shared_ptr<Type::Function> entrance;

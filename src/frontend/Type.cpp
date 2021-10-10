@@ -21,6 +21,16 @@
 
 namespace evoBasic::Type{
 
+    Member Member::Empty{AccessFlag::Public,std::shared_ptr<DeclarationSymbol>()};
+
+    bool Member::operator==(const Member &rhs) const {
+        return symbol==rhs.symbol;
+    }
+
+
+    void strToLowerByRef(string& str){
+        transform(str.begin(),str.end(),str.begin(),[](unsigned char c){ return std::tolower(c); });
+    }
 
     weak_ptr<Instantiatable> Variant::getPrototype() {
         return weak_ptr<Instantiatable>();//TODO
@@ -42,21 +52,32 @@ namespace evoBasic::Type{
         this->prototype = dynamic_pointer_cast<Class>(ptr.lock());
     }
 
-    void Module::add(shared_ptr<DeclarationSymbol> child) {
-        this->members.insert(make_pair(child->getName(),child));
+    void Module::add(AccessFlag flag,shared_ptr<DeclarationSymbol> child) {
+        this->members.insert(make_pair(child->getName(),Member(flag,child)));
+        child->setParent(shared_from_this());
     }
 
-    void Class::add(shared_ptr<DeclarationSymbol> child) {
-        this->members.insert(make_pair(child->getName(),child));
+    void Module::addImport(const shared_ptr<DeclarationSymbol>& child) {
+        if(auto mod = dynamic_pointer_cast<Module>(child)){
+            importedModule.push_back(mod);
+        }
+        else{
+            members.insert(make_pair(child->getName(),Member(AccessFlag::Public,child)));
+        }
+    }
+
+    void Class::add(AccessFlag flag,shared_ptr<DeclarationSymbol> child) {
+        this->members.insert(make_pair(child->getName(),Member(flag,child)));
         this->memberPosition.insert(make_pair(child->getName(),layout.size()));
         this->layout.push_back(child->getName());
+        child->setParent(shared_from_this());
     }
 
     shared_ptr<Instance> Class::newInstance() {
         auto ret = new Object();
-        ret->prototype = shared_from_this();
+        ret->prototype = dynamic_pointer_cast<Class>(shared_from_this());
         for(const auto& name:layout){
-            auto proto = dynamic_pointer_cast<Type::Instantiatable>(members.find(name)->second);
+            auto proto = dynamic_pointer_cast<Type::Instantiatable>(members.find(name)->second.symbol);
             auto tmp = dynamic_pointer_cast<Type::Variable>(proto->newInstance());
             ret->variables.push_back(tmp);
         }
@@ -65,6 +86,10 @@ namespace evoBasic::Type{
 
     bool Class::equal(shared_ptr<Comparable> ptr) {
         return ptr.get()==this;
+    }
+
+    void Class::addImport(const shared_ptr<DeclarationSymbol> &child) {
+
     }
 
     EnumVariable::EnumVariable(int value)
@@ -107,12 +132,16 @@ namespace evoBasic::Type{
 
     }
 
+    void Enumeration::addEnumMember(int value,std::string name) {
+        this->stringToInt.insert(std::make_pair(name,value));
+    }
+
     bool Function::equal(shared_ptr<Comparable> ptr) {
         auto func = dynamic_pointer_cast<Function>(ptr);
         if(!func)return false;
         for(int i=0;i<this->argsSignature.size();i++){
-            auto lhs = reinterpret_pointer_cast<Comparable>(this->argsSignature[i]);
-            auto rhs = reinterpret_pointer_cast<Comparable>(func->argsSignature[i]);
+            auto lhs = reinterpret_pointer_cast<Comparable>(this->argsSignature[i].symbol);
+            auto rhs = reinterpret_pointer_cast<Comparable>(func->argsSignature[i].symbol);
             if(!lhs->equal(rhs))return false;
         }
         auto lhs = reinterpret_pointer_cast<Comparable>(this->retSignature);
@@ -125,6 +154,27 @@ namespace evoBasic::Type{
         :DeclarationSymbol(DeclarationEnum::Function), funcKind(funcKind) {}
 
 
+    shared_ptr<DeclarationSymbol> Function::getRetSignature() {
+        return this->retSignature;
+    }
+
+    void Function::setRetSignature(std::shared_ptr<DeclarationSymbol> ptr){
+        retSignature = std::move(ptr);
+    }
+
+    MethodFlag Function::getMethodFlag() {
+        return this->flag;
+    }
+
+    void Function::setMethodFlag(MethodFlag flag) {
+        this->flag = flag;
+    }
+
+    void Function::addArgument(Function::Argument arg) {
+        this->argsSignature.push_back(arg);
+    }
+
+
     Field::Field(shared_ptr<Instantiatable> target)
         :DeclarationSymbol(DeclarationEnum::Field),target(std::move(target)){}
 
@@ -133,7 +183,7 @@ namespace evoBasic::Type{
     }
 
 
-    UserFunction::UserFunction(shared_ptr<AST> implCodeTree)
+    UserFunction::UserFunction(shared_ptr<Node> implCodeTree)
         :Function(FunctionEnum::User),implCodeTree(std::move(implCodeTree)){}
 
     ExternalFunction::ExternalFunction(std::string library, std::string name)
@@ -145,8 +195,61 @@ namespace evoBasic::Type{
         constant = value;
     }
 
-    bool Variable::isConstant() {
+    bool Variable::isConstant() const {
         return constant;
+    }
+
+    std::string DeclarationSymbol::getName() {
+        return this->name;
+    }
+
+    void DeclarationSymbol::setName(std::string str) {
+        strToLowerByRef(str);
+        this->name=std::move(str);
+    }
+
+    std::weak_ptr<Domain> DeclarationSymbol::getParent() {
+        return parent;
+    }
+
+    void DeclarationSymbol::setParent(std::weak_ptr<Domain> parent) {
+        this->parent = parent;
+    }
+
+    Member Domain::lookUp(const string &name) {
+        std::shared_ptr<Domain> ptr = shared_from_this();
+        while(ptr){
+            auto p = ptr->find(name);
+            if(p!=Member::Empty){
+                return p;
+            }
+            ptr = ptr->getParent().lock();
+        }
+        return Member::Empty;
+    }
+
+    Member Module::find(const string &name) {
+        auto ret = this->members.find(name);
+        if(ret!=members.end()){
+            return ret->second;
+        }
+        return Member::Empty;
+    }
+
+    weak_ptr<Domain> Module::getParent() {
+        return parent;
+    }
+
+    weak_ptr<Domain> Class::getParent() {
+        return parent;
+    }
+
+    Member Class::find(const string &name) {
+        auto ret = this->members.find(name);
+        if(ret!=members.end()){
+            return ret->second;
+        }
+        return Member::Empty;
     }
 
 

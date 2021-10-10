@@ -19,6 +19,9 @@ namespace fs = std::filesystem;
 using namespace evoBasic::env;
 
 int main(int argc, char* argv[]) {
+//    auto test = make_shared<Type::Class>();
+//    dynamic_pointer_cast<Type::Domain>(test)->add(AccessFlag::Public,{});
+
     string outputName = config::defaultOutputName;
 
     auto currentPath = argv[0];
@@ -59,5 +62,7 @@ int main(int argc, char* argv[]) {
 
     SymbolTable table(trees);
     //Analyzer::check(table,trees);
+    auto ma = dynamic_pointer_cast<Type::Domain>(table.global->find("mymodulea").symbol);
+    cout<<233<<endl;
 }
 

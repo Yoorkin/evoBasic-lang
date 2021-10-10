@@ -34,7 +34,7 @@ namespace evoBasic{
         ID,Digit,Decimal,String,Char,
         ClassMember,ModuleMember,
         Public,Private,Friend,Static,Virtual,Override,Normal,Global,
-        Error,Empty,Cast,Exprssion,Import,ExternalFunction
+        Error,Empty,Cast,Exprssion,Import,ExternalFunction,Path
     };
 
     enum class MethodFlag{Virtual,Override,Normal,Static};
@@ -100,60 +100,60 @@ namespace evoBasic{
     };
 
 
-    template<typename Args,typename Rets>
-    class Visitor{
-    public:
-        using Callback = function<Rets(shared_ptr<Node> node,Args args)>;
-        using CallbackWithNoReturn = function<void(shared_ptr<Node> node,Args args)>;
-        using ExceptionHandler = function<void(exception_ptr)>;
-    private:
-        map<Tag,Callback> events;
-        map<Tag,CallbackWithNoReturn> noRetEvents;
-        ExceptionHandler handler;
-        CallbackWithNoReturn defaultCallback;
-    public:
-
-        Visitor &on(Tag tag,Callback callback){
-            events.insert(make_pair(tag,callback));
-            return *this;
-        }
-
-        Visitor &on(Tag tag,CallbackWithNoReturn callback){
-            noRetEvents.insert(make_pair(tag,callback));
-            return *this;
-        }
-
-        Visitor &onException(ExceptionHandler handler){
-            this->handler=handler;
-            return *this;
-        }
-
-        Visitor &onDefault(CallbackWithNoReturn callback){
-            this->defaultCallback = callback;
-            return *this;
-        }
-
-        void visit(shared_ptr<Node> root,Args args){
-            //cout<<Node::TagToString[(int)root->tag]<<endl;
-            try{
-                auto target = events.find(root->tag);
-                auto noRetTarget = noRetEvents.find(root->tag);
-                if(target!=events.end()){
-                    target->second(root,args);
-                }
-                else if(noRetTarget!=noRetEvents.end()){
-                    noRetTarget->second(root,args);
-                }
-                else{
-                    if(defaultCallback)defaultCallback(root,args);
-                }
-            }
-            catch(...){
-                if(handler)handler(std::current_exception());
-                else std::rethrow_exception(std::current_exception());
-            }
-        }
-    };
+//    template<typename Args,typename Rets>
+//    class Visitor{
+//    public:
+//        using Callback = function<Rets(shared_ptr<Node> node,Args args)>;
+//        using CallbackWithNoReturn = function<void(shared_ptr<Node> node,Args args)>;
+//        using ExceptionHandler = function<void(exception_ptr)>;
+//    private:
+//        map<Tag,Callback> events;
+//        map<Tag,CallbackWithNoReturn> noRetEvents;
+//        ExceptionHandler handler;
+//        CallbackWithNoReturn defaultCallback;
+//    public:
+//
+//        Visitor &on(Tag tag,Callback callback){
+//            events.insert(make_pair(tag,callback));
+//            return *this;
+//        }
+//
+//        Visitor &on(Tag tag,CallbackWithNoReturn callback){
+//            noRetEvents.insert(make_pair(tag,callback));
+//            return *this;
+//        }
+//
+//        Visitor &onException(ExceptionHandler handler){
+//            this->handler=handler;
+//            return *this;
+//        }
+//
+//        Visitor &onDefault(CallbackWithNoReturn callback){
+//            this->defaultCallback = callback;
+//            return *this;
+//        }
+//
+//        void visit(shared_ptr<Node> root,Args args){
+//            //cout<<Node::TagToString[(int)root->tag]<<endl;
+//            try{
+//                auto target = events.find(root->tag);
+//                auto noRetTarget = noRetEvents.find(root->tag);
+//                if(target!=events.end()){
+//                    target->second(root,args);
+//                }
+//                else if(noRetTarget!=noRetEvents.end()){
+//                    noRetTarget->second(root,args);
+//                }
+//                else{
+//                    if(defaultCallback)defaultCallback(root,args);
+//                }
+//            }
+//            catch(...){
+//                if(handler)handler(std::current_exception());
+//                else std::rethrow_exception(std::current_exception());
+//            }
+//        }
+//    };
 }
 
 
