@@ -15,9 +15,9 @@ namespace evoBasic{
 
     class Parser {
         Lexer &lexer;
-        Logger &logger;
+        std::shared_ptr<Logger> logger;
     public:
-        Parser(Lexer &lexer,Logger &logger);
+        Parser(Lexer &lexer,std::shared_ptr<Logger> logger);
         AST parse();
 
         shared_ptr<Node> expr(set<Token::Enum> follows={});

@@ -135,11 +135,11 @@ namespace evoBasic{
     SymbolTable::SymbolTable(const vector<AST>& ast_list): global(new Type::Module) {
         global->setName("global");
         for(auto& ast:ast_list){
-            logger = &ast.logger;
+            logger = ast.logger;
             collectSymbol(ast.root);
         }
         for(auto& ast:ast_list){
-            logger = &ast.logger;
+            logger = ast.logger;
             collectDetail(ast);
         }
     }

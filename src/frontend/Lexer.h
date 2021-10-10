@@ -10,6 +10,7 @@
 #include<vector>
 #include<set>
 #include<list>
+#include<memory>
 #include"../utils/Logger.h"
 using namespace std;
 namespace evoBasic{
@@ -46,14 +47,14 @@ namespace evoBasic{
         int x=1,y=1,beginX,beginY;
         char c;
         istream &stream;
-        Logger &logger;
+        std::shared_ptr<Logger> logger;
         void increaseX(char c);
         vector<string> lines;
         vector<Token> tokens;
         int current_idx=-1;
     public:
         Token LL();
-        Lexer(istream &in,Logger &logger);
+        Lexer(istream &in,std::shared_ptr<Logger> logger);
         const Token& getNextToken();
         const Token& getToken();
         void match(Token::Enum token);

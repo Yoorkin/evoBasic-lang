@@ -32,7 +32,7 @@ namespace evoBasic{
         void warning(Position pos,string message);
         void error(initializer_list<Position> posList,string message);
         void warning(initializer_list<Position> posList,string message);
-        void print(ostream &stream);
+        void flush(ostream &stream);
     };
 
     class Format{

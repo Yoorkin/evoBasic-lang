@@ -94,9 +94,9 @@ namespace evoBasic{
 
     class AST{
     public:
-        Logger &logger;
+        std::shared_ptr<Logger> logger;
         shared_ptr<Node> root;
-        AST(Logger &logger,shared_ptr<Node> root):logger(logger),root(root){}
+        AST(std::shared_ptr<Logger> logger,std::shared_ptr<Node> root):logger(logger),root(root){}
     };
 
 

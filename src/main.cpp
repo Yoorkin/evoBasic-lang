@@ -47,22 +47,28 @@ int main(int argc, char* argv[]) {
 
     for(auto& sourcePath:sourceMgr.getSourcesPath()){
         ifstream file(sourcePath);
-        Logger logger(sourcePath);
+        auto logger = make_shared<Logger>(sourcePath);
         Lexer lexer(file,logger);
         Parser parser(lexer,logger);
         auto ast = parser.parse();
         ast.root->print(ast_info_stream);
         trees.push_back(ast);
-        logger.print(cout);
+    }
+
+    SymbolTable table(trees);
+
+    for(auto tree:trees){
+        tree.logger->flush(cout);
     }
 
     Logger::dev(ast_info_stream.str());
     cout<< endl << Logger::errorCount << " error(s), "
         << Logger::warningCount << " warning(s)" <<endl;
 
-    SymbolTable table(trees);
+
     //Analyzer::check(table,trees);
     auto ma = dynamic_pointer_cast<Type::Domain>(table.global->find("mymodulea").symbol);
     cout<<233<<endl;
+    trees.front().logger->error(Position(5,5,5),"testsetsetsetsetsetset");
 }
 

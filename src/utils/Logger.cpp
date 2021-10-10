@@ -46,9 +46,11 @@ namespace evoBasic{
         lines.emplace_back("");
     }
 
-    void Logger::print(ostream &stream) {
-        stream<<endl<<"In file '"<<filePath<<"':"<<endl;
-        stream<<out.str();
+    void Logger::flush(ostream &stream) {
+        if(errorCount>0 || warningCount>0){
+            stream<<endl<<"In file '"<<filePath<<"':"<<endl;
+            stream<<out.str();
+        }
     }
 
     bool Logger::debugMode = false;

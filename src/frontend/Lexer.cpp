@@ -172,7 +172,7 @@ namespace evoBasic {
                     else ReturnWithoutForward(Token::GT);
                     break;
                 case Err:
-                    logger.error(Position(beginX, beginY, x - beginX), "无法识别的标识符");
+                    logger->error(Position(beginX, beginY, x - beginX), "无法识别的标识符");
                     state = START;
                     stream.putback(c);
                     break;
@@ -194,7 +194,7 @@ namespace evoBasic {
         Logger::dev(stream.str());
     }
 
-    Lexer::Lexer(istream &in, Logger &logger) : stream(in), logger(logger) {
+    Lexer::Lexer(istream &in,shared_ptr<Logger> logger) : stream(in), logger(logger) {
         Token nextToken, prvToken;
         bool next = true;
         map<Token::Enum, Token::Enum> merge = {
@@ -264,7 +264,7 @@ namespace evoBasic {
             current_idx++;
             return true;
         } else {
-            logger.error(getNextToken().pos, errorMessage);
+            logger->error(getNextToken().pos, errorMessage);
             skipUntilFollow(follows);
             return false;
         }
@@ -300,7 +300,7 @@ namespace evoBasic {
                 count++;
                 return true;
             } else {
-                logger.error(getNextToken().pos, errorMessage);
+                logger->error(getNextToken().pos, errorMessage);
                 current_idx -= count;
                 skipUntilFollow(follows);
                 return false;

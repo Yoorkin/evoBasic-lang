@@ -12,7 +12,7 @@
 namespace evoBasic{
 
     class SymbolTable{
-        Logger* logger=nullptr;
+        std::shared_ptr<Logger> logger;
         std::shared_ptr<Type::DeclarationSymbol> visitPath(std::shared_ptr<Type::Domain> domain,const std::shared_ptr<Node> path);
         std::shared_ptr<Type::DeclarationSymbol> visitAnnotation(std::shared_ptr<Type::Domain> domain,const std::shared_ptr<Node> path);
         void visitParameterList(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Type::Function> function,
