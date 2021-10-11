@@ -92,7 +92,7 @@ term_ -> * factor term_1
        | e 
 
 factor -> unit factor_
-factor_ -> = unit factor_
+factor_ -> = expr
          | AS locating
          | e
 

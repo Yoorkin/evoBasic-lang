@@ -490,7 +490,7 @@ namespace evoBasic{
             auto op = lexer.getNextToken();
             if(op.kind == Token::ASSIGN){
                 lexer.match(Token::ASSIGN);
-                rhs = unit(follows);
+                rhs = expr(follows);
                 lhs = make_node(Tag::Assign,{{Attr::Position,op.pos}},{lhs,rhs});
             }
             else if(op.kind == Token::as_){
