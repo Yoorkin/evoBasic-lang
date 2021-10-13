@@ -99,7 +99,7 @@ namespace evoBasic{
             case Token::enum_:     return enumDecl(follow);
             case Token::let_:      return variableDecl(follow);
             default:
-                logger->error(lexer.getNextToken().pos,"无法识别的声明");
+                Logger::error(lexer.getNextToken().pos,"无法识别的声明");
                 lexer.skipUntilFollow(follow);
                 return Node::Error;
         }
@@ -117,7 +117,7 @@ namespace evoBasic{
             case Token::import:    return importDecl(follow);
             case Token::declare:   return declareDecl(follow);
             default:
-                logger->error(lexer.getNextToken().pos,"无法识别的声明");
+                Logger::error(lexer.getNextToken().pos,"无法识别的声明");
                 lexer.skipUntilFollow(follow);
                 return Node::Error;
         }
@@ -262,7 +262,7 @@ namespace evoBasic{
                     lexer.match(Token::COMMA);
                 }
                 catch(SyntaxException& e){
-                    logger->error(e.token.pos,"此处应有逗号，但却遇到了多余的符号");
+                    Logger::error(e.token.pos,"此处应有逗号，但却遇到了多余的符号");
                     lexer.skipUntilFollow({Token::RB, Token::COMMA});
                     if(lexer.getNextToken().kind==Token::COMMA)lexer.forward();
                 }
@@ -272,7 +272,7 @@ namespace evoBasic{
             lexer.match(Token::RB);
         }
         catch(SyntaxException& e){
-            logger->error(e.token.pos,Format()<<"需要右括号，但是遇到了'"<<e.token.lexeme<<"'");
+            Logger::error(e.token.pos,Format()<<"需要右括号，但是遇到了'"<<e.token.lexeme<<"'");
         }
 
         return ret;
@@ -284,7 +284,7 @@ namespace evoBasic{
             return make_node(Tag::ID,{{Attr::Lexeme,lexer.getToken().lexeme},{Attr::Position,lexer.getToken().pos}});
         }
         catch (SyntaxException& e) {
-            logger->error(e.token.pos,Format()<<"需要一个ID,但是遇到了"<<e.token.lexeme);
+            Logger::error(e.token.pos,Format()<<"需要一个ID,但是遇到了"<<e.token.lexeme);
             lexer.skipUntilFollow(follows);
             return Node::Error;
         }
@@ -297,7 +297,7 @@ namespace evoBasic{
           return make_node(Tag::Digit,{{Attr::Value,value},{Attr::Position,lexer.getToken().pos}});
       }
       catch (SyntaxException& e) {
-          logger->error(e.token.pos,Format()<<"需要一个整数,但是遇到了"<<e.token.lexeme);
+          Logger::error(e.token.pos,Format()<<"需要一个整数,但是遇到了"<<e.token.lexeme);
           lexer.skipUntilFollow(follows);
           return Node::Error;
       }
@@ -353,7 +353,7 @@ namespace evoBasic{
         auto ret = make_node(Tag::Exprssion,{logic(follows)});
         if(follows.size()>0 && !follows.contains(lexer.getNextToken().kind)){
             for(auto a:follows)cout<<Token::reserved[(int)a]<<' ';cout<<endl;
-            logger->error(lexer.getNextToken().pos,"缺少运算符或左括号");
+            Logger::error(lexer.getNextToken().pos,"缺少运算符或左括号");
             lexer.skipUntilFollow(follows);
         }
         return ret;
@@ -521,8 +521,8 @@ namespace evoBasic{
             }
         } //TODO 去掉这些消除“多余”正负号的代码
 
-        if(alertMinus!=nullptr)logger->warning(alertMinus->pos,"傻逼吗 写了那么多负号干什么");
-        if(alertAdd!=nullptr)logger->warning(alertAdd->pos,"傻逼吗 多写正号干什么");
+        if(alertMinus!=nullptr)Logger::warning(alertMinus->pos,"傻逼吗 写了那么多负号干什么");
+        if(alertAdd!=nullptr)Logger::warning(alertAdd->pos,"傻逼吗 多写正号干什么");
 
         if(minusCount%2==1)lhs = make_node(Tag::SelfNeg,{{Attr::Position,lexer.getToken().pos}},{terminal(follows)});
         else lhs = terminal(follows);
@@ -567,7 +567,7 @@ namespace evoBasic{
                 lexer.match(Token::RB,follows,"缺少右括号");
                 return tmp;
             default:
-                logger->error(lexer.getToken().pos,"缺少表达式");
+                Logger::error(lexer.getToken().pos,"缺少表达式");
                 printFollows(follows,"234");
                 lexer.skipUntilFollow(follows);
                 return Node::Error;
@@ -612,7 +612,7 @@ namespace evoBasic{
             }
         }
         catch(SyntaxException& e){
-            logger->error(e.token.pos,"'Declare'符号后只能为'Function'、'Sub'关键字");
+            Logger::error(e.token.pos,"'Declare'符号后只能为'Function'、'Sub'关键字");
         }
 
         auto name = ID(combine(follow,{Token::lib,Token::alias,Token::LB}));
@@ -670,7 +670,7 @@ namespace evoBasic{
         }
         catch(SyntaxException& e){
             ifNode->tag=Tag::Error;
-            logger->error(lexer.getNextToken().pos,Format()<<"期望关键字'then'但是遇到了"<<Token::reserved[(int)e.token.kind]);
+            Logger::error(lexer.getNextToken().pos,Format()<<"期望关键字'then'但是遇到了"<<Token::reserved[(int)e.token.kind]);
             lexer.skipUntilFollow(addition);
         }
 
@@ -687,7 +687,7 @@ namespace evoBasic{
                         ifNode->child.push_back(make_node(Tag::ElseIf,{{Attr::Position,headPos}},{cond,stmts}));
                     }
                     catch(SyntaxException& e){
-                        logger->error(lexer.getNextToken().pos,Format()<<"期望关键字'then'但是遇到了'"<<Token::reserved[(int)e.token.kind]<<"'");
+                        Logger::error(lexer.getNextToken().pos,Format()<<"期望关键字'then'但是遇到了'"<<Token::reserved[(int)e.token.kind]<<"'");
                         lexer.skipUntilFollow(addition);
                     }
                     break;
@@ -705,7 +705,7 @@ namespace evoBasic{
             lexer.match(Token::end_if);
         }
         catch(SyntaxException& e){
-            logger->error(e.token.pos,Format()<<"期望关键字'"<<Token::reserved[(int)e.expected]
+            Logger::error(e.token.pos,Format()<<"期望关键字'"<<Token::reserved[(int)e.expected]
                                                                         <<"'但是遇到了'"<<Token::reserved[(int)e.token.kind]<<"'");
             lexer.skipUntilFollow(follow);
         }
@@ -771,7 +771,7 @@ namespace evoBasic{
                     lexer.match(Token::sub_);
                     return make_node(Tag::ExitSub,{{Attr::Position,lexer.getToken().pos}});
                 default:
-                    logger->error(lexer.getNextToken().pos,"'Exit'后的关键字只能是'For'、'While'、'Sub'");
+                    Logger::error(lexer.getNextToken().pos,"'Exit'后的关键字只能是'For'、'While'、'Sub'");
                     lexer.skipUntilFollow(follow);
                     return Node::Error;
                 }
@@ -789,6 +789,7 @@ namespace evoBasic{
         auto ret = make_node(Tag::Select,{{Attr::Position,headPos}},{cond});
 
         while(!follow.contains(lexer.getNextToken().kind)){
+            if(lexer.getNextToken().kind == Token::end_select)break;
             lexer.match(Token::case_,addition,"缺少case关键字");
             if(lexer.getNextToken().kind == Token::else_){
                 lexer.match(Token::else_,addition,"缺少else关键字");
@@ -817,7 +818,7 @@ namespace evoBasic{
                 ret->child.push_back(stmt(stmtfollowAndsetfollow));
             }
             else if(!follow.empty() && !follow.contains(next)){
-                logger->error(lexer.getNextToken().pos,"无法识别的语句");
+                Logger::error(lexer.getNextToken().pos,"无法识别的语句");
                 lexer.skipUntilFollow(stmtfollowAndsetfollow);
             }
             else break;
@@ -856,10 +857,10 @@ namespace evoBasic{
     }
 
     AST Parser::parse(){
-        return AST(logger,globalDecl());
+        return {globalDecl()};
     }
 
-    Parser::Parser(Lexer &lexer,shared_ptr<Logger> logger)
-        :lexer(lexer),logger(logger){}
+    Parser::Parser(Lexer &lexer)
+        :lexer(lexer){}
 
 }

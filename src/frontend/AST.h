@@ -16,7 +16,7 @@
 #include<typeindex>
 #include<stdexcept>
 #include"Exception.h"
-#include"AST.h"
+
 namespace evoBasic{
     using namespace std;
     enum class Tag:int{
@@ -42,10 +42,6 @@ namespace evoBasic{
 
     enum class Attr{
         Type,Name,Value,ValueKind,IsByval,IsOptional,Lexeme,Position,AccessFlag,MethodFlag,DeclarationSymbol
-    };
-
-    enum class ValueKind{
-        lvalue,rvalue
     };
 
     class Node{
@@ -94,9 +90,8 @@ namespace evoBasic{
 
     class AST{
     public:
-        std::shared_ptr<Logger> logger;
         shared_ptr<Node> root;
-        AST(std::shared_ptr<Logger> logger,std::shared_ptr<Node> root):logger(logger),root(root){}
+        AST(std::shared_ptr<Node> root):root(root){}
     };
 
 

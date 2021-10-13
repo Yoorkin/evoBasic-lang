@@ -11,28 +11,30 @@
 #include<iomanip>
 #include<sstream>
 #include<fstream>
+#include<list>
+#include<memory>
+#include<iostream>
 
 namespace evoBasic{
     using namespace std;
     class Position;
     class Token;
     class Logger {
-        vector<string> lines;
-        string filePath;
-        stringstream out;
+        static std::ostream* out;
     public:
-        Logger(string filePath);
-        void log(string message);
+        Logger()=delete;
+        static void redirect(std::ostream* stream);
+        static bool debugMode;
+        static int errorCount,warningCount;
+
         static void error(string message);
         static void warning(string message);
         static void dev(string message);
-        static bool debugMode;
-        static int errorCount,warningCount;
-        void error(Position pos,string message);
-        void warning(Position pos,string message);
-        void error(initializer_list<Position> posList,string message);
-        void warning(initializer_list<Position> posList,string message);
-        void flush(ostream &stream);
+
+        static void code(const Position& pos);
+        static void error(const Position& pos,const string& message);
+        static void warning(const Position& pos,const string& message);
+        static void panic(const std::list<std::pair<std::string,Position>>& callstack,const Position& pos,const string& message);
     };
 
     class Format{

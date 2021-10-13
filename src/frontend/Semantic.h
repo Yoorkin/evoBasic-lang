@@ -38,8 +38,9 @@ namespace evoBasic{
 
 
         shared_ptr<Type::Module> global;
-        shared_ptr<Type::Function> entrance;
+        shared_ptr<Type::UserFunction> entrance;
     };
+
 
 
 /*

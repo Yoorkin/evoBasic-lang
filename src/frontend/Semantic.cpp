@@ -182,17 +182,15 @@ namespace evoBasic{
         }
     }
 
-    SymbolTable::SymbolTable(const vector<AST>& ast_list): global(new Type::Module) {
+    SymbolTable::SymbolTable(const vector<AST>& ast_list): global(new Type::Module()) {
         global->setName("global");
         variant_class = make_shared<Type::primitive::VariantClass>();
         global->add(Type::Member(AccessFlag::Public,variant_class));
 
         for(auto& ast:ast_list){
-            logger = ast.logger;
             collectSymbol(ast.root);
         }
         for(auto& ast:ast_list){
-            logger = ast.logger;
             collectDetail(ast);
         }
     }
@@ -215,7 +213,7 @@ namespace evoBasic{
         auto beginMember = domain->lookUp(path.begin()->second);
         if(beginMember==Type::Member::Empty){
             logger->error(path.begin()->first,Format()<<"找不到对象'"<<path.begin()->second<<"'");
-            return {};
+            return make_tuple(shared_ptr<Type::DeclarationSymbol>(nullptr),Position(),"");
         }
         path.pop_front();
         shared_ptr<Type::Domain> ptr = dynamic_pointer_cast<Type::Domain>(beginMember.symbol);

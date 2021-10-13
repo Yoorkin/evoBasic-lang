@@ -4,18 +4,19 @@
 
 #include"Lexer.h"
 #include<iostream>
+#include <utility>
 #include"Exception.h"
 #include"../utils/Logger.h"
 
 #define ReturnWithoutForward(token) {\
     stream.putback(c);\
-    return Token(lexeme,token,Position(beginX,beginY,x-beginX));\
+    return Token(lexeme,token,Position(beginX,beginY,x-beginX,source));\
     }
 
 #define ReturnWithForward(token) {\
     increaseX(c);\
     lexeme.push_back(c);\
-    return Token(lexeme,token,Position(beginX,beginY,x-beginX));\
+    return Token(lexeme,token,Position(beginX,beginY,x-beginX,source));\
     }
 
 namespace evoBasic {
@@ -62,7 +63,7 @@ namespace evoBasic {
         enum {
             Err, START, NUM, POINT, E1, E2, ID1, ID2, COM1, COM2, CB1, CB2, STR, CHAR1, CHAR2, L, E, G
         } state = START;
-
+        auto& stream = source->getStream();
         while (true) {
             char c = ToLower(stream.get());
             if (stream.eof())c = -1;
@@ -89,7 +90,7 @@ namespace evoBasic {
                     else if (c == '<')state = L;
                     else if (c == '=')state = E;
                     else if (c == '>')state = G;
-                    else if (c == -1)return Token("EOF", Token::EOF_, Position(beginX, beginY, x - beginX));
+                    else if (c == -1)return Token("EOF", Token::EOF_, Position(beginX, beginY, x - beginX,source));
                     else state = Err;
                     break;
                 case NUM:
@@ -172,7 +173,7 @@ namespace evoBasic {
                     else ReturnWithoutForward(Token::GT);
                     break;
                 case Err:
-                    logger->error(Position(beginX, beginY, x - beginX), "无法识别的标识符");
+                    Logger::error(Position(beginX, beginY, x - beginX,source), "无法识别的标识符");
                     state = START;
                     stream.putback(c);
                     break;
@@ -189,12 +190,12 @@ namespace evoBasic {
         stream.width(20);
         stream.setf(ios::left);
         stream.fill(' ');
-        stream << nextToken.lexeme << ' ' << nextToken.pos.y << ':' << nextToken.pos.x << endl;
+        stream << nextToken.lexeme << ' ' << nextToken.pos.getY() << ':' << nextToken.pos.getX() << endl;
         stream.unsetf(ios::left);
         Logger::dev(stream.str());
     }
 
-    Lexer::Lexer(istream &in,shared_ptr<Logger> logger) : stream(in), logger(logger) {
+    Lexer::Lexer(shared_ptr<Source> source) : source(std::move(source)) {
         Token nextToken, prvToken;
         bool next = true;
         map<Token::Enum, Token::Enum> merge = {
@@ -215,7 +216,7 @@ namespace evoBasic {
                 tokens.pop_back();
                 nextToken.kind = merge[nextToken.kind];
                 nextToken.lexeme = string("end ") + nextToken.lexeme;
-                nextToken.pos = Position(pos.x, pos.y, nextToken.pos.w + nextToken.pos.x - pos.x);
+                nextToken.pos = Position(pos.getX(), pos.getY(), nextToken.pos.getW() + nextToken.pos.getX() - pos.getX(),source);
                 tokens.push_back(nextToken);
             } else {
                 tokens.push_back(nextToken);
@@ -264,7 +265,7 @@ namespace evoBasic {
             current_idx++;
             return true;
         } else {
-            logger->error(getNextToken().pos, errorMessage);
+            Logger::error(getNextToken().pos, errorMessage);
             skipUntilFollow(follows);
             return false;
         }
@@ -300,7 +301,7 @@ namespace evoBasic {
                 count++;
                 return true;
             } else {
-                logger->error(getNextToken().pos, errorMessage);
+                Logger::error(getNextToken().pos, errorMessage);
                 current_idx -= count;
                 skipUntilFollow(follows);
                 return false;
@@ -314,5 +315,36 @@ namespace evoBasic {
         for (auto x:follows)stream << Token::reserved[x] << ' ';
         stream << endl;
         Logger::dev(stream.str());
+    }
+
+    Position Position::accross(const Position &begin, const Position &end) {
+        if(begin.y!=end.y || begin.x>=end.x+end.w)throw "error";
+        Position ret;
+        ret.x = begin.x;
+        ret.y = begin.y;
+        ret.w = end.x - begin.x + end.w;
+        return ret;
+    }
+
+    const std::string &Source::operator[](int idx) {
+        return getLine(idx);
+    }
+
+    const std::string &Source::getLine(int idx) {
+        return lines[idx];
+    }
+
+    Source::Source(const std::string& file_path):stream(file_path),file_path(file_path){
+        string str;
+        while(getline(stream,str)){
+            lines.push_back(str);
+        }
+        lines.emplace_back("");
+        stream.clear();
+        stream.seekg(ios::beg);
+    }
+
+    std::istream &Source::getStream() {
+        return stream;
     }
 }

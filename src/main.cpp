@@ -11,6 +11,7 @@
 #include"utils/cmdDistribute.h"
 #include"utils/Link.h"
 #include"config.h"
+#include"interpreter/Interpreter.h"
 
 using namespace evoBasic;
 using namespace std;
@@ -46,10 +47,9 @@ int main(int argc, char* argv[]) {
     stringstream ast_info_stream;
 
     for(auto& sourcePath:sourceMgr.getSourcesPath()){
-        ifstream file(sourcePath);
-        auto logger = make_shared<Logger>(sourcePath);
-        Lexer lexer(file,logger);
-        Parser parser(lexer,logger);
+        auto source = make_shared<Source>(sourcePath);
+        Lexer lexer(source);
+        Parser parser(lexer);
         auto ast = parser.parse();
         ast.root->print(ast_info_stream);
         trees.push_back(ast);
@@ -57,18 +57,19 @@ int main(int argc, char* argv[]) {
 
     SymbolTable table(trees);
 
-    for(auto tree:trees){
-        tree.logger->flush(cout);
+    Logger::dev(ast_info_stream.str());
+
+
+    if(Logger::errorCount == 0){
+        auto interpreter = make_shared<Interpreter>();
+        interpreter->execute(table);
     }
 
-    Logger::dev(ast_info_stream.str());
     cout<< endl << Logger::errorCount << " error(s), "
         << Logger::warningCount << " warning(s)" <<endl;
-
 
     //Analyzer::check(table,trees);
     auto ma = dynamic_pointer_cast<Type::Domain>(table.global->find("mymodulea").symbol);
 
-    trees.front().logger->error(Position(5,5,5),"testsetsetsetsetsetset");
 }
 

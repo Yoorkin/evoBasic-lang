@@ -46,12 +46,28 @@ namespace evoBasic::Type{
 
     void strToLowerByRef(string& str);
 
-    class Instance{
+    enum class ValueKind{lvalue,rvalue};
+
+    class Value{
+        ValueKind kind;
     public:
-        Instance(const Instance&)=delete;
-        Instance()=default;
+        Value(const Value&)=delete;
+        explicit Value(ValueKind kind):kind(kind){}
+        ValueKind getKind();
+        void setKind(ValueKind kind);
         virtual void setPrototype(weak_ptr<Instantiatable> ptr)=0;
         virtual weak_ptr<Instantiatable> getPrototype()=0;
+    };
+
+    class Constant : public Value{
+    public:
+        Constant() : Value(ValueKind::rvalue){}
+    };
+
+    class Instance : public Value{
+    public:
+        Instance(const Instance&)=delete;
+        explicit Instance() : Value(ValueKind::lvalue){}
     };
 
     class Instantiatable{
@@ -225,10 +241,11 @@ namespace evoBasic::Type{
 
 
     class UserFunction: public Function{
-        shared_ptr<Node> implCodeTree;
+        std::shared_ptr<Node> implCodeTree;
     public:
         UserFunction(const UserFunction&)=delete;
-        explicit UserFunction(shared_ptr<Node> implCodeTree);
+        explicit UserFunction(std::shared_ptr<Node> implCodeTree);
+        std::shared_ptr<Node> getImplCodeTree();
     };
 
     class ExternalFunction: public Function{
@@ -243,7 +260,13 @@ namespace evoBasic::Type{
 //        virtual void onCall(vector<shared_ptr<Variable>> args,shared_ptr<Variable> ret)=0;
 //    };
 
+    class LValue{
 
+    };
+
+    class RValue{
+
+    };
 
     class Variable: public Instance{
         InstanceEnum kind;

@@ -7,62 +7,18 @@
 
 namespace evoBasic{
 
-    void Logger::log(string message){
-        out<<message;
-    }
-
-    void Logger::error(Position pos,string message) {
-        Logger::errorCount++;
-        out << "error(" << pos.y << "," << pos.x  << "): " << message << endl;
-        out << setw(8) << setfill(' ');
-        out <<pos.y<<" │ "<< lines[pos.y-1] << endl;
-        for(int i=0;i<8;i++)out<<' ';
-        out<<" │ ";
-        for(int i=0;i<pos.x-1;i++)out<<' ';
-        out<<'^';
-        for(int i=1;i<pos.w;i++)out<<'~';
-        out<<endl;
-    }
-
-    void Logger::warning(Position pos,string message) {
-        Logger::warningCount++;
-        out << "warning(" << pos.y << "," << pos.x  << "): " << message << endl;
-        out << setw(8) << setfill(' ');
-        out <<pos.y<<" │ "<< lines[pos.y-1] << endl;
-        for(int i=0;i<8;i++)out<<' ';
-        out<<" │ ";
-        for(int i=0;i<pos.x-1;i++)out<<' ';
-        out<<'^';
-        for(int i=1;i<pos.w;i++)out<<'~';
-        out<<endl;
-    }
-
-    Logger::Logger(string filePath):filePath(filePath){
-        string str;
-        ifstream in(filePath);
-        while(getline(in,str)){
-            lines.push_back(str);
-        }
-        lines.emplace_back("");
-    }
-
-    void Logger::flush(ostream &stream) {
-        if(errorCount>0 || warningCount>0){
-            stream<<endl<<"In file '"<<filePath<<"':"<<endl;
-            stream<<out.str();
-        }
-    }
-
     bool Logger::debugMode = false;
 
     int Logger::errorCount=0;
     int Logger::warningCount=0;
 
     void Logger::error(string message) {
+        errorCount++;
         cout << "error: " << message << endl;
     }
 
     void Logger::warning(string message){
+        warningCount++;
         cout << "warning: " << message << endl;
     }
 
@@ -70,34 +26,42 @@ namespace evoBasic{
         if(debugMode)cout<<message;
     }
 
-    void Logger::error(initializer_list<Position> posList, string message) {
-        Logger::errorCount++;
-        out << "error: " << message << endl;
-        for(auto pos:posList){
-            out << setw(8) << setfill(' ');
-            out <<pos.y<<" │ "<< lines[pos.y-1] << endl;
-            for(int i=0;i<8;i++)out<<' ';
-            out<<" │ ";
-            for(int i=0;i<pos.x-1;i++)out<<' ';
-            out<<'^';
-            for(int i=1;i<pos.w;i++)out<<'~';
-            out<<endl;
-        }
+    ostream* Logger::out = &std::cout;
+
+    void Logger::redirect(std::ostream *stream) {
+        out = stream;
     }
 
-    void Logger::warning(initializer_list<Position> posList, string message) {
-        Logger::warningCount++;
-        out << "warning: " << message << endl;
-        for(auto pos:posList){
-            out << setw(8) << setfill(' ');
-            out <<pos.y<<" │ "<< lines[pos.y-1] << endl;
-            for(int i=0;i<8;i++)out<<' ';
-            out<<" │ ";
-            for(int i=0;i<pos.x-1;i++)out<<' ';
-            out<<'^';
-            for(int i=1;i<pos.w;i++)out<<'~';
-            out<<endl;
-        }
+    void Logger::code(const Position &pos) {
+        *out << setw(8) << setfill(' ');
+        *out << pos.getY()<<" │ "<< pos.getSource()->getLine(pos.getY()-1) << endl;
+        for(int i=0;i<8;i++)*out<<' ';
+        *out<<" │ ";
+        for(int i=0;i<pos.getX()-1;i++)*out<<' ';
+        *out<<'^';
+        for(int i=1;i<pos.getW();i++)*out<<'~';
+        *out<<endl;
     }
+
+    void Logger::error(const Position &pos, const string &message) {
+        Logger::errorCount++;
+        *out << "error: " << message << endl;
+        code(pos);
+    }
+
+    void Logger::warning(const Position &pos, const string &message) {
+        Logger::warningCount++;
+        *out << "warning: " << message << endl;
+        code(pos);
+    }
+
+    void Logger::panic(const list<std::pair<std::string, Position>> &callstack, const Position &pos, const string &message) {
+        for(const auto& call:callstack){
+            *out<<"In: "<<call.first<<"  ("<<call.second.getY()<<','<<call.second.getX()<<')';
+        }
+        *out << "panic: " << message <<endl;
+        code(pos);
+    }
+
 }
 

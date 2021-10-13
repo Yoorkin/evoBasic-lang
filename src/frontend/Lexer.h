@@ -7,6 +7,7 @@
 #include<istream>
 #include<string>
 #include<map>
+#include <utility>
 #include<vector>
 #include<set>
 #include<list>
@@ -14,18 +15,29 @@
 #include"../utils/Logger.h"
 using namespace std;
 namespace evoBasic{
-    struct Position{
+
+    class Source{
+        std::ifstream stream;
+        std::string file_path;
+        std::vector<std::string> lines;
+    public:
+        explicit Source(const std::string& file_path);
+        const std::string& operator[](int idx);
+        const std::string& getLine(int idx);
+        std::istream& getStream();
+    };
+
+    class Position{
         int x,y,w;
-        Position(int x,int y,int w):x(x),y(y),w(w){}
-        Position():x(-1),y(-1){}
-        static Position accross(const Position& begin,const Position& end){
-            if(begin.y!=end.y || begin.x>=end.x+end.w)throw "error";
-            Position ret;
-            ret.x = begin.x;
-            ret.y = begin.y;
-            ret.w = end.x - begin.x + end.w;
-            return ret;
-        }
+        std::shared_ptr<Source> source;
+    public:
+        Position(int x,int y,int w,std::shared_ptr<Source> source):x(x),y(y),w(w),source(std::move(source)){}
+        explicit Position():x(-1),y(-1),w(-1){}
+        [[nodiscard]] int getX()const{return x;}
+        [[nodiscard]] int getY()const{return y;}
+        [[nodiscard]] int getW()const{return w;}
+        [[nodiscard]] const std::shared_ptr<Source>& getSource()const{return source;}
+        static Position accross(const Position& begin,const Position& end);
     };
 
 #define E(x) x
@@ -54,15 +66,14 @@ namespace evoBasic{
     class Lexer {
         int x=1,y=1,beginX,beginY;
         char c;
-        istream &stream;
-        std::shared_ptr<Logger> logger;
         void increaseX(char c);
-        vector<string> lines;
+        //vector<string> lines;
         vector<Token> tokens;
         int current_idx=-1;
+        std::shared_ptr<Source> source;
     public:
         Token LL();
-        Lexer(istream &in,std::shared_ptr<Logger> logger);
+        explicit Lexer(std::shared_ptr<Source> source);
         const Token& getNextToken();
         const Token& getToken();
         void match(Token::Enum token);

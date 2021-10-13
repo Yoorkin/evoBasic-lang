@@ -39,7 +39,7 @@ namespace evoBasic{
                 else if(target==typeid(bool))out<<(any_cast<bool>(x.second)?"true":"false");
                 else if(target==typeid(Position)){
                     auto pos = any_cast<Position>(x.second);
-                    out<<"("<<pos.y<<","<<pos.x<<')';
+                    out<<"("<<pos.getY()<<","<<pos.getX()<<')';
                 }
                 else if(target==typeid(AccessFlag))
                     out<<AccessFlagToString[(int)any_cast<AccessFlag>(x.second)];

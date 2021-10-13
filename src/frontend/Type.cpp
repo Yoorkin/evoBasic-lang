@@ -197,6 +197,10 @@ namespace evoBasic::Type{
     UserFunction::UserFunction(shared_ptr<Node> implCodeTree)
         :Function(FunctionEnum::User),implCodeTree(std::move(implCodeTree)){}
 
+    std::shared_ptr<Node> UserFunction::getImplCodeTree() {
+        return this->implCodeTree;
+    }
+
     ExternalFunction::ExternalFunction(std::string library, std::string name)
         : Function(FunctionEnum::External),library(std::move(library)),name(std::move(name)){}
 
@@ -285,4 +289,11 @@ namespace evoBasic::Type{
         }
     }
 
+    ValueKind Value::getKind() {
+        return kind;
+    }
+
+    void Value::setKind(ValueKind kind) {
+        this->kind = kind;
+    }
 }
