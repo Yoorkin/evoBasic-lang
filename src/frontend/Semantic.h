@@ -12,17 +12,11 @@
 namespace evoBasic{
 
     class SymbolTable{
-        std::shared_ptr<Logger> logger;
-        std::tuple<std::shared_ptr<Type::DeclarationSymbol>,Position,std::string>
-            visitPath(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> path);
-
-        std::tuple<std::shared_ptr<Type::DeclarationSymbol>,Position,std::string>
-            visitAnnotation(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> path);
 
         void visitParameterList(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Type::Function> function,
                                         std::shared_ptr<Node> parameter_list);
 
-        std::shared_ptr<Type::primitive::VariantClass> variant_class;
+        static std::shared_ptr<Type::primitive::VariantClass> variant_class;
     public:
         explicit SymbolTable(const vector<AST>& ast_list);
 
@@ -36,9 +30,16 @@ namespace evoBasic{
          */
         void collectSymbol(const shared_ptr<Node>& ast);
 
+        static std::tuple<std::shared_ptr<Type::DeclarationSymbol>,Position,std::string>
+        visitPath(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> path);
+
+        static std::tuple<std::shared_ptr<Type::DeclarationSymbol>,Position,std::string>
+        visitAnnotation(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> path);
 
         shared_ptr<Type::Module> global;
         shared_ptr<Type::UserFunction> entrance;
+
+        static std::shared_ptr<Type::primitive::VariantClass> getVariantClass();
     };
 
 

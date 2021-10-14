@@ -46,7 +46,7 @@ namespace evoBasic{
                 if(next_domain){
                     next_list.push_back(make_pair(next_domain,tree));
                 }
-                domain->add(Type::Member(access,ptr));
+                domain->add(Type::Member::FromSymbol(access,ptr));
             }
         }
     }
@@ -82,11 +82,12 @@ namespace evoBasic{
                         func->setRetSignature(ptr);
                     }
                     auto access = tree->get<AccessFlag>(Attr::AccessFlag);
-                    domain->add(Type::Member(access,func));
+                    domain->add(Type::Member::FromFunction(access,func));
                 }
                 else if(tag == Tag::Function){
 
-                    auto func = std::make_shared<Type::UserFunction>(tree->child[3]);
+                    auto method = tree->get<MethodFlag>(Attr::MethodFlag);
+                    auto func = std::make_shared<Type::UserFunction>(method,tree->child[3]);
                     func->setName(tree->child[0]->get<std::string>(Attr::Lexeme));
                     visitParameterList(domain,func,tree->child[1]);
                     if(tree->child[2]->tag!=Tag::Empty){
@@ -97,7 +98,7 @@ namespace evoBasic{
                         entrance = func;
                     }
                     auto access = tree->get<AccessFlag>(Attr::AccessFlag);
-                    domain->add(Type::Member(access,func));
+                    domain->add(Type::Member::FromFunction(access,func));
 
                 }
                 else if(tag == Tag::Enum){
@@ -113,7 +114,7 @@ namespace evoBasic{
                         value++;
                     }
                     auto access = tree->get<AccessFlag>(Attr::AccessFlag);
-                    domain->add(Type::Member(access,em));
+                    domain->add(Type::Member::FromSymbol(access,em));
 
                 }
                 else if(tag == Tag::Type){
@@ -133,14 +134,12 @@ namespace evoBasic{
                             target_type = get<0>(visitAnnotation(domain,annotation_node));
                         }
                         if(target_type){
-                            auto tmp = dynamic_pointer_cast<Type::Instantiatable>(target_type);
+                            auto tmp = dynamic_pointer_cast<Type::Prototype>(target_type);
                             if(tmp){
-                                auto field = make_shared<Type::Field>(tmp);
-                                field->setName(name);
-                                domain->add(Type::Member(access,field));
+                                domain->add(Type::Member::FromField(access,name,tmp));
                             }
                             else{
-                                logger->error(variable_node->child[0]->pos(),"无法实例化的类型");
+                                Logger::error(variable_node->child[0]->pos(),"无法实例化的类型");
                             }
                         }
                     }
@@ -160,12 +159,12 @@ namespace evoBasic{
                             cls->addInherit(base_class);
                         }
                         else{
-                            logger->error(get<1>(info),Format()<<"'"<<get<2>(info)<<"'不是一个类");
+                            Logger::error(get<1>(info),Format()<<"'"<<get<2>(info)<<"'不是一个类");
                         }
                     }
                     next_list.emplace_back(cls,tree);
                     auto access = tree->get<AccessFlag>(Attr::AccessFlag);
-                    domain->add(Type::Member(access,cls));
+                    domain->add(Type::Member::FromSymbol(access,cls));
 
                 }
                 else if(tag == Tag::Module){
@@ -175,17 +174,18 @@ namespace evoBasic{
                     mod->setName(tree->child[0]->get<std::string>(Attr::Lexeme));
                     next_list.emplace_back(mod,tree);
                     auto access = tree->get<AccessFlag>(Attr::AccessFlag);
-                    domain->add(Type::Member(access,mod));
+                    domain->add(Type::Member::FromSymbol(access,mod));
 
                 }
             }
         }
     }
 
+    std::shared_ptr<Type::primitive::VariantClass> SymbolTable::variant_class;
+
     SymbolTable::SymbolTable(const vector<AST>& ast_list): global(new Type::Module()) {
         global->setName("global");
-        variant_class = make_shared<Type::primitive::VariantClass>();
-        global->add(Type::Member(AccessFlag::Public,variant_class));
+        global->add(Type::Member::FromSymbol(AccessFlag::Public,getVariantClass()));
 
         for(auto& ast:ast_list){
             collectSymbol(ast.root);
@@ -212,7 +212,7 @@ namespace evoBasic{
         auto last_string = path.back().second;
         auto beginMember = domain->lookUp(path.begin()->second);
         if(beginMember==Type::Member::Empty){
-            logger->error(path.begin()->first,Format()<<"找不到对象'"<<path.begin()->second<<"'");
+            Logger::error(path.begin()->first,Format()<<"找不到对象'"<<path.begin()->second<<"'");
             return make_tuple(shared_ptr<Type::DeclarationSymbol>(nullptr),Position(),"");
         }
         path.pop_front();
@@ -224,7 +224,7 @@ namespace evoBasic{
                 if(&p != &path.back()){
                     ptr = dynamic_pointer_cast<Type::Domain>(next.symbol);
                     if(!ptr){
-                        logger->error(p.first,Format()<<"'"<<id<<"'不是个模块");
+                        Logger::error(p.first,Format()<<"'"<<id<<"'不是个模块");
                         break;
                     }
                 }
@@ -232,7 +232,7 @@ namespace evoBasic{
                     target = next.symbol;
                 }
             }else{
-                logger->error(p.first,Format()<<"找不到对象'"<<id<<"'");
+                Logger::error(p.first,Format()<<"找不到对象'"<<id<<"'");
                 break;
             }
         }
@@ -256,5 +256,10 @@ namespace evoBasic{
             auto symbol = get<0>(visitAnnotation(domain,param->child[1]));
             function->addArgument(Type::Function::Argument(name,symbol,isByval,isOptional));
         }
+    }
+
+    std::shared_ptr<Type::primitive::VariantClass> SymbolTable::getVariantClass() {
+        if(!variant_class) variant_class = make_shared<Type::primitive::VariantClass>();
+        return variant_class;
     }
 }

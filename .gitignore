@@ -2,3 +2,6 @@ cmake-build-debug
 test/cmake-build-debug
 .idea
 .vscode
+doxygen.config
+latex
+html

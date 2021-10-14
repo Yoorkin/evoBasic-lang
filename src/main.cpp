@@ -61,8 +61,8 @@ int main(int argc, char* argv[]) {
 
 
     if(Logger::errorCount == 0){
-        auto interpreter = make_shared<Interpreter>();
-        interpreter->execute(table);
+        auto interpreter = make_shared<Interpreter>(table);
+        interpreter->execute();
     }
 
     cout<< endl << Logger::errorCount << " error(s), "

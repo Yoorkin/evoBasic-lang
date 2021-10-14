@@ -21,10 +21,39 @@
 
 namespace evoBasic::Type{
 
-    Member Member::Empty{AccessFlag::Public,std::shared_ptr<DeclarationSymbol>()};
+    Member Member::Empty{};
 
     bool Member::operator==(const Member &rhs) const {
         return symbol==rhs.symbol;
+    }
+
+    Member Member::FromSymbol(AccessFlag flag, std::shared_ptr<DeclarationSymbol> ptr) {
+        Member ret;
+        ret.symbol = ptr;
+        ret.access = flag;
+        ret.kind = SymbolMember;
+        ret.name = ptr->getName();
+        return ret;
+    }
+
+    Member Member::FromFunction(AccessFlag flag, std::shared_ptr<Function> function) {
+        Member ret;
+        ret.symbol = function;
+        ret.access = flag;
+        ret.kind = FunctionMember;
+        ret.method = function->getMethodFlag();
+        ret.name = function->getName();
+        return ret;
+    }
+
+    Member Member::FromField(AccessFlag flag, std::string field_name, std::shared_ptr<Prototype> field_prototype) {
+        Member ret;
+        ret.symbol = field_prototype;
+        ret.kind = FieldMember;
+        ret.name = std::move(field_name);
+        ret.access = flag;
+        ret.method = MethodFlag::Normal;
+        return ret;
     }
 
 
@@ -32,137 +61,96 @@ namespace evoBasic::Type{
         transform(str.begin(),str.end(),str.begin(),[](unsigned char c){ return std::tolower(c); });
     }
 
-    weak_ptr<Instantiatable> Variant::getPrototype() {
-        return prototype;
-    }
-
-    void Variant::setPrototype(weak_ptr<Instantiatable> ptr) {
-        prototype = ptr;
-    }
-
-    Variant::Variant(): Variable(InstanceEnum::Variant){}
-
-
-
-    Object::Object() : Variable(InstanceEnum::Object) {}
-
-    weak_ptr<Instantiatable> Object::getPrototype() {
-        return this->prototype;
-    }
-
-    vector<shared_ptr<Variable>> &Object::getVars() {
-        return variables;
-    }
-
-    void Object::setPrototype(weak_ptr<Instantiatable> ptr) {
-        this->prototype = dynamic_pointer_cast<Class>(ptr.lock());
-    }
 
     void Module::add(Member member) {
         this->members.insert(make_pair(member.symbol->getName(),member));
-        member.symbol->setParent(shared_from_this());
+        member.symbol->setParent(static_pointer_cast<Module>(shared_from_this()));
     }
 
-    void Module::addImport(const shared_ptr<DeclarationSymbol>& child) {
+    void Module::addImport(shared_ptr<DeclarationSymbol> child) {
         if(auto mod = dynamic_pointer_cast<Module>(child)){
             importedModule.push_back(mod);
         }
         else{
-            members.insert(make_pair(child->getName(),Member(AccessFlag::Public,child)));
+            throw "unimpl";
         }
     }
 
     void Class::add(Member member) {
-        if(member.isMethod){
-            if(member.method==MethodFlag::Virtual||member.method==MethodFlag::Override){
-                virtual_table.insert({member.symbol->getName(),member});
-            }
+        switch(member.kind){
+            case Member::FunctionMember:
+                if(member.method==MethodFlag::Virtual||member.method==MethodFlag::Override){
+                    virtual_table.insert({member.name,member});
+                }
+                break;
+            case Member::SymbolMember:
+                break;
+            case Member::FieldMember:
+                this->members.insert(make_pair(member.name,member));
+                this->memberPosition.insert(make_pair(member.name,layout.size()));
+                this->layout.push_back(member.name);
         }
-        this->members.insert(make_pair(member.symbol->getName(),member));
-        this->memberPosition.insert(make_pair(member.symbol->getName(),layout.size()));
-        this->layout.push_back(member.symbol->getName());
-        member.symbol->setParent(shared_from_this());
     }
 
-    shared_ptr<Instance> Class::newInstance() {
-        auto ret = new Object();
-        ret->prototype = dynamic_pointer_cast<Class>(shared_from_this());
-        for(const auto& name:layout){
-            auto proto = dynamic_pointer_cast<Type::Instantiatable>(members.find(name)->second.symbol);
-            auto tmp = dynamic_pointer_cast<Type::Variable>(proto->newInstance());
-            ret->variables.push_back(tmp);
-        }
-        return shared_ptr<Object>(ret);
+    shared_ptr<Value> Class::create() {
+//        auto ret = new Object();
+//        ret->prototype = dynamic_pointer_cast<Class>(shared_from_this());
+//        for(const auto& name:layout){
+//            auto proto = dynamic_pointer_cast<Type::DeclarationSymbol>(members.find(name)->second.symbol);
+//            auto tmp = dynamic_pointer_cast<Type::Variable>(proto->newInstance());
+//            ret->variables.push_back(tmp);
+//        }
+//        return shared_ptr<Object>(ret);
+        throw "unimpl";
     }
 
-    bool Class::equal(shared_ptr<Comparable> ptr) {
+    bool Class::equal(shared_ptr<Prototype> ptr) {
         return ptr.get()==this;
     }
 
-    void Class::addImport(const shared_ptr<DeclarationSymbol> &child) {
+    void Class::addImport(shared_ptr<DeclarationSymbol> child) {
+        throw "unimpl";
+    }
+
+    EnumInstance::EnumInstance(int value)
+        :Instance(InstanceEnum::Enum_),value(value){}
+
+    EnumInstance::EnumInstance()
+        :Instance(InstanceEnum::Enum_){
 
     }
 
-    EnumVariable::EnumVariable(int value)
-        :Variable(InstanceEnum::Enum_),value(value){}
-
-    EnumVariable::EnumVariable()
-        :Variable(InstanceEnum::Enum_){
-
+    void EnumInstance::setValue(int value) {
+        throw "unimpl";
     }
 
-    void EnumVariable::setValue(int value) {
-
-    }
-
-    void EnumVariable::setPrototype(weak_ptr<Instantiatable> ptr) {
-        this->prototype = dynamic_pointer_cast<Enumeration>(ptr.lock());
+    void EnumInstance::setPrototype(weak_ptr<Prototype> ptr) {
+        Instance::setPrototype(ptr);
         this->value = this->prototype.lock()->getDefalutNumber();
     }
 
-    weak_ptr<Instantiatable> EnumVariable::getPrototype() {
-        return prototype;
-    }
-
-    int EnumVariable::getValue() {
+    int EnumInstance::getValue() {
         return value;
     }
 
-    bool Enumeration::equal(shared_ptr<Comparable> ptr) {
+    bool Enumeration::equal(shared_ptr<Prototype> ptr) {
         return ptr.get()==this;
     }
 
-    shared_ptr<Instance> Enumeration::newInstance() {
-        auto ret = new EnumVariable();
-        ret->prototype = shared_from_this();
-        ret->value = defaultValue;
-        return shared_ptr<EnumVariable>(ret);
+    shared_ptr<Value> Enumeration::create() {
+        auto ret = new EnumInstance();
+        ret->setPrototype(static_pointer_cast<Prototype>(shared_from_this()));
+        ret->setValue(defaultValue);
+        return shared_ptr<EnumInstance>(ret);
     }
 
-    Enumeration::Enumeration() : DeclarationSymbol(DeclarationEnum::Enum_) {
+    Enumeration::Enumeration() : Class(DeclarationEnum::Enum_) {
 
     }
 
     void Enumeration::addEnumMember(int value,std::string name) {
         this->stringToInt.insert(std::make_pair(name,value));
     }
-
-    bool Function::equal(shared_ptr<Comparable> ptr) {
-        auto func = dynamic_pointer_cast<Function>(ptr);
-        if(!func)return false;
-        for(int i=0;i<this->argsSignature.size();i++){
-            auto lhs = reinterpret_pointer_cast<Comparable>(this->argsSignature[i].symbol);
-            auto rhs = reinterpret_pointer_cast<Comparable>(func->argsSignature[i].symbol);
-            if(!lhs->equal(rhs))return false;
-        }
-        auto lhs = reinterpret_pointer_cast<Comparable>(this->retSignature);
-        auto rhs = reinterpret_pointer_cast<Comparable>(func->retSignature);
-        if(!lhs->equal(rhs))return false;
-        return true;
-    }
-
-    Function::Function(FunctionEnum funcKind)
-        :DeclarationSymbol(DeclarationEnum::Function), funcKind(funcKind) {}
 
 
     shared_ptr<DeclarationSymbol> Function::getRetSignature() {
@@ -173,46 +161,24 @@ namespace evoBasic::Type{
         retSignature = std::move(ptr);
     }
 
-    MethodFlag Function::getMethodFlag() {
-        return this->flag;
-    }
-
-    void Function::setMethodFlag(MethodFlag flag) {
-        this->flag = flag;
-    }
 
     void Function::addArgument(Function::Argument arg) {
         this->argsSignature.push_back(arg);
     }
 
 
-    Field::Field(shared_ptr<Instantiatable> target)
-        :DeclarationSymbol(DeclarationEnum::Field),target(std::move(target)){}
-
-    shared_ptr<Instance> Field::newInstance() {
-        return target->newInstance();
-    }
 
 
-    UserFunction::UserFunction(shared_ptr<Node> implCodeTree)
-        :Function(FunctionEnum::User),implCodeTree(std::move(implCodeTree)){}
+    UserFunction::UserFunction(MethodFlag flag,shared_ptr<Node> implCodeTree)
+        :implCodeTree(std::move(implCodeTree)),flag(flag){}
 
     std::shared_ptr<Node> UserFunction::getImplCodeTree() {
         return this->implCodeTree;
     }
 
     ExternalFunction::ExternalFunction(std::string library, std::string name)
-        : Function(FunctionEnum::External),library(std::move(library)),name(std::move(name)){}
+        : library(std::move(library)),name(std::move(name)){}
 
-    Variable::Variable(InstanceEnum kind) : kind(kind){}
-
-    void Variable::setConstant(bool value) {
-        constant = value;
-    }
-
-    bool Variable::isConstant() const {
-        return constant;
-    }
 
     std::string DeclarationSymbol::getName() {
         return this->name;
@@ -232,7 +198,7 @@ namespace evoBasic::Type{
     }
 
     Member Domain::lookUp(const string &name) {
-        std::shared_ptr<Domain> ptr = shared_from_this();
+        std::shared_ptr<Domain> ptr = static_pointer_cast<Domain>(shared_from_this());
         while(ptr){
             auto p = ptr->find(name);
             if(p!=Member::Empty){
@@ -251,13 +217,7 @@ namespace evoBasic::Type{
         return Member::Empty;
     }
 
-    weak_ptr<Domain> Module::getParent() {
-        return parent;
-    }
 
-    weak_ptr<Domain> Class::getParent() {
-        return parent;
-    }
 
     Member Class::find(const string &name) {
         auto ret = this->members.find(name);
@@ -271,9 +231,14 @@ namespace evoBasic::Type{
         this->inherit_list.push_back(base);
     }
 
+    void Record::add(Member member) {
+
+    }
+
+
     namespace primitive{
-        shared_ptr<Instance> VariantClass::newInstance() {
-            return make_shared<Variant>();
+        shared_ptr<Value> VariantClass::create() {
+            return make_shared<VariantInstance>();
         }
 
         VariantClass::VariantClass() {
@@ -284,7 +249,7 @@ namespace evoBasic::Type{
             setName("integer");
         }
 
-        shared_ptr<Instance> Integer::newInstance() {
+        shared_ptr<Value> Integer::create() {
             throw "unimplemented";//TODO
         }
     }
@@ -295,5 +260,21 @@ namespace evoBasic::Type{
 
     void Value::setKind(ValueKind kind) {
         this->kind = kind;
+    }
+
+    Member Record::find(const string &name) {
+        throw "unimpl";
+    }
+
+    std::shared_ptr<Value> Record::create() {
+        throw "unimpl";
+    }
+
+    bool Record::equal(std::shared_ptr<Prototype> ptr) {
+        throw "unimpl";
+    }
+
+    VariantInstance::VariantInstance(): Instance(InstanceEnum::Variant) {
+
     }
 }
