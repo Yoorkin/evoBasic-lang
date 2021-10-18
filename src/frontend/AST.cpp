@@ -88,7 +88,12 @@ namespace evoBasic{
     shared_ptr<Node> Node::Error(new Node(Tag::Error));
 
     Position Node::pos() {
-        return get<Position>(Attr::Position);
+        auto ret = attr.find(Attr::Position);
+        if(ret==attr.end()){
+            if(this->child.empty())throw "error";
+            return this->child[0]->pos();
+        }
+        else return any_cast<Position>(ret->second);
     }
 
     shared_ptr<Node> make_node(Tag tag,initializer_list<pair<Attr,any>> attribute,initializer_list<shared_ptr<Node>> child){

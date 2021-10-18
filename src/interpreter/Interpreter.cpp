@@ -14,7 +14,7 @@ namespace evoBasic{
         }
 
         try{
-            call(entrance);
+            call(entrance,Position::Empty);
         }
         catch (const RuntimeException& e){
             list<pair<string,Position>> callstack_info;
@@ -29,26 +29,49 @@ namespace evoBasic{
 
 
 
-    std::shared_ptr<Type::Value> Interpreter::call(const std::shared_ptr<Type::Function> function) {
-        for(const auto& stmt : entrance->getImplCodeTree()->child){
-            auto tag = stmt->tag;
-            if(tag == Tag::Let && !call_stack.empty()){
-                for(const auto& var : stmt->child){
-                    auto name = var->child[0]->get<string>(Attr::Lexeme);
-                    auto tup = SymbolTable::visitAnnotation(current_domain,var->child[1]);
-                    auto prototype = dynamic_pointer_cast<Type::Prototype>(get<0>(tup));
-                    if(!prototype)throw RuntimeException(get<1>(tup),Format()<<"'"<<name<<"'初始化失败");
-//                    auto instance = prototype->create();
-//                    auto variable = dynamic_pointer_cast<Type::Variable>(instance);
-//                    variable->setName(name);
+    std::shared_ptr<Type::Value> Interpreter::call(const std::shared_ptr<Type::Function> function,Position previous) {
+        auto user = dynamic_pointer_cast<Type::UserFunction>(function);
+        auto external = dynamic_pointer_cast<Type::ExternalFunction>(function);
 
-                    if(var->child[2]->tag != Tag::Empty){
-                        auto initial = calculateExpression(var->child[2]);
+        if(user){
+            call_stack.push(StackFrame(user,previous));
 
+            for(const auto& stmt : entrance->getImplCodeTree()->child){
+                auto tag = stmt->tag;
+                if(tag == Tag::Let && !call_stack.empty()){
+
+                    for(const auto& var : stmt->child){
+                        auto name = var->child[0]->get<string>(Attr::Lexeme);
+                        auto tup = SymbolTable::visitAnnotation(current_domain,var->child[1]);
+                        auto prototype = dynamic_pointer_cast<Type::Prototype>(get<0>(tup));
+                        if(!prototype)throw RuntimeException(get<1>(tup),Format()<<"'"<<name<<"'初始化失败");
+                        shared_ptr<Type::Value> ptr;
+                        if(prototype->getKind() == Type::DeclarationEnum::Primitive){
+                            // primitive type. integer,boolean,long,Variant etc.
+                            ptr = prototype->create();
+                        }
+                        else{
+                            // ref type
+                            ptr = make_shared<Type::Ref>();
+                        }
+                        call_stack.top().add(name,ptr);
+                        if(var->child[2]->tag != Tag::Empty){
+                            auto initial = calculateExpression(var->child[2]);
+                        }
                     }
+                    //call_stack.top().add();
                 }
-                //call_stack.top().add();
             }
+
+            call_stack.pop();
+
+            if(user->getRetSignature()){
+                throw RuntimeException(previous,Format()<<"函数'"<<user->getName()<<"'未返回值");
+            }
+            else{ // void
+                return make_shared<Type::VoidValue>();
+            }
+
         }
     }
 
@@ -77,9 +100,8 @@ namespace evoBasic{
         return prv_pos;
     }
 
-    void StackFrame::add(std::shared_ptr<Type::Value> variable) {
-        //local_variables.insert({variable->getName(),std::move(variable)});
-        throw "unimpl";
+    void StackFrame::add(std::string name,std::shared_ptr<Type::Value> variable) {
+        local_variables.insert({std::move(name),std::move(variable)});
     }
 
     RuntimeException::RuntimeException(Position position, std::string message) : pos(std::move(position)),msg(std::move(message)) {}
@@ -95,6 +117,7 @@ namespace evoBasic{
 
     std::shared_ptr<Type::Value> Interpreter::calculateExpression(std::shared_ptr<Node> expression) {
         throw "unimplement";
+        
     }
 
 

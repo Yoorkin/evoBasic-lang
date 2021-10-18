@@ -20,7 +20,7 @@ namespace evoBasic{
     public:
         string name;
         Position namePos,conflictNamePos;
-        explicit NameConflictException(string name):name(std::move(name)){}
+        //explicit NameConflictException(string name):name(std::move(name)){}
 
         NameConflictException(string name,Position namePos,Position conflictNamePos)
                 :name(std::move(name)),namePos(namePos),conflictNamePos(conflictNamePos){}
@@ -40,12 +40,15 @@ namespace evoBasic{
     };
 
     class SyntaxException:public exception{
+        std::string tmp;
     public:
         const Token& token;
-        explicit SyntaxException(const Token& token,Token::Enum expected):token(token),expected(expected){};
+        explicit SyntaxException(const Token& token,Token::Enum expected):token(token),expected(expected){
+            tmp = (Token::reserved[(int)token.kind] + " but expected "+ Token::reserved[(int)expected]);
+        };
         Token::Enum expected;
         const char * what() const noexcept override{
-            return (Token::reserved[(int)token.kind] + " but expected "+ Token::reserved[(int)expected]).c_str();
+            return tmp.c_str();
         }
     };
 

@@ -21,7 +21,7 @@ namespace evoBasic{
     public:
         explicit StackFrame(const std::shared_ptr<Type::UserFunction>& function,Position previous);
         std::shared_ptr<Type::Value> lookUp(const std::string& name);
-        void add(std::shared_ptr<Type::Value> variable);
+        void add(std::string name,std::shared_ptr<Type::Value> variable);
         std::shared_ptr<Type::UserFunction> getFunction();
         const Position& getReturnPosition();
     };
@@ -42,7 +42,7 @@ namespace evoBasic{
     public:
         explicit Interpreter(const SymbolTable& table);
         void execute();
-        std::shared_ptr<Type::Value> call(std::shared_ptr<Type::Function> function);
+        std::shared_ptr<Type::Value> call(std::shared_ptr<Type::Function> function,Position previous);
         std::shared_ptr<Type::Value> calculateExpression(std::shared_ptr<Node> expression);
     };
 

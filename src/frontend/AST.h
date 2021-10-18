@@ -41,7 +41,7 @@ namespace evoBasic{
     enum class AccessFlag{Public,Private,Friend};
 
     enum class Attr{
-        Type,Name,Value,ValueKind,IsByval,IsOptional,Lexeme,Position,AccessFlag,MethodFlag,DeclarationSymbol
+        Type,Name,Value,ValueKind,IsByval,IsOptional,Lexeme,Position,AccessFlag,MethodFlag,Symbol
     };
 
     class Node{

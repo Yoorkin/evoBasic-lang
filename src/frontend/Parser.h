@@ -23,6 +23,8 @@ namespace evoBasic{
 
         shared_ptr<Node> logic(set<Token::Enum> follows={});
 
+        shared_ptr<Node> logicNot(set<Token::Enum> follows={});
+
         shared_ptr<Node> cmp(set<Token::Enum> follows={});
 
         shared_ptr<Node> add(set<Token::Enum> follows={});

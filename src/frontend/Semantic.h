@@ -17,6 +17,10 @@ namespace evoBasic{
                                         std::shared_ptr<Node> parameter_list);
 
         static std::shared_ptr<Type::primitive::VariantClass> variant_class;
+        static std::shared_ptr<Type::primitive::Primitive<bool>> boolean_prototype;
+        static std::shared_ptr<Type::primitive::Primitive<int>> integer_prototype;
+        static std::shared_ptr<Type::primitive::Primitive<double>> double_prototype;
+
     public:
         explicit SymbolTable(const vector<AST>& ast_list);
 
@@ -30,19 +34,93 @@ namespace evoBasic{
          */
         void collectSymbol(const shared_ptr<Node>& ast);
 
-        static std::tuple<std::shared_ptr<Type::DeclarationSymbol>,Position,std::string>
+        static std::tuple<std::shared_ptr<Type::Symbol>,Position,std::string>
         visitPath(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> path);
 
-        static std::tuple<std::shared_ptr<Type::DeclarationSymbol>,Position,std::string>
-        visitAnnotation(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> path);
+        static std::tuple<std::shared_ptr<Type::Symbol>,Position,std::string>
+        visitAnnotation(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> node);
 
         shared_ptr<Type::Module> global;
         shared_ptr<Type::UserFunction> entrance;
 
         static std::shared_ptr<Type::primitive::VariantClass> getVariantClass();
+        static std::shared_ptr<Type::primitive::Primitive<bool>> getBooleanPrototype();
+        static std::shared_ptr<Type::primitive::Primitive<int>> getIntegerPrototype();
+        static std::shared_ptr<Type::primitive::Primitive<double>> getDoublePrototype();
     };
 
+    class ExprException : public exception{
+        Position pos;
+        std::string str;
+    public:
+        ExprException(Position pos, std::string msg): pos(pos), str(msg){}
+        const char * what() const noexcept override{
+            return str.c_str();
+        }
+        Position& getPos(){return pos;}
+        std::string& getMsg(){return str;}
+    };
 
+    class UnitException : public ExprException{
+    public:
+        UnitException(Position pos, std::string msg): ExprException(std::move(pos),std::move(msg)){}
+    };
+
+    class FactorException : public ExprException{
+    public:
+        FactorException(Position pos, std::string msg): ExprException(std::move(pos),std::move(msg)){}
+    };
+
+    enum class ExprKind{lvalue,rvalue};
+    using ExprResult = std::pair<std::shared_ptr<Type::Prototype>,ExprKind>;
+
+    class TypeAnalyzer{
+
+        using PromotionRuleFunction = std::function<std::shared_ptr<Type::Prototype>(std::shared_ptr<Node>)>;
+        using PrototypePtr = Type::Prototype*;
+        using BinaryOpSignature = std::pair<PrototypePtr,PrototypePtr>;
+
+        static std::map<BinaryOpSignature,std::shared_ptr<Type::Prototype>> binary_op_result_type;
+        static std::map<BinaryOpSignature,PromotionRuleFunction> typePromotionRule;
+        static std::set<BinaryOpSignature> isCastRuleExist;
+    public:
+        static void check(std::vector<AST>& ast_list,SymbolTable& table);
+        static void visitStructure(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> root);
+        static void visitStatement(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Type::UserFunction> function,std::shared_ptr<Node> root);
+        static void visitLetStmt(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> root);
+
+
+
+        static ExprResult visitExpression(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> node);
+        static ExprResult visitLogic(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> node);
+        static ExprResult visitTermAddCmp(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> node);
+        static ExprResult visitFactor(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> node);
+        static std::shared_ptr<Type::Symbol> visitUnit(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> node);
+        static void visitParameterList(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Type::Function> function,std::shared_ptr<Node> node);
+
+    };
+
+    class TemporaryScope : public Type::Domain {
+        std::shared_ptr<Type::UserFunction> current_function;
+        std::map<std::string,Type::Member> local_variables;
+    public:
+        explicit TemporaryScope(std::weak_ptr<Type::Domain> parent,std::shared_ptr<Type::UserFunction> current);
+        Type::Member find(const string& name)override;
+        void add(Type::Member member)override;
+        void add(std::string name,std::shared_ptr<Type::Prototype> prototype);
+
+        std::shared_ptr<Type::Value> create()override{
+            throw "error";
+        };
+
+        bool equal(std::shared_ptr<Prototype> ptr)override{
+            throw "error";
+        };
+
+        void addImport(std::shared_ptr<Symbol> child)override{
+            throw "unimpl";//TODO
+        };
+    };
 
 /*
  *                                        | ->  VariableTypeDependGraph -> | TypeInference                |

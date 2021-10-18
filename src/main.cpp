@@ -43,11 +43,13 @@ int main(int argc, char* argv[]) {
         distributor.distribute(argv[i]);
     }
 
+
     vector<AST> trees;
     stringstream ast_info_stream;
 
     for(auto& sourcePath:sourceMgr.getSourcesPath()){
         auto source = make_shared<Source>(sourcePath);
+        Logger::error(Position(5,2,3,8,source),"testsettetttttttttttt");
         Lexer lexer(source);
         Parser parser(lexer);
         auto ast = parser.parse();

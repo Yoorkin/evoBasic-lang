@@ -360,32 +360,50 @@ namespace evoBasic{
     }
 
     shared_ptr<Node> Parser::logic(set<Token::Enum> follows){
-        auto addition = {Token::and_,Token::or_,Token::xor_};
+        auto addition = {Token::and_,Token::or_,Token::xor_,Token::not_};
         follows.insert(addition.begin(),addition.end());
-        auto lhs = cmp(follows);
+        auto lhs = logicNot(follows);
         shared_ptr<Node> rhs;
         while(true){
             auto op = lexer.getNextToken();
             switch(op.kind){
                 case Token::and_:
                     lexer.match(Token::and_);
-                    rhs = cmp(follows);
+                    rhs = logicNot(follows);
                     lhs = make_node(Tag::And,{{Attr::Position,op.pos}},{lhs,rhs});
                     break;
                 case Token::or_:
                     lexer.match(Token::or_);
-                    rhs = cmp(follows);
+                    rhs = logicNot(follows);
                     lhs = make_node(Tag::Or,{{Attr::Position,op.pos}},{lhs,rhs});
                     break;
                 case Token::xor_:
                     lexer.match(Token::xor_);
-                    rhs = cmp(follows);
+                    rhs = logicNot(follows);
                     lhs = make_node(Tag::Xor,{{Attr::Position,op.pos}},{lhs,rhs});
                     break;
                 default:
                     return lhs;
             }
         }
+    }
+
+    shared_ptr<Node> Parser::logicNot(set<Token::Enum> follows){
+        shared_ptr<Node> root;
+        if(lexer.getNextToken().kind == Token::not_){
+            lexer.match(Token::not_);
+            root = make_node(Tag::Not,{{Attr::Position,lexer.getToken().pos}});
+            auto iter = root;
+            while(lexer.getNextToken().kind == Token::not_){
+                lexer.match(Token::not_);
+                auto child = make_node(Tag::Not,{{Attr::Position,lexer.getToken().pos}});
+                iter->child.push_back(child);
+                iter = child;
+            }
+            iter->child.push_back(cmp(follows));
+            return root;
+        }
+        else return cmp(follows);
     }
 
 

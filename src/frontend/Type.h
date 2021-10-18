@@ -21,7 +21,7 @@ namespace evoBasic::Type{
 #define PRIMITIVE               Variant,Integer,Long,Byte,Boolean
 
 #define INSTANCE_ENUM_LIST      PRIMITIVE,Object,Enum_
-#define DECLARATION_ENUM_LIST   PRIMITIVE,Class,Enum_,Type,Function,Module,Field,Variable
+#define DECLARATION_ENUM_LIST   Class,Enum_,Type,Function,Module,Variant,Primitive,FunctionScope
 #define FUNCTION_ENUM_LIST      User,External,Intrinsic
 
     enum class InstanceEnum{INSTANCE_ENUM_LIST};
@@ -39,7 +39,7 @@ namespace evoBasic::Type{
     class Class;
     class Object;
     //class Instantiatable;
-    class DeclarationSymbol;
+    class Symbol;
     class Variant;
     class RValue;
     class LValue;
@@ -55,11 +55,11 @@ namespace evoBasic::Type{
     class Member{
         Member()=default;
     public:
-        static Member FromSymbol(AccessFlag flag,std::shared_ptr<DeclarationSymbol> ptr);
+        static Member FromSymbol(AccessFlag flag,std::shared_ptr<Symbol> ptr);
         static Member FromFunction(AccessFlag flag, std::shared_ptr<Function> function);
         static Member FromField(AccessFlag flag,std::string field_name,std::shared_ptr<Prototype> field_prototype);
 
-        std::shared_ptr<DeclarationSymbol> symbol;
+        std::shared_ptr<Symbol> symbol;
         std::string name;
         AccessFlag access;
         enum {SymbolMember,FunctionMember,FieldMember}kind;
@@ -94,13 +94,6 @@ namespace evoBasic::Type{
     };
 
 
-    template<typename T>
-    class PrimitiveValue : public LValue {
-        T t;
-    public:
-        void set(T value){this->t = value;}
-        T get(){return this->t;}
-    };
 
 
     class Instance : public RValue{
@@ -139,15 +132,15 @@ namespace evoBasic::Type{
 
 
 
-    class DeclarationSymbol : public std::enable_shared_from_this<DeclarationSymbol> {
+    class Symbol : public std::enable_shared_from_this<Symbol> {
         friend Domain;
         std::string name;
         DeclarationEnum kind;
     protected:
         weak_ptr<Domain> parent;
     public:
-        DeclarationSymbol(const DeclarationSymbol&)=delete;
-        explicit DeclarationSymbol(DeclarationEnum kind):kind(kind){}
+        Symbol(const Symbol&)=delete;
+        explicit Symbol(DeclarationEnum kind): kind(kind){}
 
         virtual std::string getName();
         virtual void setName(std::string str);
@@ -156,33 +149,23 @@ namespace evoBasic::Type{
 
         virtual std::weak_ptr<Domain> getParent();
         virtual void setParent(std::weak_ptr<Domain> parent);
+
+        template<typename T>
+        std::shared_ptr<T> as_shared(){
+            return dynamic_pointer_cast<T>(shared_from_this());
+        }
     };
 
 
 
-    class Prototype : public DeclarationSymbol{
+    class Prototype : public Symbol{
     public:
         Prototype(const Prototype&)=delete;
-        explicit Prototype(DeclarationEnum kind): DeclarationSymbol(kind){};
+        explicit Prototype(DeclarationEnum kind): Symbol(kind){};
         virtual std::shared_ptr<Value> create()=0;
         virtual bool equal(std::shared_ptr<Prototype> ptr)=0;
     };
 
-
-
-    template<typename T>
-    class Primitive : public Prototype {
-    public:
-        bool equal(std::shared_ptr<Prototype> ptr)override{
-            auto p = dynamic_pointer_cast<Primitive<T>>(ptr);
-            return p.operator bool();
-        }
-
-        std::shared_ptr<Value> create()override{
-            auto ret = make_shared<PrimitiveValue<T>>();
-            ret->setPrototype(shared_from_this());
-        }
-    };
 
 
     //domain interface
@@ -193,7 +176,7 @@ namespace evoBasic::Type{
         virtual void add(Member member)=0;
         virtual Member find(const string& name)=0; //search object in members
         virtual Member lookUp(const string& name); //search object in members and importedModule
-        virtual void addImport(std::shared_ptr<DeclarationSymbol> child)=0;
+        virtual void addImport(std::shared_ptr<Symbol> child)=0;
     };
 
     class Module : public Domain{
@@ -205,12 +188,14 @@ namespace evoBasic::Type{
         void add(Member member)override;
         Member find(const string& name)override;
 
-        void addImport(shared_ptr<DeclarationSymbol> child)override;
+        void addImport(shared_ptr<Symbol> child)override;
 
         std::shared_ptr<Value> create()override {return {nullptr};}
         bool equal(std::shared_ptr<Prototype> ptr)override {return false;}
 
     };
+
+
 
     class Record : public Domain {
         std::map<std::string,Member> fields;
@@ -221,8 +206,10 @@ namespace evoBasic::Type{
         bool equal(std::shared_ptr<Prototype> ptr)override;
 
         void add(Member member)override;
-        void addImport(std::shared_ptr<DeclarationSymbol>)override{throw "error";}
+        void addImport(std::shared_ptr<Symbol>)override{throw "error";}
     };
+
+
 
     class Class : public Domain {
         std::map<std::string,Member> members;
@@ -230,7 +217,7 @@ namespace evoBasic::Type{
         std::vector<std::string> layout;
         std::list<std::pair<int,Node>> initialize_rules;
         std::map<std::string,Member> virtual_table;
-        std::list<std::shared_ptr<DeclarationSymbol>> inherit_list;
+        std::list<std::shared_ptr<Symbol>> inherit_list;
     public:
         Class(const Class&)=delete;
         explicit Class(): Domain(DeclarationEnum::Class){}
@@ -241,7 +228,7 @@ namespace evoBasic::Type{
 
         void add(Member member)override;
         Member find(const string& name)override;
-        void addImport(std::shared_ptr<DeclarationSymbol> child)override;
+        void addImport(std::shared_ptr<Symbol> child)override;
 
         //void addInitializeRule(int layout_index,)
 
@@ -249,61 +236,76 @@ namespace evoBasic::Type{
     };
 
     namespace primitive{
+
         class VariantClass : public Class{
         public:
             explicit VariantClass();
             std::shared_ptr<Value> create()override;
         };
 
-        class Integer : public Class{
+        template<typename T>
+        class PrimitiveValue : public LValue {
+            T t;
         public:
-            explicit Integer();
-            std::shared_ptr<Value> create()override;
+            void set(T value){this->t = value;}
+            T get(){return this->t;}
         };
 
 
-//        class Boolean : public Class{
-//
-//            shared_ptr<Instance> create()override;
-//        };
-//
-//        class Long : public Class{
-//            shared_ptr<Instance> create()override;
-//        };
+        template<typename T>
+        class Primitive : public Prototype {
+        public:
+            explicit Primitive(std::string name) : Prototype(DeclarationEnum::Primitive){
+                setName(std::move(name));
+            };
+
+            bool equal(std::shared_ptr<Prototype> ptr)override{
+                auto p = dynamic_pointer_cast<Primitive<T>>(ptr);
+                return p.operator bool();
+            }
+
+            std::shared_ptr<Value> create()override{
+                auto ret = make_shared<PrimitiveValue<T>>();
+                ret->setPrototype(static_pointer_cast<Prototype>(shared_from_this()));
+                return ret;
+            }
+        };
+
+
 
     }
 
 
-    class Function: public DeclarationSymbol{
+    class Function: public Symbol{
     public:
         struct Argument{
             std::string name;
             bool isByval,isOptional;
-            std::shared_ptr<DeclarationSymbol> symbol;
-            Argument(std::string name,std::shared_ptr<DeclarationSymbol> symbol,bool isByval,bool isOptional)
-                    :name(std::move(name)),symbol(std::move(symbol)),isByval(isByval),isOptional(isOptional){}
+            std::shared_ptr<Prototype> symbol;
+            Argument(std::string name,std::shared_ptr<Prototype> prototype,bool isByval,bool isOptional)
+                    :name(std::move(name)),symbol(std::move(prototype)),isByval(isByval),isOptional(isOptional){}
         };
     private:
         vector<Argument> argsSignature;
-        shared_ptr<DeclarationSymbol> retSignature;
+        shared_ptr<Prototype> retSignature;
     public:
         Function(const Function&)=delete;
-        explicit Function(): DeclarationSymbol(DeclarationEnum::Function){};
+        explicit Function(): Symbol(DeclarationEnum::Function){};
         void addArgument(Argument arg);
 
-        shared_ptr<DeclarationSymbol> getRetSignature();
-        void setRetSignature(shared_ptr<DeclarationSymbol> ptr);
+        shared_ptr<Prototype> getRetSignature();
+        void setRetSignature(shared_ptr<Prototype> ptr);
         virtual MethodFlag getMethodFlag()=0;
     };
 
 
 
 
-//    class Field : public DeclarationSymbol{
-//        shared_ptr<DeclarationSymbol> target;
+//    class Field : public Symbol{
+//        shared_ptr<Symbol> target;
 //    public:
 //        Field(const Field&)=delete;
-//        explicit Field(shared_ptr<DeclarationSymbol> target);
+//        explicit Field(shared_ptr<Symbol> target);
 //    };
 
     class Enumeration : public Class{
@@ -355,7 +357,7 @@ namespace evoBasic::Type{
             bool boolean_;
             Object* object_;
         }data{};
-        weak_ptr<DeclarationSymbol> prototype;
+        weak_ptr<Symbol> prototype;
     public:
         VariantInstance(const Variant&)=delete;
         explicit VariantInstance();

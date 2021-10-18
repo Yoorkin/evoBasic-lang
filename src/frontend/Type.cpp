@@ -27,7 +27,7 @@ namespace evoBasic::Type{
         return symbol==rhs.symbol;
     }
 
-    Member Member::FromSymbol(AccessFlag flag, std::shared_ptr<DeclarationSymbol> ptr) {
+    Member Member::FromSymbol(AccessFlag flag, std::shared_ptr<Symbol> ptr) {
         Member ret;
         ret.symbol = ptr;
         ret.access = flag;
@@ -67,7 +67,7 @@ namespace evoBasic::Type{
         member.symbol->setParent(static_pointer_cast<Module>(shared_from_this()));
     }
 
-    void Module::addImport(shared_ptr<DeclarationSymbol> child) {
+    void Module::addImport(shared_ptr<Symbol> child) {
         if(auto mod = dynamic_pointer_cast<Module>(child)){
             importedModule.push_back(mod);
         }
@@ -82,13 +82,18 @@ namespace evoBasic::Type{
                 if(member.method==MethodFlag::Virtual||member.method==MethodFlag::Override){
                     virtual_table.insert({member.name,member});
                 }
+                else{
+                    this->members.insert({member.name,member});
+                }
                 break;
             case Member::SymbolMember:
+                this->members.insert({member.name,member});
                 break;
             case Member::FieldMember:
                 this->members.insert(make_pair(member.name,member));
                 this->memberPosition.insert(make_pair(member.name,layout.size()));
                 this->layout.push_back(member.name);
+                break;
         }
     }
 
@@ -96,7 +101,7 @@ namespace evoBasic::Type{
 //        auto ret = new Object();
 //        ret->prototype = dynamic_pointer_cast<Class>(shared_from_this());
 //        for(const auto& name:layout){
-//            auto proto = dynamic_pointer_cast<Type::DeclarationSymbol>(members.find(name)->second.symbol);
+//            auto proto = dynamic_pointer_cast<Type::Symbol>(members.find(name)->second.symbol);
 //            auto tmp = dynamic_pointer_cast<Type::Variable>(proto->newInstance());
 //            ret->variables.push_back(tmp);
 //        }
@@ -108,7 +113,7 @@ namespace evoBasic::Type{
         return ptr.get()==this;
     }
 
-    void Class::addImport(shared_ptr<DeclarationSymbol> child) {
+    void Class::addImport(shared_ptr<Symbol> child) {
         throw "unimpl";
     }
 
@@ -153,11 +158,11 @@ namespace evoBasic::Type{
     }
 
 
-    shared_ptr<DeclarationSymbol> Function::getRetSignature() {
+    shared_ptr<Prototype> Function::getRetSignature() {
         return this->retSignature;
     }
 
-    void Function::setRetSignature(std::shared_ptr<DeclarationSymbol> ptr){
+    void Function::setRetSignature(std::shared_ptr<Prototype> ptr){
         retSignature = std::move(ptr);
     }
 
@@ -180,20 +185,20 @@ namespace evoBasic::Type{
         : library(std::move(library)),name(std::move(name)){}
 
 
-    std::string DeclarationSymbol::getName() {
+    std::string Symbol::getName() {
         return this->name;
     }
 
-    void DeclarationSymbol::setName(std::string str) {
+    void Symbol::setName(std::string str) {
         strToLowerByRef(str);
         this->name=std::move(str);
     }
 
-    std::weak_ptr<Domain> DeclarationSymbol::getParent() {
+    std::weak_ptr<Domain> Symbol::getParent() {
         return parent;
     }
 
-    void DeclarationSymbol::setParent(std::weak_ptr<Domain> parent) {
+    void Symbol::setParent(std::weak_ptr<Domain> parent) {
         this->parent = parent;
     }
 
@@ -232,7 +237,12 @@ namespace evoBasic::Type{
     }
 
     void Record::add(Member member) {
-
+        if(member.kind == Member::FieldMember){
+            fields.insert({member.name,member});
+        }
+        else{
+            throw "error";
+        }
     }
 
 
@@ -245,13 +255,6 @@ namespace evoBasic::Type{
             setName("variant");
         }
 
-        Integer::Integer() {
-            setName("integer");
-        }
-
-        shared_ptr<Value> Integer::create() {
-            throw "unimplemented";//TODO
-        }
     }
 
     ValueKind Value::getKind() {

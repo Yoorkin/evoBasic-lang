@@ -61,13 +61,15 @@ typeAnnotation -> AS locating
 
 expr  -> cmp expr_ 
 
-expr_ -> AND cmp expr_
-       | OR  cmp expr_
-       | XOR cmp expr_
-       | e 
+expr_ -> AND logicNot expr_
+       | OR  logicNot expr_
+       | XOR logicNot expr_
+       | e
 
-cmp  -> NOT add cmp_ 
-      | add cmp_
+logicNot -> not logicNot
+          | cmp
+
+cmp  -> add cmp_
 
 cmp_ -> == add cmp_1 
       | <> add cmp_1 

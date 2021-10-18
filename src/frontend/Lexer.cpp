@@ -30,6 +30,8 @@ namespace evoBasic {
 #undef E
 #undef E_
 
+    const Position Position::Empty{};
+
     bool isDigit(char c) {
         return c <= '9' && c >= '0';
     }
@@ -216,7 +218,7 @@ namespace evoBasic {
                 tokens.pop_back();
                 nextToken.kind = merge[nextToken.kind];
                 nextToken.lexeme = string("end ") + nextToken.lexeme;
-                nextToken.pos = Position(pos.getX(), pos.getY(), nextToken.pos.getW() + nextToken.pos.getX() - pos.getX(),source);
+                nextToken.pos = Position(pos.getX(), pos.getY(), nextToken.pos.getW() + nextToken.pos.getX() - pos.getX(),this->source);
                 tokens.push_back(nextToken);
             } else {
                 tokens.push_back(nextToken);
@@ -307,6 +309,7 @@ namespace evoBasic {
                 return false;
             }
         }
+        throw "error";
     }
 
     void printFollows(set<Token::Enum> follows, string name) {
@@ -318,11 +321,8 @@ namespace evoBasic {
     }
 
     Position Position::accross(const Position &begin, const Position &end) {
-        if(begin.y!=end.y || begin.x>=end.x+end.w)throw "error";
-        Position ret;
-        ret.x = begin.x;
-        ret.y = begin.y;
-        ret.w = end.x - begin.x + end.w;
+        if(begin.y>end.y || begin.x>=end.ex || begin.source != end.source)throw "error";
+        Position ret(begin.x,begin.y,end.ex,end.ey,begin.source);
         return ret;
     }
 

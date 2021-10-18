@@ -28,16 +28,28 @@ namespace evoBasic{
     };
 
     class Position{
-        int x,y,w;
+        int x,y,ex,ey;
         std::shared_ptr<Source> source;
+        explicit Position()=default;
     public:
-        Position(int x,int y,int w,std::shared_ptr<Source> source):x(x),y(y),w(w),source(std::move(source)){}
-        explicit Position():x(-1),y(-1),w(-1){}
-        [[nodiscard]] int getX()const{return x;}
-        [[nodiscard]] int getY()const{return y;}
-        [[nodiscard]] int getW()const{return w;}
-        [[nodiscard]] const std::shared_ptr<Source>& getSource()const{return source;}
+        Position(int x,int y,int w,std::shared_ptr<Source> source)
+            :x(x),y(y),ey(y),ex(x+w),source(std::move(source)){
+            if(!this->source)throw "error";
+        }
+
+        Position(int x,int y,int end_x,int end_y,std::shared_ptr<Source> source)
+            :x(x),y(y),ex(end_x),ey(end_y),source(source){
+            if(!this->source)throw "error";
+        }
+
+        int getX()const{return x;}
+        int getY()const{return y;}
+        int getEndX()const{return ex;}
+        int getEndY()const{return ey;}
+        int getW()const{return ex-x;}
+        const std::shared_ptr<Source>& getSource()const{return source;}
         static Position accross(const Position& begin,const Position& end);
+        const static Position Empty;
     };
 
 #define E(x) x
@@ -54,8 +66,8 @@ namespace evoBasic{
     public:
         enum Enum{LEXEME_LIST}kind;
         string lexeme;
-        Position pos;
-        Token()=default;
+        Position pos=Position::Empty;
+        explicit Token()=default;
         Token(string lexeme,Enum token,Position position)
             : lexeme(move(lexeme)), kind(token), pos(move(position)){}
 //        explicit Token(Enum token){this->token=token;}
