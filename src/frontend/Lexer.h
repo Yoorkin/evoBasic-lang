@@ -60,7 +60,9 @@ namespace evoBasic{
     E_(function),E_(sub),E_(byval),E_(byref),E_(optional),E_(as),E_(let),E_(end),E_(enum),E_(type),\
     E_(select),E_(case),E_(for),E_(to),E_(step),E_(while),E_(wend),E_(if),E_(then),E_(elseif),E_(else),\
     E_(and),E_(or),E_(xor),E_(not),E_(return),E_(continue),E_(exit),E_(next),E_(false),E_(true),\
-    E(end_if),E(end_function),E(end_sub),E(end_module),E(end_class),E(end_type),E(end_enum),E(end_select),E(import),E(declare),E(lib),E(alias),E(impl)
+    E(end_if),E(end_function),E(end_sub),E(end_module),E(end_class),E(end_type),E(end_enum),E(end_select),E(end_init),E(end_operator), \
+    E(import),E(declare),E(lib),E(alias),E(init),E_(operator), \
+    E(impl),E(extend)
 
     class Token{
     public:

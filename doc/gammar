@@ -9,7 +9,7 @@ moduleDecl -> MODULE ID
 accessFlag -> PUBLIC | PRIVATE | FRIEND | e
 moduleMember -> functionDecl | subDecl | typeDecl | enumDecl | variableDecl | classDecl | moduleDecl
 
-classDecl -> CLASS ID (IMPLEMENTS locating(,locating)*)*
+classDecl -> CLASS ID (EXTEND locating)? (IMPLEMENTS locating(,locating)*)*
                 (accessFlag classMember)*
              END CLASS
 
@@ -28,7 +28,10 @@ enumList_ -> ID enumVal enumList_ | e
 enumVal -> = DIGHT | e
 
 functionDecl -> FUNCTION ID(parameterList) AS locating stmtSets END FUNCTION 
-subDecl -> SUB ID(parameterList) stmtSets END SUB 
+subDecl -> SUB ID(parameterList) stmtSets END SUB
+
+initDecl -> INIT (parameterList) stmtSets END INIT
+operatorDecl -> OPERATOR ID(parameterList) AS locating stmtSets END OPERATOR
 
 stmtSets -> stmt stmtSets | e
 stmt -> forStmt | variableDecl | loopStmt | ifStmt | selectStmt | controlStmt | expr
@@ -66,8 +69,7 @@ expr_ -> AND logicNot expr_
        | XOR logicNot expr_
        | e
 
-logicNot -> not logicNot
-          | cmp
+logicNot -> (not)* cmp
 
 cmp  -> add cmp_
 

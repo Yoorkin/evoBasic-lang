@@ -75,7 +75,8 @@ namespace evoBasic{
             "ID","Digit","Decimal","String","CHAR",
             "ClassMember","ModuleMember",
             "Public","Private","Friend","Static","Virtual","Override","Normal","Global",
-            "<Syntax Error>","Empty","Cast","Expression","Import","ExternalFunction","Path","Impl"
+            "<Syntax Error>","Empty","Cast","Expression","Import","ExternalFunction","Path",
+            "Impl","Extend","Init","Operator"
     };
 
     vector<string> Node::AttrToString{

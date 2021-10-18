@@ -63,6 +63,10 @@ namespace evoBasic{
 
         shared_ptr<Node> functionDecl(set<Token::Enum> follows);
 
+        shared_ptr<Node> initDecl(set<Token::Enum> follows);
+
+        shared_ptr<Node> operatorDecl(set<Token::Enum> follows);
+
         shared_ptr<Node> parameterList(set<Token::Enum> follows);
 
         shared_ptr<Node> subDecl(set<Token::Enum> follows);

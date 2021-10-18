@@ -208,7 +208,9 @@ namespace evoBasic {
                 {Token::enum_,     Token::end_enum},
                 {Token::class_,    Token::end_class},
                 {Token::select_,   Token::end_select},
-                {Token::type_,     Token::end_type}
+                {Token::type_,     Token::end_type},
+                {Token::init,      Token::end_init},
+                {Token::operator_, Token::end_operator}
         };
 
         do {
