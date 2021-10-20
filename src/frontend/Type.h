@@ -21,7 +21,7 @@ namespace evoBasic::Type{
 #define PRIMITIVE               Variant,Integer,Long,Byte,Boolean
 
 #define INSTANCE_ENUM_LIST      PRIMITIVE,Object,Enum_
-#define DECLARATION_ENUM_LIST   Class,Enum_,Type,Function,Module,Variant,Primitive,FunctionScope
+#define DECLARATION_ENUM_LIST   Class,Enum_,EnumMember,Type,Function,Module,Variant,Primitive,FunctionScope,Field
 #define FUNCTION_ENUM_LIST      User,External,Intrinsic
 
     enum class InstanceEnum{INSTANCE_ENUM_LIST};
@@ -44,29 +44,12 @@ namespace evoBasic::Type{
     class RValue;
     class LValue;
     class Prototype;
-    class Member;
     class Function;
 
     void strToLowerByRef(string& str);
 
     enum class ValueKind{lvalue,rvalue};
 
-
-    class Member{
-        Member()=default;
-    public:
-        static Member FromSymbol(AccessFlag flag,std::shared_ptr<Symbol> ptr);
-        static Member FromFunction(AccessFlag flag, std::shared_ptr<Function> function);
-        static Member FromField(AccessFlag flag,std::string field_name,std::shared_ptr<Prototype> field_prototype);
-
-        std::shared_ptr<Symbol> symbol;
-        std::string name;
-        AccessFlag access;
-        enum {SymbolMember,FunctionMember,FieldMember}kind;
-        MethodFlag method;
-        static Member Empty;
-        bool operator==(const Member& rhs) const;
-    };
 
     class Value{
         ValueKind kind;
@@ -136,6 +119,7 @@ namespace evoBasic::Type{
         friend Domain;
         std::string name;
         DeclarationEnum kind;
+        AccessFlag access = AccessFlag::Public;
     protected:
         weak_ptr<Domain> parent;
     public:
@@ -150,12 +134,14 @@ namespace evoBasic::Type{
         virtual std::weak_ptr<Domain> getParent();
         virtual void setParent(std::weak_ptr<Domain> parent);
 
+        void setAccessFlag(AccessFlag flag);
+        AccessFlag getAccessFlag();
+
         template<typename T>
         std::shared_ptr<T> as_shared(){
             return dynamic_pointer_cast<T>(shared_from_this());
         }
     };
-
 
 
     class Prototype : public Symbol{
@@ -166,6 +152,28 @@ namespace evoBasic::Type{
         virtual bool equal(std::shared_ptr<Prototype> ptr)=0;
     };
 
+    class Field : public Symbol{
+        std::shared_ptr<Prototype> prototype;
+        bool is_const;
+    public:
+        explicit Field(std::shared_ptr<Prototype> prototype,bool isConstant)
+        : Symbol(DeclarationEnum::Field), prototype(prototype){
+            if(!prototype) throw "error";
+        }
+
+        bool isConstant(){
+            return is_const;
+        }
+
+        std::shared_ptr<Prototype> getPrototype(){
+            return prototype;
+        }
+
+        void setPrototype(std::shared_ptr<Prototype> ptr){
+            this->prototype = ptr;
+        }
+
+    };
 
 
     //domain interface
@@ -173,20 +181,20 @@ namespace evoBasic::Type{
     public:
         Domain(const Domain&)=delete;
         explicit Domain(DeclarationEnum kind) : Prototype(kind){}
-        virtual void add(Member member)=0;
-        virtual Member find(const string& name)=0; //search object in members
-        virtual Member lookUp(const string& name); //search object in members and importedModule
+        virtual void add(std::shared_ptr<Symbol> symbol)=0;
+        virtual std::shared_ptr<Symbol> find(const string& name)=0; //search object in members
+        virtual std::shared_ptr<Symbol> lookUp(const string& name); //search object in members and importedModule
         virtual void addImport(std::shared_ptr<Symbol> child)=0;
     };
 
     class Module : public Domain{
-        std::map<std::string,Member> members;
+        std::map<std::string,std::shared_ptr<Symbol>> members;
         std::list<std::shared_ptr<Module>> importedModule;
     public:
         Module(const Module&)=delete;
         explicit Module(): Domain(DeclarationEnum::Module){}
-        void add(Member member)override;
-        Member find(const string& name)override;
+        void add(std::shared_ptr<Symbol> symbol)override;
+        std::shared_ptr<Symbol> find(const string& name)override;
 
         void addImport(shared_ptr<Symbol> child)override;
 
@@ -198,25 +206,25 @@ namespace evoBasic::Type{
 
 
     class Record : public Domain {
-        std::map<std::string,Member> fields;
+        std::map<std::string,std::shared_ptr<Symbol>> fields;
     public:
         explicit Record() : Domain(DeclarationEnum::Type){}
-        Member find(const string& name)override;
+        std::shared_ptr<Symbol> find(const string& name)override;
         std::shared_ptr<Value> create()override;
         bool equal(std::shared_ptr<Prototype> ptr)override;
 
-        void add(Member member)override;
+        void add(std::shared_ptr<Symbol> symbol)override;
         void addImport(std::shared_ptr<Symbol>)override{throw "error";}
     };
 
 
 
     class Class : public Domain {
-        std::map<std::string,Member> members;
+        std::map<std::string,std::shared_ptr<Symbol>> members;
         std::map<std::string,int> memberPosition;
         std::vector<std::string> layout;
         std::list<std::pair<int,Node>> initialize_rules;
-        std::map<std::string,Member> virtual_table;
+        std::map<std::string,std::shared_ptr<Symbol>> virtual_table;
         std::list<std::shared_ptr<Symbol>> inherit_list;
     public:
         Class(const Class&)=delete;
@@ -226,8 +234,8 @@ namespace evoBasic::Type{
         std::shared_ptr<Value> create()override;
         bool equal(std::shared_ptr<Prototype> ptr)override;
 
-        void add(Member member)override;
-        Member find(const string& name)override;
+        void add(std::shared_ptr<Symbol> symbol)override;
+        std::shared_ptr<Symbol> find(const string& name)override;
         void addImport(std::shared_ptr<Symbol> child)override;
 
         //void addInitializeRule(int layout_index,)
@@ -257,6 +265,7 @@ namespace evoBasic::Type{
         public:
             explicit Primitive(std::string name) : Prototype(DeclarationEnum::Primitive){
                 setName(std::move(name));
+                setAccessFlag(AccessFlag::Public);
             };
 
             bool equal(std::shared_ptr<Prototype> ptr)override{
@@ -275,6 +284,26 @@ namespace evoBasic::Type{
 
     }
 
+
+    class Enumeration : public Class{
+        int defaultValue;
+    public:
+        Enumeration(const Enumeration&)=delete;
+        explicit Enumeration();
+        int getDefalutNumber() const{return defaultValue;}
+        void setDefalutNumber(int num){defaultValue=num;}
+
+        shared_ptr<Value> create()override;
+        bool equal(shared_ptr<Prototype> ptr)override;
+    };
+
+    class EnumMember : public Symbol{
+        int index;
+    public:
+        EnumMember(const Enumeration&)=delete;
+        explicit EnumMember(int index): Symbol(DeclarationEnum::EnumMember),index(index){}
+        int getIndex()const{return index;}
+    };
 
     class Function: public Symbol{
     public:
@@ -298,33 +327,6 @@ namespace evoBasic::Type{
         virtual MethodFlag getMethodFlag()=0;
     };
 
-
-
-
-//    class Field : public Symbol{
-//        shared_ptr<Symbol> target;
-//    public:
-//        Field(const Field&)=delete;
-//        explicit Field(shared_ptr<Symbol> target);
-//    };
-
-    class Enumeration : public Class{
-        std::map<std::string,int> stringToInt;
-        int defaultValue;
-    public:
-        Enumeration(const Enumeration&)=delete;
-        explicit Enumeration();
-        int getDefalutNumber() const{return defaultValue;}
-        void setDefalutNumber(int num){defaultValue=num;}
-        const std::map<std::string,int>& getMapping(){return stringToInt;}
-        void addEnumMember(int value,std::string name);
-
-        shared_ptr<Value> create()override;
-        bool equal(shared_ptr<Prototype> ptr)override;
-    };
-
-
-
     class UserFunction: public Function{
         std::shared_ptr<Node> implCodeTree;
         MethodFlag flag;
@@ -335,6 +337,13 @@ namespace evoBasic::Type{
         MethodFlag getMethodFlag()override{return flag;}
     };
 
+//    class InitFunction: public UserFunction{
+//    public:
+//        InitFunction(const InitFunction&)=delete;
+//        InitFunction(std::shared_ptr<Node> implCodeTree): UserFunction(MethodFlag::Normal,implCodeTree){}
+//    };
+//
+
     class ExternalFunction: public Function{
         std::string library,name;
     public:
@@ -342,6 +351,8 @@ namespace evoBasic::Type{
         explicit ExternalFunction(std::string library,std::string name);
         MethodFlag getMethodFlag()override{return MethodFlag::Normal;}
     };
+
+
 
 
 

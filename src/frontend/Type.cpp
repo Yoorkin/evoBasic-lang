@@ -21,50 +21,15 @@
 
 namespace evoBasic::Type{
 
-    Member Member::Empty{};
-
-    bool Member::operator==(const Member &rhs) const {
-        return symbol==rhs.symbol;
-    }
-
-    Member Member::FromSymbol(AccessFlag flag, std::shared_ptr<Symbol> ptr) {
-        Member ret;
-        ret.symbol = ptr;
-        ret.access = flag;
-        ret.kind = SymbolMember;
-        ret.name = ptr->getName();
-        return ret;
-    }
-
-    Member Member::FromFunction(AccessFlag flag, std::shared_ptr<Function> function) {
-        Member ret;
-        ret.symbol = function;
-        ret.access = flag;
-        ret.kind = FunctionMember;
-        ret.method = function->getMethodFlag();
-        ret.name = function->getName();
-        return ret;
-    }
-
-    Member Member::FromField(AccessFlag flag, std::string field_name, std::shared_ptr<Prototype> field_prototype) {
-        Member ret;
-        ret.symbol = field_prototype;
-        ret.kind = FieldMember;
-        ret.name = std::move(field_name);
-        ret.access = flag;
-        ret.method = MethodFlag::Normal;
-        return ret;
-    }
-
 
     void strToLowerByRef(string& str){
         transform(str.begin(),str.end(),str.begin(),[](unsigned char c){ return std::tolower(c); });
     }
 
 
-    void Module::add(Member member) {
-        this->members.insert(make_pair(member.symbol->getName(),member));
-        member.symbol->setParent(static_pointer_cast<Module>(shared_from_this()));
+    void Module::add(std::shared_ptr<Symbol> symbol) {
+        this->members.insert(make_pair(symbol->getName(),symbol));
+        symbol->setParent(static_pointer_cast<Domain>(shared_from_this()));
     }
 
     void Module::addImport(shared_ptr<Symbol> child) {
@@ -76,24 +41,24 @@ namespace evoBasic::Type{
         }
     }
 
-    void Class::add(Member member) {
-        switch(member.kind){
-            case Member::FunctionMember:
-                if(member.method==MethodFlag::Virtual||member.method==MethodFlag::Override){
-                    virtual_table.insert({member.name,member});
-                }
-                else{
-                    this->members.insert({member.name,member});
-                }
-                break;
-            case Member::SymbolMember:
-                this->members.insert({member.name,member});
-                break;
-            case Member::FieldMember:
-                this->members.insert(make_pair(member.name,member));
-                this->memberPosition.insert(make_pair(member.name,layout.size()));
-                this->layout.push_back(member.name);
-                break;
+    void Class::add(std::shared_ptr<Symbol> symbol) {
+        auto kind = symbol->getKind();
+        if(kind == DeclarationEnum::Function){
+            auto func = static_pointer_cast<Type::Function>(symbol);
+            if(func->getMethodFlag() == MethodFlag::Virtual || func->getMethodFlag() == MethodFlag::Override){
+                virtual_table.insert({symbol->getName(),symbol});
+            }
+            else{
+                members.insert({symbol->getName(),symbol});
+            }
+        }
+        else if(kind == DeclarationEnum::Field){
+            this->members.insert({symbol->getName(),symbol});
+            this->memberPosition.insert({symbol->getName(),layout.size()});
+            this->layout.push_back(symbol->getName());
+        }
+        else{
+            members.insert({symbol->getName(),symbol});
         }
     }
 
@@ -153,9 +118,6 @@ namespace evoBasic::Type{
 
     }
 
-    void Enumeration::addEnumMember(int value,std::string name) {
-        this->stringToInt.insert(std::make_pair(name,value));
-    }
 
 
     shared_ptr<Prototype> Function::getRetSignature() {
@@ -202,43 +164,50 @@ namespace evoBasic::Type{
         this->parent = parent;
     }
 
-    Member Domain::lookUp(const string &name) {
+    AccessFlag Symbol::getAccessFlag() {
+        return this->access;
+    }
+
+    void Symbol::setAccessFlag(AccessFlag flag) {
+        this->access = flag;
+    }
+
+    std::shared_ptr<Symbol> Domain::lookUp(const string &name) {
         std::shared_ptr<Domain> ptr = static_pointer_cast<Domain>(shared_from_this());
         while(ptr){
             auto p = ptr->find(name);
-            if(p!=Member::Empty){
+            if(!p){
                 return p;
             }
             ptr = ptr->getParent().lock();
         }
-        return Member::Empty;
+        return {nullptr};
     }
 
-    Member Module::find(const string &name) {
+    std::shared_ptr<Symbol> Module::find(const string &name) {
         auto ret = this->members.find(name);
         if(ret!=members.end()){
             return ret->second;
         }
-        return Member::Empty;
+        return {nullptr};
     }
 
 
-
-    Member Class::find(const string &name) {
+    std::shared_ptr<Symbol> Class::find(const string &name) {
         auto ret = this->members.find(name);
         if(ret!=members.end()){
             return ret->second;
         }
-        return Member::Empty;
+        return {nullptr};
     }
 
     void Class::addInherit(std::shared_ptr<Class> base) {
         this->inherit_list.push_back(base);
     }
 
-    void Record::add(Member member) {
-        if(member.kind == Member::FieldMember){
-            fields.insert({member.name,member});
+    void Record::add(std::shared_ptr<Symbol> symbol) {
+        if(symbol->getKind() == Type::DeclarationEnum::Field){
+            fields.insert({symbol->getName(),symbol});
         }
         else{
             throw "error";
@@ -253,6 +222,7 @@ namespace evoBasic::Type{
 
         VariantClass::VariantClass() {
             setName("variant");
+            setAccessFlag(AccessFlag::Public);
         }
 
     }
@@ -265,7 +235,7 @@ namespace evoBasic::Type{
         this->kind = kind;
     }
 
-    Member Record::find(const string &name) {
+    std::shared_ptr<Symbol> Record::find(const string &name) {
         throw "unimpl";
     }
 

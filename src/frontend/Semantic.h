@@ -72,13 +72,13 @@ namespace evoBasic{
     };
 
     enum class ExprKind{lvalue,rvalue};
-    using ExprResult = std::pair<std::shared_ptr<Type::Prototype>,ExprKind>;
+    using ExprResult = std::pair<std::shared_ptr<Type::Symbol>,ExprKind>;
 
     class TypeAnalyzer{
 
         using PromotionRuleFunction = std::function<std::shared_ptr<Type::Prototype>(std::shared_ptr<Node>)>;
-        using PrototypePtr = Type::Prototype*;
-        using BinaryOpSignature = std::pair<PrototypePtr,PrototypePtr>;
+        using SymbolPtr = Type::Symbol*;
+        using BinaryOpSignature = std::pair<SymbolPtr,SymbolPtr>;
 
         static std::map<BinaryOpSignature,std::shared_ptr<Type::Prototype>> binary_op_result_type;
         static std::map<BinaryOpSignature,PromotionRuleFunction> typePromotionRule;
@@ -102,12 +102,11 @@ namespace evoBasic{
 
     class TemporaryScope : public Type::Domain {
         std::shared_ptr<Type::UserFunction> current_function;
-        std::map<std::string,Type::Member> local_variables;
+        std::map<std::string,std::shared_ptr<Type::Symbol>> local_variables;
     public:
         explicit TemporaryScope(std::weak_ptr<Type::Domain> parent,std::shared_ptr<Type::UserFunction> current);
-        Type::Member find(const string& name)override;
-        void add(Type::Member member)override;
-        void add(std::string name,std::shared_ptr<Type::Prototype> prototype);
+        std::shared_ptr<Type::Symbol> find(const string& name)override;
+        void add(std::shared_ptr<Type::Symbol> symbol)override;
 
         std::shared_ptr<Type::Value> create()override{
             throw "error";

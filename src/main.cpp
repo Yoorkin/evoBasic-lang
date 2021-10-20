@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
         << Logger::warningCount << " warning(s)" <<endl;
 
     //Analyzer::check(table,trees);
-    auto ma = dynamic_pointer_cast<Type::Domain>(table.global->find("mymodulea").symbol);
+    auto ma = dynamic_pointer_cast<Type::Domain>(table.global->find("mymodulea"));
 
 }
 
