@@ -7,6 +7,6 @@ file(GLOB FRONTEND_SOURCE ${CMAKE_SOURCE_DIR}/src/frontend/*)
 file(GLOB UTILS_SOURCE ${CMAKE_SOURCE_DIR}/src/utils/*)
 file(GLOB INTERPRETER_SOURCE ${CMAKE_SOURCE_DIR}/src/interpreter/*)
 
-# add_subdirectory(test ${CMAKE_BINARY_DIR}/test_dir)
+add_subdirectory(test ${CMAKE_BINARY_DIR}/test_dir)
 
-add_executable(evoBasic ${FRONTEND_SOURCE} ${UTILS_SOURCE} ${INTERPRETER_SOURCE} src/main.cpp src/interpreter/Intrinsics.cpp src/interpreter/Intrinsics.h src/interpreter/Interpreter.cpp src/interpreter/Interpreter.h)
+add_executable(evoBasic ${FRONTEND_SOURCE} ${UTILS_SOURCE} ${INTERPRETER_SOURCE} src/main.cpp)

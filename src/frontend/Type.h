@@ -21,7 +21,7 @@ namespace evoBasic::Type{
 #define PRIMITIVE               Variant,Integer,Long,Byte,Boolean
 
 #define INSTANCE_ENUM_LIST      PRIMITIVE,Object,Enum_
-#define DECLARATION_ENUM_LIST   Class,Enum_,EnumMember,Type,Function,Module,Variant,Primitive,FunctionScope,Field
+#define DECLARATION_ENUM_LIST   Class,Enum_,EnumMember,Type,Function,Module,Variant,Primitive,FunctionScope,Field,Error
 #define FUNCTION_ENUM_LIST      User,External,Intrinsic
 
     enum class InstanceEnum{INSTANCE_ENUM_LIST};
@@ -123,6 +123,8 @@ namespace evoBasic::Type{
     protected:
         weak_ptr<Domain> parent;
     public:
+        const std::string indent_unit = "\t";
+
         Symbol(const Symbol&)=delete;
         explicit Symbol(DeclarationEnum kind): kind(kind){}
 
@@ -139,8 +141,11 @@ namespace evoBasic::Type{
 
         template<typename T>
         std::shared_ptr<T> as_shared(){
+            if(this==nullptr)return shared_ptr<T>(nullptr);
             return dynamic_pointer_cast<T>(shared_from_this());
         }
+
+        virtual std::string debug(int indent)=0;
     };
 
 
@@ -150,6 +155,19 @@ namespace evoBasic::Type{
         explicit Prototype(DeclarationEnum kind): Symbol(kind){};
         virtual std::shared_ptr<Value> create()=0;
         virtual bool equal(std::shared_ptr<Prototype> ptr)=0;
+    };
+
+    class Error : public Prototype{
+    public:
+        Error(const Error&)=delete;
+        explicit Error();
+        std::string debug(int indent)override;
+        bool equal(std::shared_ptr<Prototype> ptr)override{
+            return this == ptr.get();
+        }
+        std::shared_ptr<Value> create()override{
+            throw "error";
+        }
     };
 
     class Field : public Symbol{
@@ -172,6 +190,8 @@ namespace evoBasic::Type{
         void setPrototype(std::shared_ptr<Prototype> ptr){
             this->prototype = ptr;
         }
+
+        std::string debug(int indent)override;
 
     };
 
@@ -200,7 +220,7 @@ namespace evoBasic::Type{
 
         std::shared_ptr<Value> create()override {return {nullptr};}
         bool equal(std::shared_ptr<Prototype> ptr)override {return false;}
-
+        std::string debug(int indent)override;
     };
 
 
@@ -215,11 +235,13 @@ namespace evoBasic::Type{
 
         void add(std::shared_ptr<Symbol> symbol)override;
         void addImport(std::shared_ptr<Symbol>)override{throw "error";}
+        std::string debug(int indent)override;
     };
 
 
 
     class Class : public Domain {
+    protected:
         std::map<std::string,std::shared_ptr<Symbol>> members;
         std::map<std::string,int> memberPosition;
         std::vector<std::string> layout;
@@ -241,6 +263,7 @@ namespace evoBasic::Type{
         //void addInitializeRule(int layout_index,)
 
         void addInherit(std::shared_ptr<Class> base);
+        std::string debug(int indent)override;
     };
 
     namespace primitive{
@@ -278,9 +301,14 @@ namespace evoBasic::Type{
                 ret->setPrototype(static_pointer_cast<Prototype>(shared_from_this()));
                 return ret;
             }
+
+            std::string debug(int indent)override{
+                stringstream str;
+                for(int i=0;i<indent;i++)str<<indent_unit;
+                str<<getName()<<" : Primitive\n";
+                return str.str();
+            }
         };
-
-
 
     }
 
@@ -295,6 +323,7 @@ namespace evoBasic::Type{
 
         shared_ptr<Value> create()override;
         bool equal(shared_ptr<Prototype> ptr)override;
+        std::string debug(int indent)override;
     };
 
     class EnumMember : public Symbol{
@@ -303,6 +332,7 @@ namespace evoBasic::Type{
         EnumMember(const Enumeration&)=delete;
         explicit EnumMember(int index): Symbol(DeclarationEnum::EnumMember),index(index){}
         int getIndex()const{return index;}
+        std::string debug(int indent)override;
     };
 
     class Function: public Symbol{
@@ -325,6 +355,7 @@ namespace evoBasic::Type{
         shared_ptr<Prototype> getRetSignature();
         void setRetSignature(shared_ptr<Prototype> ptr);
         virtual MethodFlag getMethodFlag()=0;
+        std::string debug(int indent)override;
     };
 
     class UserFunction: public Function{

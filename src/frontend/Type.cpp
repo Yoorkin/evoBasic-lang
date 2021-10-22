@@ -48,9 +48,7 @@ namespace evoBasic::Type{
             if(func->getMethodFlag() == MethodFlag::Virtual || func->getMethodFlag() == MethodFlag::Override){
                 virtual_table.insert({symbol->getName(),symbol});
             }
-            else{
-                members.insert({symbol->getName(),symbol});
-            }
+            members.insert({symbol->getName(),symbol});
         }
         else if(kind == DeclarationEnum::Field){
             this->members.insert({symbol->getName(),symbol});
@@ -60,6 +58,7 @@ namespace evoBasic::Type{
         else{
             members.insert({symbol->getName(),symbol});
         }
+        symbol->setParent(shared_from_this()->as_shared<Domain>());
     }
 
     shared_ptr<Value> Class::create() {
@@ -118,6 +117,17 @@ namespace evoBasic::Type{
 
     }
 
+    std::string Enumeration::debug(int indent) {
+        stringstream str;
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<getName()<<" : Enum{\n";
+        for(const auto& p:this->members){
+            str<<p.second->debug(indent+1);
+        }
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<"}\n";
+        return str.str();
+    }
 
 
     shared_ptr<Prototype> Function::getRetSignature() {
@@ -133,7 +143,20 @@ namespace evoBasic::Type{
         this->argsSignature.push_back(arg);
     }
 
-
+    std::string Function::debug(int indent) {
+        stringstream str;
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<this->getName()<<" : Function(";
+        for(const auto& arg:this->argsSignature){
+            str<<arg.symbol->getName();
+            if(&arg!=&argsSignature.back())str<<',';
+        }
+        str<<')';
+        if(retSignature)
+            str<<" As "<<retSignature->getName();
+        str<<'\n';
+        return str.str();
+    }
 
 
     UserFunction::UserFunction(MethodFlag flag,shared_ptr<Node> implCodeTree)
@@ -176,7 +199,7 @@ namespace evoBasic::Type{
         std::shared_ptr<Domain> ptr = static_pointer_cast<Domain>(shared_from_this());
         while(ptr){
             auto p = ptr->find(name);
-            if(!p){
+            if(p){
                 return p;
             }
             ptr = ptr->getParent().lock();
@@ -192,6 +215,18 @@ namespace evoBasic::Type{
         return {nullptr};
     }
 
+    std::string Module::debug(int indent) {
+        stringstream str;
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<this->getName()<<" : Module{\n";
+        for(const auto& p:this->members){
+            str<<p.second->debug(indent+1);
+        }
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<"}\n";
+        return str.str();
+    }
+
 
     std::shared_ptr<Symbol> Class::find(const string &name) {
         auto ret = this->members.find(name);
@@ -203,6 +238,18 @@ namespace evoBasic::Type{
 
     void Class::addInherit(std::shared_ptr<Class> base) {
         this->inherit_list.push_back(base);
+    }
+
+    std::string Class::debug(int indent) {
+        stringstream str;
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<getName()<<" : Class{\n";
+        for(const auto& p:this->members){
+            str<<p.second->debug(indent+1);
+        }
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<"}\n";
+        return str.str();
     }
 
     void Record::add(std::shared_ptr<Symbol> symbol) {
@@ -247,7 +294,39 @@ namespace evoBasic::Type{
         throw "unimpl";
     }
 
+    std::string Record::debug(int indent) {
+        stringstream str;
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<this->getName()<<" : Record{\n";
+        for(const auto& p:this->fields){
+            str<<p.second->debug(indent+1);
+        }
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<"}\n";
+        return str.str();
+    }
+
     VariantInstance::VariantInstance(): Instance(InstanceEnum::Variant) {
 
     }
+
+    std::string Field::debug(int indent) {
+        stringstream str;
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<this->getName()<<" : Field("<<this->getPrototype()->getName()<<")\n";
+        return str.str();
+    }
+
+    std::string EnumMember::debug(int indent) {
+        stringstream str;
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<this->getName()<<" : "<<this->index<<'\n';
+        return str.str();
+    }
+
+    std::string Error::debug(int indent) {
+        return getName();
+    }
+
+    Error::Error(): Prototype(DeclarationEnum::Error){}
 }

@@ -9,6 +9,131 @@
 
 namespace evoBasic{
 
+    BuiltIn::BuiltIn() {
+        using namespace Type::primitive;
+        boolean_prototype = make_shared<Primitive<dataDef::boolean>>("boolean");
+        byte_prototype = make_shared<Primitive<dataDef::i8>>("byte");
+        short_prototype = make_shared<Primitive<dataDef::i16>>("short");
+        integer_prototype = make_shared<Primitive<dataDef::i32>>("integer");
+        long_prototype = make_shared<Primitive<dataDef::i64>>("long");
+        single_prototype = make_shared<Primitive<dataDef::f32>>("single");
+        double_prototype = make_shared<Primitive<dataDef::f64>>("double");
+
+        variant_class = make_shared<VariantClass>();
+        variant_class->setName("variant");
+
+        error_symbol = make_shared<Type::Error>();
+        error_symbol->setName("< Error >");
+    }
+
+    BuiltIn::doubleTypePtr BuiltIn::getDoublePrototype() {
+        return double_prototype;
+    }
+
+    BuiltIn::longTypePtr BuiltIn::getLongPrototype() {
+        return long_prototype;
+    }
+
+    BuiltIn::byteTypePtr BuiltIn::getBytePrototype() {
+        return byte_prototype;
+    }
+
+    BuiltIn::shortTypePtr BuiltIn::getShortPrototype() {
+        return short_prototype;
+    }
+
+    BuiltIn::singleTypePtr BuiltIn::getSinglePrototype() {
+        return single_prototype;
+    }
+
+    std::shared_ptr<Type::primitive::VariantClass> BuiltIn::getVariantClass() {
+        return variant_class;
+    }
+
+    shared_ptr<Type::primitive::Primitive<bool>> BuiltIn::getBooleanPrototype() {
+        return boolean_prototype;
+    }
+
+    shared_ptr<Type::primitive::Primitive<int>> BuiltIn::getIntegerPrototype() {
+        return integer_prototype;
+    }
+
+    std::shared_ptr<Type::Error> BuiltIn::getErrorPrototype() {
+        return error_symbol;
+    }
+
+
+    ConversionRules::ConversionRules(BuiltIn* builtIn) {
+        enum Types {bin=0,i08,i16,i32,i64,f32,f64};
+        auto& in = *builtIn;
+        vector<shared_ptr<Type::Prototype>> enumToPrototype = {
+            in.getBooleanPrototype(),
+            in.getBytePrototype(),
+            in.getShortPrototype(),
+            in.getIntegerPrototype(),
+            in.getLongPrototype(),
+            in.getSinglePrototype(),
+            in.getDoublePrototype()
+        };
+
+        vector<vector<Types>> promotion_table = {
+                /*        bin i08 i16 132 i64 f32 f64 */
+                /* bin */{bin,i32,i32,i32,i64,f64,f64},
+                /* i08 */{i32,i32,i32,i32,i64,f64,f64},
+                /* i16 */{i32,i32,i32,i32,i64,f64,f64},
+                /* i32 */{i32,i32,i32,i32,i64,f64,f64},
+                /* i64 */{i64,i64,i64,i64,i64,f64,f64},
+                /* f32 */{f64,f64,f64,f64,f64,f64,f64},
+                /* f64 */{f64,f64,f64,f64,f64,f64,f64}
+        };
+
+        auto makeTypeAnnotation = [=](string type_name){
+            return make_node(Tag::Annotation,{
+                    make_node(Tag::Path,{
+                            make_node(Tag::ID,{{Attr::Lexeme,std::move(type_name)}})
+                    })
+            });
+        };
+
+
+        auto promoteToTargetFunction = [=](SymbolPtr lhs,SymbolPtr rhs,
+                                           const shared_ptr<Type::Prototype> target_type,
+                                           const shared_ptr<Node>& node)->shared_ptr<Type::Prototype>{
+            auto lhs_node = node->child[0], rhs_node = node->child[1];
+
+            if(lhs != target_type.get())
+                node->child[0] = make_node(Tag::Cast,{lhs_node,makeTypeAnnotation(target_type->getName())});
+
+            if(rhs != target_type.get())
+                node->child[1] = make_node(Tag::Cast,{rhs_node,makeTypeAnnotation(target_type->getName())});
+
+            return target_type;
+        };
+
+        for(int l=0;l<enumToPrototype.size();l++){
+            for(int r=0;r<enumToPrototype.size();r++){
+                const auto& l_type = enumToPrototype[l];
+                const auto& r_type = enumToPrototype[r];
+                Types idx = promotion_table[l][r];
+                auto result_prototype = enumToPrototype[(int)idx];
+                auto handler = std::bind(promoteToTargetFunction,l_type.get(),r_type.get(),result_prototype,placeholders::_1);
+                typePromotionRule.insert({{l_type.get(),r_type.get()},handler});
+            }
+        }
+    }
+
+    ConversionRules::promotion_iterator ConversionRules::promotion(SymbolPtr lhs, SymbolPtr rhs) {
+        return typePromotionRule.find({lhs,rhs});
+    }
+
+    bool ConversionRules::isEmpty(ConversionRules::promotion_iterator iterator) {
+        return typePromotionRule.end() == iterator;
+    }
+
+    bool ConversionRules::isCastRuleExist(SymbolPtr lhs,SymbolPtr rhs) {
+        return castRuleFlag.contains({lhs,rhs});
+    }
+
 
     void SymbolTable::collectSymbol(const shared_ptr<Node>& ast){
         list<pair<shared_ptr<Type::Domain>,shared_ptr<Node>>> next_list{{global,ast}};
@@ -41,7 +166,7 @@ namespace evoBasic{
                         break;
                 }
                 auto next_domain = dynamic_pointer_cast<Type::Domain>(ptr);
-                tree->set(Attr::Symbol, ptr);
+                tree->set<shared_ptr<Type::Symbol>>(Attr::Symbol, ptr);
 
                 ptr->setAccessFlag(access);
                 ptr->setName(tree->child[0]->get<std::string>(Attr::Lexeme));
@@ -86,7 +211,8 @@ namespace evoBasic{
                     }
                     auto access = tree->get<AccessFlag>(Attr::AccessFlag);
                     func->setAccessFlag(access);
-                    domain->add(func);
+                    tree->set<shared_ptr<Type::Symbol>>(Attr::Symbol,func);
+                    domain->add(func->as_shared<Type::Symbol>());
                 }
                 else if(tag == Tag::Function){
 
@@ -103,7 +229,8 @@ namespace evoBasic{
                     }
                     auto access = tree->get<AccessFlag>(Attr::AccessFlag);
                     func->setAccessFlag(access);
-                    domain->add(func);
+                    tree->set<shared_ptr<Type::Symbol>>(Attr::Symbol,func);
+                    domain->add(func->as_shared<Type::Symbol>());
 
                 }
                 else if(tag == Tag::Init){
@@ -112,7 +239,8 @@ namespace evoBasic{
                     func->setName("init");
                     visitParameterList(domain,func,tree->child[0]);
                     func->setAccessFlag(AccessFlag::Public);
-                    domain->add(func);
+                    tree->set<shared_ptr<Type::Symbol>>(Attr::Symbol,func);
+                    domain->add(func->as_shared<Type::Symbol>());
 
                 }
                 else if(tag == Tag::Operator){
@@ -133,6 +261,7 @@ namespace evoBasic{
                         if(member->child.size()>1)value = member->child[1]->get<int>(Attr::Value);
                         auto enum_member = make_shared<Type::EnumMember>(value);
                         enum_member->setAccessFlag(AccessFlag::Public);
+                        enum_member->setName(name);
                         em->add(enum_member);
                         value++;
                     }
@@ -164,7 +293,7 @@ namespace evoBasic{
                         auto annotation_node = variable_node->child[1];
                         shared_ptr<Type::Symbol> target_type;
                         if(annotation_node->tag == Tag::Empty){
-                            target_type = variant_class;
+                            target_type = Semantics::Instance()->getBuiltIn().getVariantClass();
                         }
                         else{
                             target_type = get<0>(visitAnnotation(domain,annotation_node));
@@ -176,7 +305,7 @@ namespace evoBasic{
                             field->setName(name);
                             field->setAccessFlag(access);
                             domain->add(field);
-                            variable_node->set(Attr::Symbol, field);
+                            variable_node->set<shared_ptr<Type::Symbol>>(Attr::Symbol, field);
                         }
                         else{
                             Logger::error(variable_node->child[0]->pos(),"无法实例化的类型");
@@ -227,32 +356,19 @@ namespace evoBasic{
         }
     }
 
-    std::shared_ptr<Type::primitive::VariantClass> SymbolTable::variant_class;
-    std::shared_ptr<Type::primitive::Primitive<bool>> SymbolTable::boolean_prototype;
-    std::shared_ptr<Type::primitive::Primitive<int>> SymbolTable::integer_prototype;
-    std::shared_ptr<Type::primitive::Primitive<double>> SymbolTable::double_prototype;
-
-    std::shared_ptr<Type::primitive::VariantClass> SymbolTable::getVariantClass() {
-        if(!variant_class) variant_class = make_shared<Type::primitive::VariantClass>();
-        return variant_class;
-    }
-
-    shared_ptr<Type::primitive::Primitive<bool>> SymbolTable::getBooleanPrototype() {
-        if(!boolean_prototype) boolean_prototype = make_shared<Type::primitive::Primitive<bool>>("boolean");
-        return boolean_prototype;
-    }
-
-    shared_ptr<Type::primitive::Primitive<int>> SymbolTable::getIntegerPrototype() {
-        if(!integer_prototype) integer_prototype = make_shared<Type::primitive::Primitive<int>>("integer");
-        return integer_prototype;
-    }
-
 
     SymbolTable::SymbolTable(const vector<AST>& ast_list): global(new Type::Module()) {
         global->setName("global");
-        global->add(getVariantClass());
-        global->add(getIntegerPrototype());
-        global->add(getBooleanPrototype());
+        auto& in = Semantics::Instance()->getBuiltIn();
+        global->add(in.getVariantClass());
+        global->add(in.getBooleanPrototype());
+        global->add(in.getBytePrototype());
+        global->add(in.getShortPrototype());
+        global->add(in.getIntegerPrototype());
+        global->add(in.getLongPrototype());
+        global->add(in.getSinglePrototype());
+        global->add(in.getDoublePrototype());
+
 
         for(auto& ast:ast_list){
             collectSymbol(ast.root);
@@ -325,18 +441,10 @@ namespace evoBasic{
         }
     }
 
-    shared_ptr<Type::primitive::Primitive<double>> SymbolTable::getDoublePrototype() {
-        if(!double_prototype)double_prototype = make_shared<Type::primitive::Primitive<double>>("double");
-        return double_prototype;
-    }
 
-
-    std::map<TypeAnalyzer::BinaryOpSignature,TypeAnalyzer::PromotionRuleFunction> TypeAnalyzer::typePromotionRule;
-    std::set<TypeAnalyzer::BinaryOpSignature> TypeAnalyzer::isCastRuleExist;
-
-    void TypeAnalyzer::check(std::vector<AST>& ast_list,SymbolTable& table) {
+    void TypeAnalyzer::check(std::vector<AST>& ast_list) {
         for(auto& ast:ast_list){
-            visitStructure(table.global,ast.root);
+            visitStructure(table->global,ast.root);
         }
     }
 
@@ -353,10 +461,10 @@ namespace evoBasic{
             }
             else if(tag == Tag::Function){
                 auto user_function = tree->get<std::shared_ptr<Type::Symbol>>(Attr::Symbol)->as_shared<Type::UserFunction>();
-                visitStatement(domain,user_function,tree);
+                visitStatement(domain,user_function,tree->child[3]);
             }
             else if(tag == Tag::Let){ // let statement in Class or Module
-                visitLetStmt(domain,tree);
+                visitLoadedLetStmt(domain, tree);
             }
         }
     }
@@ -367,13 +475,13 @@ namespace evoBasic{
         for(auto& stmt_node:root->child){
             auto tag = stmt_node->tag;
             if(tag == Tag::Let){
-                visitLetStmt(scope,stmt_node);
+                visitLocalLetStmt(scope, stmt_node);
             }
             else if(tag == Tag::If){
                 for(auto& child:stmt_node->child){
                     if(child->tag == Tag::ElseIf){
                         auto cond_type = visitExpression(scope,child->child[0]).first->as_shared<Type::Prototype>();
-                        if(!cond_type->equal(SymbolTable::getBooleanPrototype())){
+                        if(cond_type && !cond_type->equal(Semantics::Instance()->getBuiltIn().getBooleanPrototype())){
                             Logger::error(child->pos(),"条件表达式类型不是'Boolean'");
                         }
                         visitStatement(scope,function,child->child[1]);
@@ -385,7 +493,7 @@ namespace evoBasic{
             }
             else if(tag == Tag::Loop){
                 auto cond_type = visitExpression(scope,stmt_node->child[0]).first->as_shared<Type::Prototype>();
-                if(!cond_type->equal(SymbolTable::getBooleanPrototype())){
+                if(!cond_type->equal(Semantics::Instance()->getBuiltIn().getBooleanPrototype())){
                     Logger::error(stmt_node->pos(),"条件表达式类型不是'Boolean'");
                 }
                 visitStatement(scope,function,stmt_node->child[1]);
@@ -418,55 +526,169 @@ namespace evoBasic{
         }
     }
 
-    void TypeAnalyzer::visitLetStmt(std::shared_ptr<Type::Domain> domain, std::shared_ptr<Node> node) {
+    void TypeAnalyzer::visitLoadedLetStmt(std::shared_ptr<Type::Domain> domain, std::shared_ptr<Node> node) {
         for(auto& variable_node:node->child){
             auto name = variable_node->child[0]->get<string>(Attr::Lexeme);
             auto initial_node = variable_node->child[2];
             if(variable_node->tag != Tag::Variable || initial_node->tag == Tag::Empty)continue;
-            auto var_type = static_pointer_cast<Type::Prototype>(variable_node->get<shared_ptr<Type::Symbol>>(Attr::Symbol));
+            auto var_type = variable_node->get<shared_ptr<Type::Symbol>>(Attr::Symbol)->as_shared<Type::Field>();
             auto exp_type = visitExpression(domain,initial_node).first->as_shared<Type::Prototype>();
-            if(!var_type->equal(exp_type)){
+            if(!var_type->getPrototype()->equal(exp_type)){
                 Logger::error(variable_node->child[0]->pos(),Format()<<"初始化表达式类型与变量'"<<name<<"'类型不一致");
+            }
+        }
+    }
+
+    void TypeAnalyzer::visitLocalLetStmt(shared_ptr<Type::Domain> domain,shared_ptr<Node> node){
+        bool is_const = false;
+        for(auto& variable_node:node->child){
+            if(variable_node->tag != Tag::Variable)continue;
+            auto name = variable_node->child[0]->get<string>(Attr::Lexeme);
+            auto annotation_node = variable_node->child[1];
+            auto initial_node = variable_node->child[2];
+
+            shared_ptr<Type::Prototype> var_type(nullptr);
+
+            if(annotation_node->tag == Tag::Empty){
+                if(initial_node->tag == Tag::Empty){
+                    Logger::error(variable_node->pos(),"无法进行类型推导，变量必须有初始化表达式或类型标记");
+                }
+                else{
+                    auto result = visitExpression(domain,initial_node);
+                    if(result.second != ExprKind::error)var_type = result.first->as_shared<Type::Prototype>();
+                }
+            }
+            else{
+                if(initial_node->tag == Tag::Empty){
+                    var_type = get<0>(SymbolTable::visitAnnotation(domain,annotation_node))->as_shared<Type::Prototype>();
+                }
+                else{
+                    auto result = visitExpression(domain,initial_node);
+                    auto anno_type = get<0>(SymbolTable::visitAnnotation(domain,annotation_node))->as_shared<Type::Prototype>();
+                    if(result.second != ExprKind::error){
+                        auto expr_type = result.first->as_shared<Type::Prototype>();
+                        if(!anno_type->equal(expr_type)){
+                            Logger::error(variable_node->child[0]->pos(),Format()<<"初始化表达式类型与变量'"<<name<<"'类型不一致");
+                        }
+                        else{
+                            var_type = anno_type;
+                        }
+                    }
+                }
+            }
+
+            if(var_type){
+                domain->add(make_shared<Type::Field>(var_type,is_const));
+            }
+            else{
+                auto tmp = make_shared<Type::Field>(Semantics::Instance()->getBuiltIn().getErrorPrototype(), is_const);
+                tmp->setName(name);
+                domain->add(tmp);
             }
         }
     }
 
 
     ExprResult TypeAnalyzer::visitExpression(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> node){
+        try{
+            return visitLogic(domain,node->child[0]);
+        }
+        catch (SkipExprException &e){
+            return {nullptr, ExprKind::error};
+        }
+        catch (ExprException &e){
+            Logger::error(e.getPos(),e.getMsg());
+            return {nullptr, ExprKind::error};
+        }
 
     }
 
-    ExprResult TypeAnalyzer::visitTermAddCmp(std::shared_ptr<Type::Domain> domain, std::shared_ptr<Node> node) {
-        set<Tag> condition = {Tag::Mul,Tag::Div,Tag::FDiv,Tag::Add,Tag::Sub,Tag::EQ,Tag::LE,Tag::GE,Tag::LT,Tag::GT,Tag::NE};
-        if(condition.contains(node->tag)){
-            auto lhs_type = visitTermAddCmp(domain, node->child[0]).first;
-            auto rhs_type = visitTermAddCmp(domain, node->child[1]).first;
-            if(lhs_type->getKind() == Type::DeclarationEnum::Primitive &&
-                rhs_type->getKind() == Type::DeclarationEnum::Primitive){
+    ExprResult TypeAnalyzer::visitExprWithoutCatch(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> node){
+        return visitLogic(domain,node->child[0]);
+    }
 
-                auto rule = typePromotionRule.find({lhs_type.get(),rhs_type.get()});
-                if(rule == typePromotionRule.end()){
+    ExprResult TypeAnalyzer::visitLogic(std::shared_ptr<Type::Domain> domain, std::shared_ptr<Node> node) {
+        auto tag = node->tag;
+        switch (node->tag){
+            case Tag::And:
+            case Tag::Or:
+            case Tag::Xor:
+            {
+                auto lhs_type = visitLogic(domain,node->child[0]).first->as_shared<Type::primitive::Primitive<bool>>();
+                auto rhs_type = visitLogic(domain,node->child[1]).first->as_shared<Type::primitive::Primitive<bool>>();
+                if(!lhs_type){
+                    throw ExprException(node->pos(),"左值类型不是Boolean");
+                }
+                else if(!rhs_type){
+                    throw ExprException(node->pos(),"右值类型不是Boolean");
+                }
+                return {Semantics::Instance()->getBuiltIn().getBooleanPrototype(), ExprKind::rvalue};
+            }
+            break;
+            case Tag::Not:
+            {
+                auto rhs_type = visitLogic(domain,node->child[0]).first->as_shared<Type::primitive::Primitive<bool>>();
+                if(!rhs_type){
+                    throw ExprException(node->pos(),"右值类型不是Boolean");
+                }
+                return {Semantics::Instance()->getBuiltIn().getBooleanPrototype(), ExprKind::rvalue};
+            }
+            break;
+            default:
+                return visitTermAddCmp(domain,node);
+        }
+    }
+
+    ExprResult TypeAnalyzer::visitTermAddCmp(std::shared_ptr<Type::Domain> domain, std::shared_ptr<Node> node) {
+
+        switch (node->tag) {
+            case Tag::Mul:
+            case Tag::Div:
+            case Tag::FDiv:
+            case Tag::Add:
+            case Tag::Sub:
+            case Tag::LE:
+            case Tag::GE:
+            case Tag::LT:
+            case Tag::GT:
+            {
+                auto lhs_type = visitTermAddCmp(domain, node->child[0]).first;
+                auto rhs_type = visitTermAddCmp(domain, node->child[1]).first;
+                auto rule = Semantics::Instance()->getConversionRules().promotion(lhs_type.get(), rhs_type.get());
+                if(Semantics::Instance()->getConversionRules().isEmpty(rule)){
                     throw ExprException(node->pos(),Format()<<"无法进行'"<<lhs_type->getName()
                                                             <<" op "<<rhs_type->getName()<<"'的二元运算");
                 }
-                auto ret_type = rule->second.operator()(node);
+                auto ret_type = rule->second.operator ()(node);
                 return {ret_type,ExprKind::rvalue};
             }
-            else if((node->tag == Tag::NE || node->tag == Tag::EQ) &&
-                    lhs_type->getKind() == Type::DeclarationEnum::Field &&
-                    rhs_type->getKind() == Type::DeclarationEnum::Enum_){
-
-
+            break;
+            case Tag::EQ:
+            case Tag::NE:
+            {
+                auto lhs_type = visitTermAddCmp(domain, node->child[0]).first;
+                auto rhs_type = visitTermAddCmp(domain, node->child[1]).first;
+                auto lhs_kind = lhs_type->getKind();
+                auto rhs_kind = rhs_type->getKind();
+                if(lhs_kind == Type::DeclarationEnum::Primitive &&
+                   rhs_kind == Type::DeclarationEnum::Primitive) {
+                    auto rule = Semantics::Instance()->getConversionRules().promotion(lhs_type.get(), rhs_type.get());
+                    if(Semantics::Instance()->getConversionRules().isEmpty(rule)) {
+                        throw ExprException(node->pos(),Format()<<"无法进行'"<<lhs_type->getName()
+                                                                <<" op "<<rhs_type->getName()<<"'的二元运算");
+                    }
+                    rule->second.operator ()(node);
+                    return {Semantics::Instance()->getBuiltIn().getBooleanPrototype(),ExprKind::rvalue};
+                }
+                else if(lhs_kind == Type::DeclarationEnum::Enum_ &&
+                        rhs_kind == Type::DeclarationEnum::Enum_ &&
+                        lhs_type == rhs_type) {
+                    return {Semantics::Instance()->getBuiltIn().getBooleanPrototype(),ExprKind::rvalue};
+                }
             }
-            else if(node->tag == Tag::EQ &&
-                    lhs_type->getKind() == Type::DeclarationEnum::Type &&
-                    rhs_type->getKind() == Type::DeclarationEnum::Type){
-
-
-            }
-        }
-        else{
-            return visitFactor(domain,node);
+            break;
+            default:
+                return visitFactor(domain,node);
         }
     }
 
@@ -474,10 +696,14 @@ namespace evoBasic{
     TypeAnalyzer::visitFactor(std::shared_ptr<Type::Domain> domain, std::shared_ptr<Node> node) {
         if(node->tag == Tag::Cast){
             auto lhs = visitFactor(domain,node->child[0]);
-            auto anno_info = SymbolTable::visitAnnotation(domain,node);
+            auto anno_info = SymbolTable::visitAnnotation(domain,node->child[1]);
             auto anno_type = get<0>(anno_info)->as_shared<Type::Prototype>();
-            isCastRuleExist.contains({lhs.first.get(),anno_type.get()});
-            return {anno_type,ExprKind::rvalue};
+            if(Semantics::Instance()->getConversionRules().isCastRuleExist(lhs.first.get(),anno_type.get())){
+                return {anno_type,ExprKind::rvalue};
+            }
+            else{
+                throw ExprException(node->pos(),"未定义的类型转换");
+            }
         }
         else if(node->tag == Tag::Assign){
             auto lhs = visitFactor(domain,node->child[0]);
@@ -496,13 +722,20 @@ namespace evoBasic{
         else{
             auto symbol = visitUnit(domain,node);
             switch (symbol->getKind()) {
+                case Type::DeclarationEnum::Enum_:
+                    return {symbol,ExprKind::rvalue};
                 case Type::DeclarationEnum::EnumMember:
                     return {symbol->getParent().lock(),ExprKind::rvalue};
                 case Type::DeclarationEnum::Field:
-                    return {
+                    if(symbol->as_shared<Type::Field>()->getPrototype()->getKind() == Type::DeclarationEnum::Error){
+                        throw SkipExprException();
+                    }
+                    else return {
                         symbol->as_shared<Type::Field>()->getPrototype(),
                         static_pointer_cast<Type::Field>(symbol)->isConstant() ? ExprKind::rvalue : ExprKind::lvalue
                     };
+                case Type::DeclarationEnum::Primitive:
+                    return {symbol,ExprKind::rvalue};
                 default:
                     throw ExprException(node->pos(),"无法赋值或转型的表达式");
             }
@@ -576,14 +809,17 @@ namespace evoBasic{
             if(!function) {
                 throw UnitException(node->pos(), Format() << "'" << name << "'不是一个函数或者过程");
             }
-            visitParameterList(domain,function,node->child[1]);
+            visitParameterList(domain,function,node->child[0]);
             return function->getRetSignature();
         }
         else if(node->tag == Tag::Digit){
-            return SymbolTable::getIntegerPrototype();
+            return Semantics::Instance()->getBuiltIn().getIntegerPrototype();
         }
         else if(node->tag == Tag::Decimal){
-            return SymbolTable::getDoublePrototype();
+            return Semantics::Instance()->getBuiltIn().getDoublePrototype();
+        }
+        else if(node->tag == Tag::Exprssion){
+            return visitExprWithoutCatch(domain,node).first;
         }
         else{
             throw "unimplement";
@@ -595,6 +831,8 @@ namespace evoBasic{
                                      std::shared_ptr<Node> node) {
 
     }
+
+    TypeAnalyzer::TypeAnalyzer(const shared_ptr<SymbolTable> table):table(table) {}
 
 
     TemporaryScope::TemporaryScope(std::weak_ptr<Type::Domain> parent, std::shared_ptr<Type::UserFunction> current)
@@ -612,5 +850,28 @@ namespace evoBasic{
         this->local_variables.insert({symbol->getName(),symbol});
     }
 
+    std::shared_ptr<Semantics> Semantics::instance;
 
+    BuiltIn &Semantics::getBuiltIn() {
+        return *builtIn;
+    }
+
+    std::shared_ptr<Semantics> Semantics::Instance() {
+        if(!instance)instance.reset(new Semantics());
+        return instance;
+    }
+
+    ConversionRules &Semantics::getConversionRules() {
+        return *conversionRules;
+    }
+
+    Semantics::Semantics() {
+        builtIn = new BuiltIn();
+        conversionRules = new ConversionRules(builtIn);
+    }
+
+    Semantics::~Semantics() {
+        delete builtIn;
+        delete conversionRules;
+    }
 }

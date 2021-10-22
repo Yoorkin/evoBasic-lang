@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.13)
 project(evoBasicTest)
 
 # GoogleTest requires at least C++11
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 20)
 
 include(FetchContent)
 FetchContent_Declare(
@@ -17,7 +17,10 @@ enable_testing()
 
 add_executable(
         cbTest
-        semantic_test.hpp
+        semantic_test.cpp
+        ${FRONTEND_SOURCE}
+        ${UTILS_SOURCE}
+        ${INTERPRETER_SOURCE}
 )
 target_link_libraries(
         cbTest

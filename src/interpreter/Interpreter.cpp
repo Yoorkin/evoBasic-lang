@@ -111,7 +111,7 @@ namespace evoBasic{
     }
 
 
-    Interpreter::Interpreter(const SymbolTable& table) : current_domain(table.global),entrance(table.entrance){
+    Interpreter::Interpreter(shared_ptr<SymbolTable> table) : current_domain(table->global),entrance(table->entrance){
 
     }
 

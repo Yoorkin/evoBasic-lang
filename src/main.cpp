@@ -45,33 +45,43 @@ int main(int argc, char* argv[]) {
 
 
     vector<AST> trees;
-    stringstream ast_info_stream;
+
 
     for(auto& sourcePath:sourceMgr.getSourcesPath()){
         auto source = make_shared<Source>(sourcePath);
-        Logger::error(Position(5,2,3,8,source),"testsettetttttttttttt");
         Lexer lexer(source);
         Parser parser(lexer);
         auto ast = parser.parse();
-        ast.root->print(ast_info_stream);
         trees.push_back(ast);
     }
 
-    SymbolTable table(trees);
+    auto table = make_shared<SymbolTable>(trees);
 
+
+    Logger::dev(table->global->debug(0));
+    stringstream ast_info_stream;
+    for(auto ast:trees)
+        ast.root->print(ast_info_stream);
     Logger::dev(ast_info_stream.str());
 
 
-    if(Logger::errorCount == 0){
-        auto interpreter = make_shared<Interpreter>(table);
-        interpreter->execute();
-    }
+    auto analyzer = make_shared<TypeAnalyzer>(table);
+    analyzer->check(trees);
+
+
+
+
+
+//    if(Logger::errorCount == 0){
+//        auto interpreter = make_shared<Interpreter>(table);
+//        interpreter->execute();
+//    }
 
     cout<< endl << Logger::errorCount << " error(s), "
         << Logger::warningCount << " warning(s)" <<endl;
 
     //Analyzer::check(table,trees);
-    auto ma = dynamic_pointer_cast<Type::Domain>(table.global->find("mymodulea"));
+    //auto ma = dynamic_pointer_cast<Type::Domain>(table.global->find("mymodulea"));
 
 }
 

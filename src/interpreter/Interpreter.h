@@ -40,7 +40,7 @@ namespace evoBasic{
         std::shared_ptr<Type::Domain> current_domain;
         std::shared_ptr<Type::UserFunction> entrance;
     public:
-        explicit Interpreter(const SymbolTable& table);
+        explicit Interpreter(std::shared_ptr<SymbolTable> table);
         void execute();
         std::shared_ptr<Type::Value> call(std::shared_ptr<Type::Function> function,Position previous);
         std::shared_ptr<Type::Value> calculateExpression(std::shared_ptr<Node> expression);

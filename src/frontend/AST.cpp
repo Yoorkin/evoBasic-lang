@@ -37,6 +37,7 @@ namespace evoBasic{
                 if(target==typeid(string))out<<'"'<<any_cast<string>(x.second)<<'"';
                 else if(target==typeid(int))out<<any_cast<int>(x.second);
                 else if(target==typeid(bool))out<<(any_cast<bool>(x.second)?"true":"false");
+                else if(target==typeid(double))out<<any_cast<double>(x.second);
                 else if(target==typeid(Position)){
                     auto pos = any_cast<Position>(x.second);
                     out<<"("<<pos.getY()<<","<<pos.getX()<<')';
@@ -80,7 +81,7 @@ namespace evoBasic{
     };
 
     vector<string> Node::AttrToString{
-        "Type","Name","Value","ValueKind","IsByval","IsOptional","Lexeme","Pos","Access","Method"
+        "Type","Name","Value","ValueKind","IsByval","IsOptional","Lexeme","Pos","Access","Method","Symbol"
     };
 
     Node::Node(Tag tag):tag(tag){}
