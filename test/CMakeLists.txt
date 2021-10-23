@@ -17,7 +17,7 @@ enable_testing()
 
 add_executable(
         cbTest
-        semantic_test.cpp
+        semantic_test.cc
         ${FRONTEND_SOURCE}
         ${UTILS_SOURCE}
         ${INTERPRETER_SOURCE}

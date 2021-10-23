@@ -173,11 +173,15 @@ namespace evoBasic::Type{
     class Field : public Symbol{
         std::shared_ptr<Prototype> prototype;
         bool is_const;
+        bool need_inference;
     public:
         explicit Field(std::shared_ptr<Prototype> prototype,bool isConstant)
-        : Symbol(DeclarationEnum::Field), prototype(prototype){
+                : Symbol(DeclarationEnum::Field),prototype(prototype),need_inference(false){
             if(!prototype) throw "error";
         }
+
+        explicit  Field(bool isConstant)
+            : Symbol(DeclarationEnum::Field),prototype(nullptr),need_inference(true){}
 
         bool isConstant(){
             return is_const;
@@ -188,7 +192,12 @@ namespace evoBasic::Type{
         }
 
         void setPrototype(std::shared_ptr<Prototype> ptr){
+            need_inference = true;
             this->prototype = ptr;
+        }
+
+        bool isNeedInference(){
+            return need_inference;
         }
 
         std::string debug(int indent)override;

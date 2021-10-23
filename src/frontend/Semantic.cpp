@@ -528,8 +528,23 @@ namespace evoBasic{
 
     void TypeAnalyzer::visitLoadedLetStmt(std::shared_ptr<Type::Domain> domain, std::shared_ptr<Node> node) {
         for(auto& variable_node:node->child){
+            if(variable_node->tag != Tag::Variable)continue;
+
             auto name = variable_node->child[0]->get<string>(Attr::Lexeme);
+            auto anno_node = variable_node->child[1];
             auto initial_node = variable_node->child[2];
+
+            if(anno_node->tag == Tag::Empty && initial_node->tag != Tag::Empty){
+                auto exp_type = visitExpression(domain,initial_node).first->as_shared<Type::Prototype>();
+
+            }
+            else if(anno_node->tag != Tag::Empty && initial_node->tag != Tag::Empty){
+
+            }
+            else{
+                Logger::error(variable_node->pos(),"无法进行类型推断");
+            }
+
             if(variable_node->tag != Tag::Variable || initial_node->tag == Tag::Empty)continue;
             auto var_type = variable_node->get<shared_ptr<Type::Symbol>>(Attr::Symbol)->as_shared<Type::Field>();
             auto exp_type = visitExpression(domain,initial_node).first->as_shared<Type::Prototype>();
@@ -544,6 +559,11 @@ namespace evoBasic{
         for(auto& variable_node:node->child){
             if(variable_node->tag != Tag::Variable)continue;
             auto name = variable_node->child[0]->get<string>(Attr::Lexeme);
+            if(domain->find(name)){
+                Logger::error(variable_node->pos(),"变量重复声明");
+                return;
+            }
+
             auto annotation_node = variable_node->child[1];
             auto initial_node = variable_node->child[2];
 
@@ -578,7 +598,9 @@ namespace evoBasic{
             }
 
             if(var_type){
-                domain->add(make_shared<Type::Field>(var_type,is_const));
+                auto tmp = make_shared<Type::Field>(var_type,is_const);
+                tmp->setName(name);
+                domain->add(tmp);
             }
             else{
                 auto tmp = make_shared<Type::Field>(Semantics::Instance()->getBuiltIn().getErrorPrototype(), is_const);
