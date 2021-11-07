@@ -61,7 +61,7 @@ namespace evoBasic{
 
         shared_ptr<Node> variableDecl(set<Token::Enum> follow={});
 
-        shared_ptr<Node> functionDecl(set<Token::Enum> follows);
+        shared_ptr<Node> functionDecl(set<Token::Enum> follows,bool need_definition=true);
 
         shared_ptr<Node> initDecl(set<Token::Enum> follows);
 
@@ -69,7 +69,7 @@ namespace evoBasic{
 
         shared_ptr<Node> parameterList(set<Token::Enum> follows);
 
-        shared_ptr<Node> subDecl(set<Token::Enum> follows);
+        shared_ptr<Node> subDecl(set<Token::Enum> follows,bool need_definition=true);
 
         shared_ptr<Node> ID(set<Token::Enum> follows={});
 
@@ -98,6 +98,8 @@ namespace evoBasic{
         AccessFlag accessFlag();
 
         MethodFlag methodFlag();
+
+        shared_ptr<Node> interfaceDecl(set<Token::Enum> follows);
     };
 
 }

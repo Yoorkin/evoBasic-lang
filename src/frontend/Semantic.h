@@ -190,20 +190,23 @@ namespace evoBasic{
 
         void visitParameterList(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Type::Function> function,
                                         std::shared_ptr<Node> parameter_list);
-
+        Dependencies<Type::Field> field_dependent;
+        Dependencies<Type::Class> class_dependent;
     public:
 
         explicit SymbolTable(const vector<AST>& ast_list);
 
-        /*
-         * collect information of Function,Declare,Type Member,Enum Member
-         */
-        void collectDetail(AST ast);
 
         /*
-         *  collect information of Module,Class,Global,Type,Enum
+         *  collect information of Module,Class,Global,Type,Enum and Field
          */
         void collectSymbol(const shared_ptr<Node>& ast);
+
+        /*
+         * collect information of Function,Declare,Type Member,Enum Member
+         *
+         */
+        void collectDetail(AST ast);
 
         static std::tuple<std::shared_ptr<Type::Symbol>,Position,std::string>
         visitPath(std::shared_ptr<Type::Domain> domain,std::shared_ptr<Node> path);
@@ -292,9 +295,6 @@ namespace evoBasic{
             throw "error";
         };
 
-        void addImport(std::shared_ptr<Symbol> child)override{
-            throw "unimpl";//TODO
-        };
 
         std::string debug(int indent)override{}
     };

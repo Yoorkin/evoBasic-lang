@@ -14,21 +14,22 @@ namespace evoBasic{
     Node::Node(Tag tag,initializer_list<shared_ptr<Node>> child)
         :tag(tag),child(child){}
 
-    const vector<string> AccessFlagToString{"Public","Private","Friend"};
+    const vector<string> AccessFlagToString{"Public","Private","Friend","Protected"};
     const vector<string> MethodFlagToString{"Virtual","Override","Normal","Static"};
 
     void Node::print(ostream& out) {
         print("","*",true,out);
     }
     void Node::print(string prefix,const string& mark,bool isLast,ostream& out) {
+        const string RedBegin = "\033[31m";
+        const string GrayBegin = "\033[37m";
+        const string ColorEnd = "\033[0m";
         if(tag==Tag::Error){
-            const string RedBegin = "\033[31m";
-            const string ColorEnd = "\033[0m";
             out<<prefix<<mark<<"─"<<RedBegin<<TagToString[(int)tag]<<ColorEnd;
         }
         else out<<prefix<<mark<<"─"<<TagToString[(int)tag];
         if(!attr.empty()){
-            out<<" {";
+            out<<GrayBegin<<" {";
             bool firstAttr = true;
             for(auto x:attr){
                 if(firstAttr)firstAttr=false;else out<<',';
@@ -47,7 +48,7 @@ namespace evoBasic{
                 else if(target==typeid(MethodFlag))
                     out<<MethodFlagToString[(int)any_cast<MethodFlag>(x.second)];
             }
-            out<<"}";
+            out<<"}"<<ColorEnd;
         }
         out<<endl;
         if(isLast)prefix+=' ';else prefix+=mark;
@@ -77,7 +78,7 @@ namespace evoBasic{
             "ClassMember","ModuleMember",
             "Public","Private","Friend","Static","Virtual","Override","Normal","Global",
             "<Syntax Error>","Empty","Cast","Expression","Import","ExternalFunction","Path",
-            "Impl","Extend","Init","Operator"
+            "Impl","Extend","Init","Operator","Interface"
     };
 
     vector<string> Node::AttrToString{

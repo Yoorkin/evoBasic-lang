@@ -189,10 +189,14 @@ namespace evoBasic {
     void Lexer::printLexeme(Token nextToken, string action = "") {
         stringstream stream;
         stream << action;
-        stream.width(20);
+        stream.width(18);
         stream.setf(ios::left);
         stream.fill(' ');
-        stream << nextToken.lexeme << ' ' << nextToken.pos.getY() << ':' << nextToken.pos.getX() << endl;
+        stream << Token::reserved[(int)nextToken.kind] << " '";
+        stream.width(30);
+        stream.setf(ios::left);
+        stream.fill(' ');
+        stream << nextToken.lexeme << "'  " << nextToken.pos.getY() << ':' << nextToken.pos.getX() << endl;
         stream.unsetf(ios::left);
         Logger::dev(stream.str());
     }
@@ -210,7 +214,8 @@ namespace evoBasic {
                 {Token::select_,   Token::end_select},
                 {Token::type_,     Token::end_type},
                 {Token::init,      Token::end_init},
-                {Token::operator_, Token::end_operator}
+                {Token::operator_, Token::end_operator},
+                {Token::interface, Token::end_interface}
         };
 
         do {

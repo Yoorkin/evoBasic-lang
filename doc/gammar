@@ -6,14 +6,14 @@ moduleDecl -> MODULE ID
                  (accessFlag moduleMember)*
               END MODULE
 
-accessFlag -> PUBLIC | PRIVATE | FRIEND | e
-moduleMember -> functionDecl | subDecl | typeDecl | enumDecl | variableDecl | classDecl | moduleDecl
+accessFlag -> PUBLIC | PRIVATE | FRIEND | PROTECTED | e
+moduleMember -> functionDecl | subDecl | typeDecl | enumDecl | variableDecl | classDecl | moduleDecl | interfaceDecl
 
 classDecl -> CLASS ID (EXTEND locating)? (IMPLEMENTS locating(,locating)*)*
                 (accessFlag classMember)*
              END CLASS
 
-classMember -> methodFlag classMethod | typeDecl | enumDecl | variableDecl 
+classMember -> methodFlag classMethod | typeDecl | enumDecl | variableDecl
 methodFlag -> STATIC | VIRTUAL | OVERRIDE | e
 classMethod -> functionDecl | subDecl
 
@@ -26,6 +26,8 @@ enumDecl -> ENUM ID enumList END ENUM
 enumList -> ID enumVal enumList_
 enumList_ -> ID enumVal enumList_ | e
 enumVal -> = DIGHT | e
+
+interfaceDecl -> INTERFACE ID functionDecl* END INTERFACE
 
 functionDecl -> FUNCTION ID(parameterList) AS locating stmtSets END FUNCTION 
 subDecl -> SUB ID(parameterList) stmtSets END SUB

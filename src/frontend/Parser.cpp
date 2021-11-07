@@ -34,7 +34,7 @@ namespace evoBasic{
     shared_ptr<Node> Parser::moduleDecl(set<Token::Enum> follow){
         set<Token::Enum> memberFollow =  {Token::public_,Token::private_,Token::friend_,Token::virtual_,Token::override_,
                                           Token::function_,Token::sub_,Token::type_,Token::enum_,Token::module_,Token::class_,
-                                          Token::let_};
+                                          Token::let_,Token::interface};
         auto addition(follow);
         addition.insert(memberFollow.begin(),memberFollow.end());
         addition.insert(Token::end_module);
@@ -125,6 +125,7 @@ namespace evoBasic{
             case Token::module_:   return moduleDecl(follow);
             case Token::import:    return importDecl(follow);
             case Token::declare:   return declareDecl(follow);
+            case Token::interface: return interfaceDecl(follow);
             default:
                 Logger::error(lexer.getNextToken().pos,"无法识别的声明");
                 lexer.skipUntilFollow(follow);
@@ -144,6 +145,9 @@ namespace evoBasic{
             case Token::friend_:
                 lexer.match(Token::friend_);
                 return AccessFlag::Friend;
+            case Token::protected_:
+                lexer.match(Token::protected_);
+                return AccessFlag::Protected;
             default:
                 return AccessFlag::Private;
         }
@@ -209,15 +213,60 @@ namespace evoBasic{
         return ret;
     }
 
-    shared_ptr<Node> Parser::functionDecl(set<Token::Enum> follows){
+    shared_ptr<Node> Parser::interfaceDecl(set<Token::Enum> follows){
+        lexer.match(Token::interface);
+        auto id = ID(combine(follows,{Token::end_interface,Token::function_}));
+        auto ret = make_node(Tag::Interface,{{Attr::Position,id->pos()}},{id});
+
+        while(lexer.getNextToken().kind != Token::end_interface){
+            switch (lexer.getNextToken().kind) {
+                case Token::function_:
+                    ret->child.push_back(functionDecl(follows,false));
+                    break;
+                case Token::sub_:
+                    ret->child.push_back(subDecl(follows,false));
+                    break;
+                default:
+                    Logger::error(lexer.getNextToken().pos,"无法识别的声明");
+                    lexer.skipUntilFollow(follows);
+                    return Node::Error;
+            }
+        }
+        lexer.match(Token::end_interface,follows,"接口缺少'End Interface'标记");
+        return ret;
+    }
+
+    shared_ptr<Node> Parser::functionDecl(set<Token::Enum> follows,bool need_definition){
         lexer.match(Token::function_);
         auto id = ID(combine(follows,{Token::LB,Token::end_function}));
         auto params = parameterList(combine(follows,{Token::as_,Token::end_function}));
         lexer.match(Token::as_,combine(follows,{stmtFollows}),"缺少返回类型标记");
         auto retAnno = make_node(Tag::Annotation,{locating(combine(follows,{stmtFollows}))});
-        auto stmts = stmtSet(combine(follows,{Token::end_function}));
-        lexer.match(Token::end_function,follows,"函数缺少'End Function'标记");
-        return make_node(Tag::Function, {{Attr::Position, id->pos()}}, {id, params, retAnno, stmts});
+        if(need_definition){
+            auto stmts = stmtSet(combine(follows,{Token::end_function}));
+            lexer.match(Token::end_function,follows,"函数缺少'End Function'标记");
+            return make_node(Tag::Function, {{Attr::Position, id->pos()}}, {id, params, retAnno, stmts});
+        }
+        else{
+            return make_node(Tag::Function, {{Attr::Position, id->pos()}}, {id, params, retAnno, Node::Empty});
+        }
+    }
+
+    shared_ptr<Node> Parser::subDecl(set<Token::Enum> follows,bool need_definition){
+        auto addition(follows);
+        addition.insert(Token::end_sub);
+
+        lexer.match(Token::sub_);
+        auto id = ID();
+        auto params = parameterList(combine(follows,{stmtFollows}));
+        if(need_definition){
+            auto stmts = stmtSet(addition);
+            lexer.match(Token::end_sub,follows,"您完全不写'End Sub'结束符号是吗？");
+            return make_node(Tag::Function, {{Attr::Position, id->pos()}}, {id, params,Node::Empty, stmts});
+        }
+        else{
+            return make_node(Tag::Function, {{Attr::Position, id->pos()}}, {id, params,Node::Empty, Node::Empty});
+        }
     }
 
     shared_ptr<Node> Parser::initDecl(set<Token::Enum> follows){
@@ -238,18 +287,6 @@ namespace evoBasic{
         auto stmts = stmtSet(combine(follows,{Token::end_init}));
         lexer.match(Token::end_operator,follows,"您完全不写'End Operator'结束符号是吗？");
         return make_node(Tag::Operator, {{Attr::Position, id->pos()}}, {id, params, retAnno, stmts});
-    }
-
-    shared_ptr<Node> Parser::subDecl(set<Token::Enum> follows){
-        auto addition(follows);
-        addition.insert(Token::end_sub);
-
-        lexer.match(Token::sub_);
-        auto id = ID();
-        auto params = parameterList(combine(follows,{stmtFollows}));
-        auto stmts = stmtSet(addition);
-        lexer.match(Token::end_sub,follows,"您完全不写'End Sub'结束符号是吗？");
-        return make_node(Tag::Function, {{Attr::Position, id->pos()}}, {id, params,Node::Empty, stmts});
     }
 
     shared_ptr<Node> Parser::parameterList(set<Token::Enum> follows){

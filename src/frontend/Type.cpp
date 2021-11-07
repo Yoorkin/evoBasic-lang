@@ -42,22 +42,7 @@ namespace evoBasic::Type{
     }
 
     void Class::add(std::shared_ptr<Symbol> symbol) {
-        auto kind = symbol->getKind();
-        if(kind == DeclarationEnum::Function){
-            auto func = static_pointer_cast<Type::Function>(symbol);
-            if(func->getMethodFlag() == MethodFlag::Virtual || func->getMethodFlag() == MethodFlag::Override){
-                virtual_table.insert({symbol->getName(),symbol});
-            }
-            members.insert({symbol->getName(),symbol});
-        }
-        else if(kind == DeclarationEnum::Field){
-            this->members.insert({symbol->getName(),symbol});
-            this->memberPosition.insert({symbol->getName(),layout.size()});
-            this->layout.push_back(symbol->getName());
-        }
-        else{
-            members.insert({symbol->getName(),symbol});
-        }
+        members.insert({symbol->getName(),symbol});
         symbol->setParent(shared_from_this()->as_shared<Domain>());
     }
 
@@ -77,9 +62,6 @@ namespace evoBasic::Type{
         return ptr.get()==this;
     }
 
-    void Class::addImport(shared_ptr<Symbol> child) {
-        throw "unimpl";
-    }
 
     EnumInstance::EnumInstance(int value)
         :Instance(InstanceEnum::Enum_),value(value){}
@@ -207,6 +189,8 @@ namespace evoBasic::Type{
         return {nullptr};
     }
 
+
+
     std::shared_ptr<Symbol> Module::find(const string &name) {
         auto ret = this->members.find(name);
         if(ret!=members.end()){
@@ -236,9 +220,6 @@ namespace evoBasic::Type{
         return {nullptr};
     }
 
-    void Class::addInherit(std::shared_ptr<Class> base) {
-        this->inherit_list.push_back(base);
-    }
 
     std::string Class::debug(int indent) {
         stringstream str;
@@ -250,6 +231,22 @@ namespace evoBasic::Type{
         for(int i=0;i<indent;i++)str<<indent_unit;
         str<<"}\n";
         return str.str();
+    }
+
+    void Class::setExtend(std::shared_ptr<Class> base) {
+        this->base_class = std::move(base);
+    }
+
+    void Class::setConstructor(std::shared_ptr<Function> constructor) {
+        this->constructor = std::move(constructor);
+    }
+
+    void Class::addImplementation(std::shared_ptr<Interface> interface) {
+        this->impl_interface.push_back(interface);
+    }
+
+    void Class::addInitializeRule(std::shared_ptr<Node> variable_node) {
+        this->initialize_rules.push_back(variable_node);
     }
 
     void Record::add(std::shared_ptr<Symbol> symbol) {
@@ -312,8 +309,10 @@ namespace evoBasic::Type{
 
     std::string Field::debug(int indent) {
         stringstream str;
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<this->getName()<<" : Field("<<this->getPrototype()->getName()<<")\n";
+        for(int i=0;i<indent;i++)str << indent_unit;
+        str << this->getName() << " : Field(";
+        str << isNeedInference()? "< ? >" : getPrototype()->getName();
+        str << ")\n";
         return str.str();
     }
 
@@ -329,4 +328,27 @@ namespace evoBasic::Type{
     }
 
     Error::Error(): Prototype(DeclarationEnum::Error){}
+
+    void Interface::add(std::shared_ptr<Symbol> symbol) {
+        if(symbol->getKind() != DeclarationEnum::Function)throw "error";
+        members.emplace(symbol->getName(),symbol->as_shared<Function>());
+    }
+
+    std::shared_ptr<Symbol> Interface::find(const string &name) {
+        auto target = members.find(name);
+        if(target == members.end())return nullptr;
+        return target->second;
+    }
+
+    std::string Interface::debug(int indent) {
+        stringstream str;
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<getName()<<" : Interface{\n";
+        for(const auto& p:this->members){
+            str<<p.second->debug(indent+1);
+        }
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<"}\n";
+        return str.str();
+    }
 }

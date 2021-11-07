@@ -21,7 +21,7 @@ namespace evoBasic::Type{
 #define PRIMITIVE               Variant,Integer,Long,Byte,Boolean
 
 #define INSTANCE_ENUM_LIST      PRIMITIVE,Object,Enum_
-#define DECLARATION_ENUM_LIST   Class,Enum_,EnumMember,Type,Function,Module,Variant,Primitive,FunctionScope,Field,Error
+#define DECLARATION_ENUM_LIST   Class,Enum_,EnumMember,Type,Function,Module,Variant,Primitive,FunctionScope,Field,Error,Interface
 #define FUNCTION_ENUM_LIST      User,External,Intrinsic
 
     enum class InstanceEnum{INSTANCE_ENUM_LIST};
@@ -45,6 +45,7 @@ namespace evoBasic::Type{
     class LValue;
     class Prototype;
     class Function;
+    class Interface;
 
     void strToLowerByRef(string& str);
 
@@ -97,22 +98,6 @@ namespace evoBasic::Type{
             return this->instance;
         }
     };
-
-
-//    class Instantiatable{
-//    public:
-//        Instantiatable(const Instantiatable&)=delete;
-//        Instantiatable()=default;
-//        virtual shared_ptr<Instance> create()=0;
-//    };
-//
-//    class Comparable{
-//    public:
-//        Comparable(const Comparable&)=delete;
-//        Comparable()=default;
-//        virtual bool equal(shared_ptr<Comparable> ptr)=0;
-//    };
-
 
 
     class Symbol : public std::enable_shared_from_this<Symbol> {
@@ -175,16 +160,20 @@ namespace evoBasic::Type{
         bool is_const;
         bool need_inference;
     public:
-        explicit Field(std::shared_ptr<Prototype> prototype,bool isConstant)
+        explicit Field(std::shared_ptr<Prototype> prototype)
                 : Symbol(DeclarationEnum::Field),prototype(prototype),need_inference(false){
             if(!prototype) throw "error";
         }
 
-        explicit  Field(bool isConstant)
+        explicit  Field(std::shared_ptr<Node> variable_node)
             : Symbol(DeclarationEnum::Field),prototype(nullptr),need_inference(true){}
 
         bool isConstant(){
             return is_const;
+        }
+
+        void setConstant(bool value){
+            is_const = value;
         }
 
         std::shared_ptr<Prototype> getPrototype(){
@@ -213,7 +202,6 @@ namespace evoBasic::Type{
         virtual void add(std::shared_ptr<Symbol> symbol)=0;
         virtual std::shared_ptr<Symbol> find(const string& name)=0; //search object in members
         virtual std::shared_ptr<Symbol> lookUp(const string& name); //search object in members and importedModule
-        virtual void addImport(std::shared_ptr<Symbol> child)=0;
     };
 
     class Module : public Domain{
@@ -225,7 +213,7 @@ namespace evoBasic::Type{
         void add(std::shared_ptr<Symbol> symbol)override;
         std::shared_ptr<Symbol> find(const string& name)override;
 
-        void addImport(shared_ptr<Symbol> child)override;
+        void addImport(shared_ptr<Symbol> child);
 
         std::shared_ptr<Value> create()override {return {nullptr};}
         bool equal(std::shared_ptr<Prototype> ptr)override {return false;}
@@ -243,7 +231,6 @@ namespace evoBasic::Type{
         bool equal(std::shared_ptr<Prototype> ptr)override;
 
         void add(std::shared_ptr<Symbol> symbol)override;
-        void addImport(std::shared_ptr<Symbol>)override{throw "error";}
         std::string debug(int indent)override;
     };
 
@@ -252,11 +239,11 @@ namespace evoBasic::Type{
     class Class : public Domain {
     protected:
         std::map<std::string,std::shared_ptr<Symbol>> members;
-        std::map<std::string,int> memberPosition;
-        std::vector<std::string> layout;
-        std::list<std::pair<int,Node>> initialize_rules;
-        std::map<std::string,std::shared_ptr<Symbol>> virtual_table;
-        std::list<std::shared_ptr<Symbol>> inherit_list;
+        std::list<std::shared_ptr<Node>> initialize_rules;
+
+        std::shared_ptr<Class> base_class;
+        std::list<std::shared_ptr<Interface>> impl_interface;
+        std::shared_ptr<Function> constructor;
     public:
         Class(const Class&)=delete;
         explicit Class(): Domain(DeclarationEnum::Class){}
@@ -267,13 +254,29 @@ namespace evoBasic::Type{
 
         void add(std::shared_ptr<Symbol> symbol)override;
         std::shared_ptr<Symbol> find(const string& name)override;
-        void addImport(std::shared_ptr<Symbol> child)override;
 
-        //void addInitializeRule(int layout_index,)
+        void setExtend(std::shared_ptr<Class> base);
+        void setConstructor(std::shared_ptr<Function> constructor);
+        void addImplementation(std::shared_ptr<Interface> interface);
+        void addInitializeRule(std::shared_ptr<Node> variable_node);
 
-        void addInherit(std::shared_ptr<Class> base);
         std::string debug(int indent)override;
     };
+
+
+    class Interface : public Domain{
+        std::map<std::string,std::shared_ptr<Function>> members;
+    public:
+        explicit Interface():Domain(DeclarationEnum::Interface){}
+        void add(std::shared_ptr<Symbol> symbol)final;
+        std::shared_ptr<Symbol> find(const string& name)final;
+
+        std::shared_ptr<Value> create()final{throw "error";}
+        bool equal(std::shared_ptr<Prototype> ptr)final{throw "error";}
+
+        std::string debug(int indent)final;
+    };
+
 
     namespace primitive{
 
@@ -344,6 +347,7 @@ namespace evoBasic::Type{
         std::string debug(int indent)override;
     };
 
+
     class Function: public Symbol{
     public:
         struct Argument{
@@ -366,6 +370,7 @@ namespace evoBasic::Type{
         virtual MethodFlag getMethodFlag()=0;
         std::string debug(int indent)override;
     };
+
 
     class UserFunction: public Function{
         std::shared_ptr<Node> implCodeTree;
@@ -394,8 +399,6 @@ namespace evoBasic::Type{
 
 
 
-
-
     class VoidValue : public RValue{};
 
 
@@ -414,6 +417,8 @@ namespace evoBasic::Type{
         explicit VariantInstance();
     };
 
+
+
     class EnumInstance:public Instance{
         friend Enumeration;
         weak_ptr<Enumeration> prototype;
@@ -428,6 +433,8 @@ namespace evoBasic::Type{
 
         void setPrototype(std::weak_ptr<Prototype> ptr)override;
     };
+
+
 
     class RecordInstance : public Instance {
         std::vector<std::shared_ptr<Value>> variables;
