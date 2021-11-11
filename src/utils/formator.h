@@ -7,11 +7,11 @@
 #include<sstream>
 #include<string>
 
-class Format{
+class format{
 public:
     std::stringstream stream;
     template<typename T>
-    Format & operator<<(T t){
+    format & operator<<(T t){
         stream<<t;
         return *this;
     }
@@ -19,5 +19,6 @@ public:
         return move(stream.str());
     }
 };
+
 
 #endif //EVOVM_FORMATOR_H

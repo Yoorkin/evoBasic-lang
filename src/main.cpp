@@ -1,87 +1,45 @@
-#include<iostream>
-#include<fstream>
-#include<filesystem>
-#include<map>
-#include<string>
-#include<utility>
-
-#include"frontend/Lexer.h"
-#include"frontend/Parser.h"
-#include"frontend/Semantic.h"
-#include"utils/cmdDistribute.h"
-#include"utils/Link.h"
-#include"config.h"
-#include"interpreter/Interpreter.h"
-
+#include <iostream>
+#include "utils/nullSafe.h"
+#include "token.h"
+#include "lexer.h"
+#include "logger.h"
+#include "parser.h"
+#include "semantic.h"
+#include "context.h"
+#include "codeGen.h"
 using namespace evoBasic;
 using namespace std;
-using namespace cmd;
-namespace fs = std::filesystem;
-using namespace evoBasic::env;
+int main() {
+    Logger::debugMode = true;
+    auto source = new FileSource("test");
+    Lexer lexer(source);
+    Parser parser(&lexer);
+    auto ast = parser.parseGlobal();
+    ast->debug(cout,"");
 
-int main(int argc, char* argv[]) {
-//    auto test = make_shared<Type::Class>();
-//    dynamic_pointer_cast<Type::Domain>(test)->add(AccessFlag::Public,{});
+    auto context = make_shared<Context>();
+    Semantic::collectSymbol(ast,context);
+    cout<<context->getGlobal()->debug(0)<<endl;
 
-    string outputName = config::defaultOutputName;
+    Semantic::collectDetail(ast,context);
+    cout<<context->getGlobal()->debug(0)<<endl;
 
-    auto currentPath = argv[0];
+    Semantic::typeCheck(ast,context);
+    cout<<context->getGlobal()->debug(0)<<endl;
 
-    LinkManager linkMgr;
-    SourceManager sourceMgr;
-    CmdDistributor distributor;
+    Semantic::solveTypeInferenceDependencies(context);
+    Semantic::solveByteLengthDependencies(context);
 
-    distributor.on("-dev",[&](const string& str){Logger::debugMode = true;})
-               .on("-I=",[&](string str){sourceMgr.addHeaderDirectory(std::move(str));})
-               .on("-G=",[&](string str){outputName=std::move(str);})
-               .on("-l",[&](string str){linkMgr.addLibrary(std::move(str));})
-               .on("-L=",[&](string str){linkMgr.addLibraryDirectory(std::move(str));})
-               .others([&](string str){sourceMgr.addSource(std::move(str));})
-               .unmatched([&](const string& str){Logger::error(Format()<<"未知的编译指令'"<<str<<"'");});
-
-    for(int i=1;i<argc;i++){
-        distributor.distribute(argv[i]);
+    if(Logger::errorCount == 0){
+        IRGen gen;
+        auto ir = gen.gen(ast,context);
+        ir->toString(cout);
+        fstream file("out.evo",ios::binary | ios::out);
+        ir->toHex(file);
+    }
+    else{
+        Logger::error("Build failed");
     }
 
-
-    vector<AST> trees;
-
-
-    for(auto& sourcePath:sourceMgr.getSourcesPath()){
-        auto source = make_shared<Source>(sourcePath);
-        Lexer lexer(source);
-        Parser parser(lexer);
-        auto ast = parser.parse();
-        trees.push_back(ast);
-    }
-
-    auto table = make_shared<SymbolTable>(trees);
-
-
-    Logger::dev(table->global->debug(0));
-    stringstream ast_info_stream;
-    for(auto ast:trees)
-        ast.root->print(ast_info_stream);
-    Logger::dev(ast_info_stream.str());
-
-
-    auto analyzer = make_shared<TypeAnalyzer>(table);
-    analyzer->check(trees);
-
-
-
-
-
-//    if(Logger::errorCount == 0){
-//        auto interpreter = make_shared<Interpreter>(table);
-//        interpreter->execute();
-//    }
-
-    cout<< endl << Logger::errorCount << " error(s), "
-        << Logger::warningCount << " warning(s)" <<endl;
-
-    //Analyzer::check(table,trees);
-    //auto ma = dynamic_pointer_cast<Type::Domain>(table.global->find("mymodulea"));
-
+    return 0;
 }
-

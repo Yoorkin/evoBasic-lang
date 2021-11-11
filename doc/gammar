@@ -82,7 +82,9 @@ cmp_ -> == add cmp_1
       | <= add cmp_1 
       | =< add cmp_1 
       | >= add cmp_1 
-      | e 
+      | e
+    };
+
 
 add  -> term add_ 
 

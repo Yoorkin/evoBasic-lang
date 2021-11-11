@@ -2,9 +2,9 @@
 // Created by yorkin on 7/15/21.
 //
 
-#include "Logger.h"
-#include "../frontend/Lexer.h"
-
+#include "logger.h"
+#include "nullSafe.h"
+using namespace std;
 namespace evoBasic{
 
     bool Logger::debugMode = false;
@@ -32,29 +32,31 @@ namespace evoBasic{
         out = stream;
     }
 
-    void Logger::code(const Position &pos) {
-        if(pos.getY() == pos.getEndY()){
+    void Logger::code(const Location *pos) {
+        NotNull(pos);
+        NotNull(pos->getSource());
+        if(pos->getBeginY() == pos->getEndY()){
             *out << setw(8) << setfill(' ');
-            *out << pos.getY()<<" │ "<< pos.getSource()->getLine(pos.getY()-1) << endl;
+            *out << pos->getBeginY() << " │ " << pos->getSource()->getLine(pos->getBeginY() - 1) << endl;
             for(int i=0;i<8;i++)*out<<' ';
             *out<<" │ ";
-            for(int i=0;i<pos.getX()-1;i++)*out<<' ';
+            for(int i=0;i<pos->getBeginX()-1;i++)*out<<' ';
             *out<<'^';
-            for(int i=1;i<pos.getEndX()-pos.getX();i++)*out<<'~';
+            for(int i=1;i<pos->getEndX()-pos->getBeginX();i++)*out<<'~';
             *out<<endl;
         }
         else{
             *out << setw(8) << setfill(' ');
-            auto str = pos.getSource()->getLine(pos.getY()-1);
-            *out << pos.getY()<<" │ "<< str << endl;
+            auto str = pos->getSource()->getLine(pos->getBeginY()-1);
+            *out << pos->getBeginY()<<" │ "<< str << endl;
             for(int i=0;i<8;i++)*out<<' ';
             *out<<" │ ";
-            for(int i=0;i<pos.getX()-1;i++)*out<<' ';
+            for(int i=0;i<pos->getBeginX()-1;i++)*out<<' ';
             *out<<'^';
-            for(int i=0;i<str.size()-pos.getX();i++)*out<<'~';
+            for(int i=0;i<str.size()-pos->getBeginX();i++)*out<<'~';
             *out<<endl;
-            for(int i=pos.getY()+1;i<pos.getEndY();i++){
-                str = pos.getSource()->getLine(i-1);
+            for(int i=pos->getBeginY()+1;i<pos->getEndY();i++){
+                str = pos->getSource()->getLine(i-1);
                 *out << setw(8) << setfill(' ');
                 *out << i <<" │ "<< str << endl;
                 for(int i=0;i<8;i++)*out<<' ';
@@ -63,36 +65,36 @@ namespace evoBasic{
                     *out<<"~";
                 *out<<endl;
             }
-            str = pos.getSource()->getLine(pos.getEndY()-1);
+            str = pos->getSource()->getLine(pos->getEndY()-1);
             *out << setw(8) << setfill(' ');
-            *out << pos.getEndY()-1 <<" │ "<< str << endl;
+            *out << pos->getEndY()-1 <<" │ "<< str << endl;
             for(int i=0;i<8;i++)*out<<' ';
             *out<<" │ ";
-            for(int j=1;j<pos.getEndX();j++)
+            for(int j=1;j<pos->getEndX();j++)
                 *out<<"~";
             *out<<endl;
         }
     }
 
-    void Logger::error(const Position &pos, const string &message) {
+    void Logger::error(const Location *pos, const string &message) {
         Logger::errorCount++;
         *out << "error: " << message << endl;
         code(pos);
     }
 
-    void Logger::warning(const Position &pos, const string &message) {
+    void Logger::warning(const Location *pos, const string &message) {
         Logger::warningCount++;
         *out << "warning: " << message << endl;
         code(pos);
     }
 
-    void Logger::panic(const list<std::pair<std::string, Position>> &callstack, const Position &pos, const string &message) {
+    void Logger::panic(const list<std::pair<std::string, Location*>> &callstack, const Location *pos, const string &message) {
         for(const auto& call:callstack){
             if(&call == &callstack.front()){
                 *out<<"In: "<<call.first;
             }
             else {
-                *out<<"In: "<<call.first<<"  ("<<call.second.getY()<<','<<call.second.getX()<<')';
+                *out<<"In: "<<call.first<<"  ("<<call.second->getBeginY()<<','<<call.second->getBeginX()<<')';
             }
         }
         *out << "panic: " << message <<endl;
