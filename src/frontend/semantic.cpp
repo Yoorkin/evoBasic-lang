@@ -18,7 +18,7 @@ namespace evoBasic{
     }
 
     void Semantic::collectDetail(AST *ast, std::shared_ptr<Context> context) {
-        DetialCollector collector;
+        DetailCollector collector;
         BaseArgs args;
         args.domain = context->getGlobal();
         args.context = context;
@@ -223,14 +223,14 @@ namespace evoBasic{
 
 
 
-    std::any DetialCollector::visitGlobal(ast::Global *global, BaseArgs args) {
+    std::any DetailCollector::visitGlobal(ast::Global *global, BaseArgs args) {
         NotNull(global);
         for(const auto& member:global->member_list)
             visitMember(member,args);
         return nullptr;
     }
 
-    std::any DetialCollector::visitModule(ast::Module *mod_node, BaseArgs args) {
+    std::any DetailCollector::visitModule(ast::Module *mod_node, BaseArgs args) {
         NotNull(mod_node);
         auto name = getID(mod_node->name);
         auto mod = args.domain->find(name);
@@ -241,7 +241,7 @@ namespace evoBasic{
         return nullptr;
     }
 
-    std::any DetialCollector::visitClass(ast::Class *cls_node, BaseArgs args) {
+    std::any DetailCollector::visitClass(ast::Class *cls_node, BaseArgs args) {
         NotNull(cls_node);
         auto name = getID(cls_node->name);
         auto cls = args.domain->find(name);
@@ -252,7 +252,7 @@ namespace evoBasic{
         return nullptr;
     }
 
-    std::any DetialCollector::visitEnum(ast::Enum *em_node, BaseArgs args) {
+    std::any DetailCollector::visitEnum(ast::Enum *em_node, BaseArgs args) {
         NotNull(em_node);
         auto name = getID(em_node->name);
         auto em = args.domain->find(name)->as_shared<type::Enumeration>();
@@ -275,7 +275,7 @@ namespace evoBasic{
         return nullptr;
     }
 
-    std::any DetialCollector::visitType(ast::Type *ty_node, BaseArgs args) {
+    std::any DetailCollector::visitType(ast::Type *ty_node, BaseArgs args) {
         NotNull(ty_node);
         auto name = getID(ty_node->name);
         auto ty = args.domain->find(name)->as_shared<type::Record>();
@@ -286,6 +286,9 @@ namespace evoBasic{
                 auto field = make_shared<type::Variable>();
                 field->setName(field_name);
                 auto prototype = any_cast<shared_ptr<type::Prototype>>(visitAnnotation(p.second,args));
+                if(prototype->getKind() == DeclarationEnum::Type){
+
+                }
                 field->setPrototype(prototype);
                 ty->add(field);
             }
@@ -293,14 +296,14 @@ namespace evoBasic{
         return nullptr;
     }
 
-    std::any DetialCollector::visitDim(ast::Dim *dim_node, BaseArgs args) {
+    std::any DetailCollector::visitDim(ast::Dim *dim_node, BaseArgs args) {
         for(auto& variable_node:dim_node->variable_list){
             visitVariable(variable_node,args);
         }
         return nullptr;
     }
 
-    std::any DetialCollector::visitVariable(ast::Variable *var_node, BaseArgs args) {
+    std::any DetailCollector::visitVariable(ast::Variable *var_node, BaseArgs args) {
         auto name = getID(var_node->name);
         auto var = args.domain->find(name)->as_shared<type::Variable>();
         NotNull(var.get());
@@ -310,7 +313,7 @@ namespace evoBasic{
     }
 
 
-    std::any DetialCollector::visitFunction(ast::Function *func_node, BaseArgs args) {
+    std::any DetailCollector::visitFunction(ast::Function *func_node, BaseArgs args) {
         auto name = getID(func_node->name);
         if(is_name_valid(name,func_node->name->location,args.domain)){
             auto func = make_shared<type::UserFunction>(func_node->method_flag,func_node);
@@ -330,7 +333,7 @@ namespace evoBasic{
         return nullptr;
     }
 
-    std::any DetialCollector::visitExternal(ast::External *ext_node, BaseArgs args) {
+    std::any DetailCollector::visitExternal(ast::External *ext_node, BaseArgs args) {
         auto name = getID(ext_node->name);
         if(is_name_valid(name,ext_node->name->location,args.domain)){
             auto lib = getString(ext_node->lib);
@@ -351,7 +354,7 @@ namespace evoBasic{
         return nullptr;
     }
 
-    std::any DetialCollector::visitParameter(ast::Parameter *param_node, BaseArgs args) {
+    std::any DetailCollector::visitParameter(ast::Parameter *param_node, BaseArgs args) {
         auto name = getID(param_node->name);
         auto prototype = any_cast<shared_ptr<type::Prototype>>(visitAnnotation(param_node->annotation,args));
         NotNull(prototype.get());
@@ -362,7 +365,7 @@ namespace evoBasic{
         return nullptr;
     }
 
-    std::any DetialCollector::visitMember(ast::Member *member_node, BaseArgs args) {
+    std::any DetailCollector::visitMember(ast::Member *member_node, BaseArgs args) {
         switch (member_node->member_kind) {
             case ast::Member::function_: return visitFunction((ast::Function*)member_node,args);
             case ast::Member::class_:    return visitClass((ast::Class*)member_node,args);

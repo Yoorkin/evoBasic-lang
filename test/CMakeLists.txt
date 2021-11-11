@@ -20,7 +20,7 @@ add_executable(
         semantic_test.cc
         ${FRONTEND_SOURCE}
         ${UTILS_SOURCE}
-        ${INTERPRETER_SOURCE}
+        ${VM_SOURCE}
 )
 target_link_libraries(
         cbTest

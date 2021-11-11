@@ -1,9 +1,11 @@
 #include <gtest/gtest.h>
+#include <memory>
 #include "semantic.h"
 #include "type.h"
 
 using namespace evoBasic;
 using namespace evoBasic::type;
+using namespace std;
 
 // Demonstrate some basic assertions.
 TEST(HelloTest, BasicAssertions) {
@@ -59,113 +61,110 @@ TEST(Semantic, TypePromotion){
 }
 
 TEST(TypeInference,TopoSort_Succeed){
-//    Dependencies<Field> inf;
-//    /*
-//     *  let final = a + b + begin
-//     *  let a = b + begin
-//     *  let b = begin - 100
-//     *  let begin = 50
-//     */
-//    auto a = make_shared<Field>(false);
-//    a->setName("a");
-//    auto b = make_shared<Field>(false);
-//    b->setName("b");
-//    auto begin = make_shared<Field>(Semantics::Instance()->getBuiltIn().getIntegerPrototype(),false);
-//    begin->setName("begin");
-//    auto final = make_shared<Field>(false);
-//    final->setName("final");
-//
-//    inf.addDependencies(a,{b,begin});
-//    inf.addDependencies(b,{begin});
-//    inf.addDependencies(final,{a,b,begin});
-//
-//    auto succeed = inf.solve();
-//    list<shared_ptr<Field>> order = inf.getTopologicalOrder();
-//
-//    ASSERT_TRUE(succeed);
-//    ASSERT_EQ(order.size(),3);
-//
-//    auto iter = order.begin();
-//    ASSERT_EQ((*iter)->getName(),b->getName());
-//    iter++;
-//    ASSERT_EQ((*iter)->getName(),a->getName());
-//    iter++;
-//    ASSERT_EQ((*iter)->getName(),final->getName());
+    Dependencies<char> inf;
+    /*
+     *  let e = a + b + s
+     *  let a = b + s
+     *  let b = s - 100
+     *  let s = 50
+     */
+
+    inf.addDependent('a','b');
+    inf.addDependent('a','s');
+
+    inf.addDependent('b','s');
+
+    inf.addDependent('e','a');
+    inf.addDependent('e','b');
+    inf.addDependent('e','s');
+
+    auto succeed = inf.solve();
+    const list<char> order = inf.getTopologicalOrder();
+
+    ASSERT_TRUE(succeed);
+    ASSERT_EQ(order.size(),4);
+
+    auto iter = order.begin();
+    ASSERT_EQ(*iter,'s');
+    iter++;
+    ASSERT_EQ(*iter,'b');
+    iter++;
+    ASSERT_EQ(*iter,'a');
+    iter++;
+    ASSERT_EQ(*iter,'e');
+}
+
+TEST(TypeInference,TopoSort_Succeed_with_two_element){
+    Dependencies<char> inf;
+    /*
+     *  let a = b + 100
+     *  let b = 100
+     */
+
+    inf.addDependent('a','b');
+
+    auto succeed = inf.solve();
+    const list<char> order = inf.getTopologicalOrder();
+
+    ASSERT_TRUE(succeed);
+    ASSERT_EQ(order.size(),2);
+
+    auto iter = order.begin();
+    ASSERT_EQ(*iter,'b');
+    iter++;
+    ASSERT_EQ(*iter,'a');
 }
 
 TEST(TypeInference,TopoSort_Failed){
-//    Dependencies<type::Variable> inf;
-//    /*
-//     *  let final = a + b + begin
-//     *  let a = b + begin
-//     *  let b = begin - 100
-//     *  let begin = 50
-//     *  let x = y + 1
-//     *  let y = z + 1
-//     *  let z = x + 1
-//     */
-//    auto a = make_shared<Field>(false);
-//    a->setName("a");
-//    auto b = make_shared<Field>(false);
-//    b->setName("b");
-//    auto begin = make_shared<Field>(Semantics::Instance()->getBuiltIn().getIntegerPrototype(),false);
-//    begin->setName("begin");
-//    auto final = make_shared<Field>(false);
-//    final->setName("final");
-//
-//    auto x = make_shared<Field>(false);
-//    x->setName("x");
-//    auto y = make_shared<Field>(false);
-//    y->setName("y");
-//    auto z = make_shared<Field>(false);
-//    z->setName("z");
-//
-//    auto y1 = make_shared<Field>(false);
-//    y1->setName("y1");
-//    auto y2 = make_shared<Field>(false);
-//    y2->setName("y2");
-//
-//    inf.addDependencies(a,{b,begin});
-//    inf.addDependencies(b,{begin});
-//    inf.addDependencies(final,{a,b,begin});
-//
-//    inf.addDependencies(x,{y});
-//    inf.addDependencies(y,{z});
-//    inf.addDependencies(z,{x});
-//
-//    inf.addDependencies(y,{y1});
-//    inf.addDependencies(y1,{y2});
-//    inf.addDependencies(y2,{y});
-//
-//    auto succeed = inf.solve();
-//    list<shared_ptr<Field>> order = inf.getTopologicalOrder();
-//
-//    ASSERT_FALSE(succeed);
-//    ASSERT_EQ(order.size(),3);
-//
-//    auto iter = order.begin();
-//    ASSERT_EQ((*iter)->getName(),b->getName());
-//    iter++;
-//    ASSERT_EQ((*iter)->getName(),a->getName());
-//    iter++;
-//    ASSERT_EQ((*iter)->getName(),final->getName());
-//
-//    auto circles = inf.getCircles();
-//    ASSERT_EQ(circles.size(),2);
-//
-//    set<string> expected1 = {"x","y","z"};
-//    int i1=0;
-//    for(auto& iter:circles.front()){
-//        ASSERT_TRUE(expected1.contains(iter->getName()))<<iter->getName();
-//        i1++;
-//    }
-//    ASSERT_EQ(i1,expected1.size()+1);
-//
-//    set<string> expected2 = {"y1","y","y2"};
-//    int i2=0;
-//    for(auto& iter:circles.back()){
-//        ASSERT_TRUE(expected2.contains(iter->getName()))<<iter->getName();
-//        i2++;
-//    }
-//    ASSERT_EQ(i2,expected1.size()+1);
+    Dependencies<char> inf;
+    /*
+     *  let f = a + b + s
+     *  let a = b + s
+     *  let b = s - 100
+     *  let s = 50
+     *  let x = y + 1
+     *  let y = z + 1
+     *  let z = x + 1
+     */
+    inf.addDependent('f','a');
+    inf.addDependent('f','b');
+    inf.addDependent('f','s');
+
+    inf.addDependent('a','b');
+    inf.addDependent('a','s');
+
+    inf.addDependent('b','s');
+
+    inf.addDependent('x','y');
+
+    inf.addDependent('y','z');
+
+    inf.addDependent('z','x');
+
+
+    auto succeed = inf.solve();
+    list<char> order = inf.getTopologicalOrder();
+
+    ASSERT_FALSE(succeed);
+    ASSERT_EQ(order.size(),4);
+
+    auto iter = order.begin();
+    ASSERT_EQ(*iter,'s');
+    iter++;
+    ASSERT_EQ(*iter,'b');
+    iter++;
+    ASSERT_EQ(*iter,'a');
+    iter++;
+    ASSERT_EQ(*iter,'f');
+
+    auto circles = inf.getCircles();
+    ASSERT_EQ(circles.size(),1);
+
+    set<char> expected1 = {'x','y','z'};
+    int i1=0;
+    for(auto& iter:circles.front()){
+        ASSERT_TRUE(expected1.contains(iter))<<iter;
+        i1++;
+    }
+    ASSERT_EQ(i1,expected1.size()+1);
 }

@@ -60,7 +60,7 @@ namespace evoBasic{
         ConversionRules conversion_rules;
     public:
         Dependencies<std::shared_ptr<type::Symbol>> byteLengthDependencies;
-        Dependencies<std::pair<std::shared_ptr<type::Variable>,ast::expr::Expression*>> typeInferenceDependencies;
+        //Dependencies<std::pair<std::shared_ptr<type::Variable>,ast::expr::Expression*>> typeInferenceDependencies;
         Context(const Context&)=delete;
         Context();
         std::shared_ptr<type::Module> getGlobal();

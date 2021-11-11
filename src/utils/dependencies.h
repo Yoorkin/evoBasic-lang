@@ -13,48 +13,33 @@ namespace evoBasic{
             int in_degree = 0;
             T obj;
             std::list<Data*> be_depend_list;
-            bool visited=false;
+            bool visited = false;
         };
 
-        std::map<T*,Data*> vex;
+        std::map<T,Data*> vex;
         std::list<T> inference_order;
         std::list<std::list<T>> circles;
 
-    public:
-        using sharedPtr = std::shared_ptr<T>;
-        using sharedPtrList = std::list<sharedPtr>;
-        explicit Dependencies(std::list<std::pair<sharedPtr,sharedPtrList>> dependent_rules){
-            for(auto& p:dependent_rules){
-                addDependencies(p.first,p.second);
+        Data *getData(T obj){
+            auto target = vex.find(obj);
+            if(target == vex.end()){
+                auto data = new Data;
+                data->obj = obj;
+                vex.insert(std::make_pair(obj,data));
+                return data;
+            }
+            else{
+                return target->second;
             }
         }
-
+    public:
         explicit Dependencies()=default;
 
-        void addDependencies(std::shared_ptr<T> obj, std::list<std::shared_ptr<T>> depend){
-            auto tmp = vex.find(obj.get());
-            Data *data;
-
-            if(tmp!=vex.end())data = tmp->second;
-            else data = new Data;
-
-            data->obj = obj;
-            for(auto& ptr:depend){
-                if(!ptr->isNeedInference())continue;
-                auto target = vex.find(ptr.get());
-                if(target==vex.end()){
-                    Data *d = new Data;
-                    d->obj = ptr;
-                    d->be_depend_list.push_back(data);
-                    data->in_degree++;
-                    vex.emplace(ptr.get(),d);
-                }
-                else{
-                    target->second->be_depend_list.push_back(data);
-                    data->in_degree++;
-                }
-            }
-            vex.emplace(obj.get(), data);
+        void addDependent(T obj,T depend){
+             auto obj_data = getData(obj);
+             auto depend_data = getData(depend);
+             depend_data->be_depend_list.push_back(obj_data);
+             obj_data->in_degree++;
         }
 
         bool solve(){
@@ -100,11 +85,11 @@ namespace evoBasic{
             }
         }
 
-        const std::list<std::shared_ptr<T>>& getTopologicalOrder(){
+        const std::list<T>& getTopologicalOrder(){
             return inference_order;
         }
 
-        const std::list<std::list<std::shared_ptr<T>>>& getCircles(){
+        const std::list<std::list<T>>& getCircles(){
             return circles;
         }
 

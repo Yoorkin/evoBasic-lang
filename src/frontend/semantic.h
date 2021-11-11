@@ -54,7 +54,7 @@ namespace evoBasic{
         std::any visitAnnotationUnit(ast::AnnotationUnit *unit_node, BaseArgs args) override;
     };
 
-    class DetialCollector : public BaseVisitor{
+    class DetailCollector : public BaseVisitor{
     public:
         std::any visitGlobal(ast::Global *global, BaseArgs args) override;
         std::any visitModule(ast::Module *mod, BaseArgs args) override;
