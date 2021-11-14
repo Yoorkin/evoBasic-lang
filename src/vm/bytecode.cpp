@@ -14,13 +14,15 @@ namespace evoBasic::vm{
         "MetaSegment","ConstSegment","CodeSegment",
         "Define","Jmp","Jif","EQ","NE","LT","GT","LE","GE","Add","Sub","Mul","Div","FDiv",
         "Neg","And","Or","Xor","Not","Load","Store","Invoke","Push","Pop","Ret","Cast","Dup",
+        "Stm","Ldm","Psm",
         "PushFrameBase","PushGlobalBase","Nop"
     };
 
     std::vector<data::u8> Bytecode::to_hex = {
         0xA0,0xA1,0xA2,
         0xA3,0xA4,0xA5,0xA6,0xA7,0xA8,0xA9,0xAA,0xAB,0xAC,0xAD,0xAE,0xAF,
-        0xB0,0xB1,0xB2,0xB3,0xB4,0xB5,0xB6,0xB7,0xB8,0xB9,0xBA,0xBB,0xBC,0xBD,0xBE,0xBF,0xC0
+        0xB0,0xB1,0xB2,0xB3,0xB4,0xB5,0xB6,0xB7,0xB8,0xB9,0xBA,0xBB,0xBC,0xBD,0xBE,0xBF,
+        0xC0,0xC1,0xC2,0xC3
     };
     
     std::map<std::string,Bytecode::Value> Bytecode::string_to_value = {
@@ -28,7 +30,7 @@ namespace evoBasic::vm{
         {"Define",Define},{"Jmp",Jmp},{"Jif",Jif},{"EQ",EQ},{"NE",NE},{"LT",LT},{"GT",GT},
         {"LE",LE},{"GE",GE},{"Add",Add},{"Sub",Sub},{"Mul",Mul},{"Div",Div},{"FDiv",FDiv},
         {"Neg",Neg},{"And",And},{"Or",Or},{"Xor",Xor},{"Not",Not},{"Load",Load},{"Store",Store},{"Invoke",Invoke},
-        {"Push",Push},{"Pop",Pop},{"Ret",Ret},{"Cast",Cast},{"Dup",Dup},
+        {"Push",Push},{"Pop",Pop},{"Ret",Ret},{"Cast",Cast},{"Dup",Dup},{"Stm",Stm},{"Ldm",Ldm},{"Psm",Psm},
         {"PushFrameBase",PushFrameBase},{"PushGlobalBase",PushGlobalBase},{"Nop",Nop}
     };
     
@@ -68,6 +70,8 @@ namespace evoBasic::vm{
     std::vector<data::u8> Data::to_hex = {
         0xD0,0xD1,0xD2,0xD3,0xD4,0xD5,0xD6,0xD7,0xD8,0xD9,0xDA,0xDB
     };
+
+    Data Data::ptr(vm::Data::u32);
 
     std::string Data::toString() {
         return to_string[value_];

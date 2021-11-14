@@ -24,10 +24,6 @@ namespace evoBasic{
         virtual std::any visitEnum(ast::Enum *em_node,ARGS args){return nullptr;}
         virtual std::any visitType(ast::Type *ty_node,ARGS args){return nullptr;}
         virtual std::any visitParameter(ast::Parameter *param_node,ARGS args){return nullptr;}
-        virtual std::any visitID(ast::ID *id_node,ARGS args){return nullptr;}
-        virtual std::any visitAnnotation(ast::Annotation *anno_node,ARGS args){return nullptr;}
-        virtual std::any visitAnnotationUnit(ast::AnnotationUnit *unit_node,ARGS args){return nullptr;}
-        virtual std::any visitGeneric(ast::Generic *generic_node,ARGS args){return nullptr;}
 
         virtual std::any visitLet(ast::stmt::Let *let_node,ARGS args){return nullptr;}
         virtual std::any visitSelect(ast::stmt::Select *select_node,ARGS args){return nullptr;}
@@ -43,21 +39,22 @@ namespace evoBasic{
             return nullptr;
         }
 
-        virtual std::any visitBinary(ast::expr::Binary *logic_node,ARGS args){return nullptr;}
+        virtual std::any visitBinary(ast::expr::Binary *logic_node, ARGS args){return nullptr;}
         virtual std::any visitUnary(ast::expr::Unary *unit_node, ARGS args){return nullptr;}
-        virtual std::any visitCallee(ast::expr::Callee *callee_node,ARGS args){return nullptr;}
 
-        virtual std::any visitGenericArgs(ast::expr::GenericArgs *genericArgs_node,ARGS args){return nullptr;}
-        virtual std::any visitArgsList(ast::expr::ArgsList *args_list_node, ARGS args){return nullptr;}
-        virtual std::any visitArg(ast::expr::Arg *arg_node, ARGS args){return nullptr;}
+        virtual std::any visitCallee(ast::expr::Callee *callee_node, ARGS args){return nullptr;}
+        virtual std::any visitArg(ast::expr::Callee::Argument *arg_node, ARGS args){return nullptr;}
 
-        virtual std::any visitCast(ast::expr::Cast *cast_node,ARGS args){return nullptr;}
-        virtual std::any visitDigit(ast::expr::literal::Digit *digit_node,ARGS args){return nullptr;}
-        virtual std::any visitDecimal(ast::expr::literal::Decimal *decimal, ARGS args){return nullptr;}
-        virtual std::any visitString(ast::expr::literal::String *str_node,ARGS args){return nullptr;}
-        virtual std::any visitChar(ast::expr::literal::Char *ch_node,ARGS args){return nullptr;}
-        virtual std::any visitBoolean(ast::expr::literal::Boolean *bl_node,ARGS args){return nullptr;}
+        virtual std::any visitID(ast::expr::ID *id_node,ARGS args){return nullptr;}
+        virtual std::any visitDigit(ast::expr::Digit *digit_node,ARGS args){return nullptr;}
+        virtual std::any visitDecimal(ast::expr::Decimal *decimal, ARGS args){return nullptr;}
+        virtual std::any visitString(ast::expr::String *str_node,ARGS args){return nullptr;}
+        virtual std::any visitChar(ast::expr::Char *ch_node,ARGS args){return nullptr;}
+        virtual std::any visitBoolean(ast::expr::Boolean *bl_node,ARGS args){return nullptr;}
         virtual std::any visitParentheses(ast::expr::Parentheses *parentheses_node,ARGS args){return nullptr;}
+
+        virtual std::any visitAnnotation(ast::Annotation *anno_node, ARGS args) {return nullptr;}
+        virtual std::any visitAnnotationUnit(ast::AnnotationUnit *unit_node, ARGS args) {return nullptr;}
 
         virtual std::any visitMember(ast::Member *member_node,ARGS args){
             switch (member_node->member_kind) {
@@ -91,27 +88,27 @@ namespace evoBasic{
             switch (expr_node->expression_kind) {
                 case ast::expr::Expression::binary_:
                     return visitBinary((ast::expr::Binary*)expr_node,args);
-                case ast::expr::Expression::cast_:
-                    return visitCast((ast::expr::Cast*)expr_node,args);
                 case ast::expr::Expression::unary_:
                     return visitUnary((ast::expr::Unary*)expr_node, args);
-                case ast::expr::Expression::link_:
-                    return visitLink((ast::expr::Link*)expr_node,args);
+                case ast::expr::Expression::digit_:
+                    return visitDigit((ast::expr::Digit*)expr_node,args);
+                case ast::expr::Expression::decimal_:
+                    return visitDecimal((ast::expr::Decimal *)expr_node,args);
+                case ast::expr::Expression::string_:
+                    return visitString((ast::expr::String*)expr_node,args);
+                case ast::expr::Expression::char_:
+                    return visitChar((ast::expr::Char*)expr_node,args);
+                case ast::expr::Expression::parentheses_:
+                    return visitParentheses((ast::expr::Parentheses*)expr_node,args);
+                case ast::expr::Expression::callee_:
+                    return visitCallee((ast::expr::Callee*)expr_node,args);
+                case ast::expr::Expression::boolean_:
+                    return visitBoolean((ast::expr::Boolean*)expr_node,args);
+                case ast::expr::Expression::ID_:
+                    return visitID((ast::expr::ID*)expr_node,args);
             }
         }
         virtual std::any visitLink(ast::expr::Link *link_node,ARGS args){return nullptr;}
-        virtual std::any visitTerminal(ast::expr::Terminal *terminal_node,ARGS args){
-            switch (terminal_node->terminal_kind) {
-                case ast::expr::Terminal::digit_:  return visitDigit((ast::expr::literal::Digit*)terminal_node,args);
-                case ast::expr::Terminal::decimal_:return visitDecimal((ast::expr::literal::Decimal *) terminal_node,args);
-                case ast::expr::Terminal::string_: return visitString((ast::expr::literal::String*)terminal_node,args);
-                case ast::expr::Terminal::char_:   return visitChar((ast::expr::literal::Char*)terminal_node,args);
-                case ast::expr::Terminal::parentheses_: return visitParentheses((ast::expr::Parentheses*)terminal_node,args);
-                case ast::expr::Terminal::callee_:  return visitCallee((ast::expr::Callee*)terminal_node,args);
-                case ast::expr::Terminal::boolean_: return visitBoolean((ast::expr::literal::Boolean*)terminal_node,args);
-            }
-        }
-
 
     };
 

@@ -3,6 +3,7 @@
 //
 
 #include "codeGen.h"
+#include <variant>
 using namespace std;
 namespace evoBasic{
     using namespace vm;
@@ -187,7 +188,7 @@ namespace evoBasic{
                 //TODO
             }
             else if(field_kind == type::DeclarationEnum::Array){
-                //TODO
+
             }
             else if(field_kind == type::DeclarationEnum::Class){
                 //TODO
@@ -267,9 +268,9 @@ namespace evoBasic{
 
 
         //load iterator address and begin expression value
-        args.in_left_of_assignment = true;
+        args.reserve_address = true;
         visitExpression(forstmt_node->iterator,args);
-        args.in_left_of_assignment = false;
+        args.reserve_address = false;
         auto data = any_cast<vm::Data>(visitExpression(forstmt_node->begin,args));
         //store value in address
         args.previous_segment->add(ir::Instruction::WithType(Bytecode::Store, data));
@@ -290,9 +291,9 @@ namespace evoBasic{
         args.previous_segment->add(ir::Instruction::WithType(Bytecode::Add, data));
         //duplicate increased value and store in iterator address
         args.previous_segment->add(ir::Instruction::WithType(Bytecode::Dup, data));
-        args.in_left_of_assignment = true;
+        args.reserve_address = true;
         visitExpression(forstmt_node->iterator,args);
-        args.in_left_of_assignment = false;
+        args.reserve_address = false;
         args.previous_segment->add(ir::Instruction::WithType(Bytecode::Store, data));
         //load end expression value
         visitExpression(forstmt_node->end,args);
@@ -344,65 +345,65 @@ namespace evoBasic{
     std::any IRGen::visitBinary(ast::expr::Binary *logic_node, IRGenArgs args) {
         IRGenArgs new_args = args;
         if(logic_node->op == ast::expr::Binary::ASSIGN){
-            new_args.in_left_of_assignment = true;
+            new_args.reserve_address = true;
             new_args.need_dup_in_assignment = true;
         }
         auto lhs_data = any_cast<vm::Data>(visitExpression(logic_node->lhs,new_args));
-        new_args.in_left_of_assignment = false;
+        new_args.reserve_address = false;
         visitExpression(logic_node->rhs,new_args);
 
         switch (logic_node->op) {
             case ast::expr::Binary::And:
                 args.previous_segment->add(ir::Instruction::WithoutType(Bytecode::And));
-                return vm::Data(vm::Data::boolean);
+                return DataSizeVariant(vm::Data::boolean);
             case ast::expr::Binary::Or:
                 args.previous_segment->add(ir::Instruction::WithoutType(Bytecode::Or));
-                return vm::Data(vm::Data::boolean);
+                return DataSizeVariant(vm::Data::boolean);
             case ast::expr::Binary::Xor:
                 args.previous_segment->add(ir::Instruction::WithoutType(Bytecode::Xor));
-                return vm::Data(vm::Data::boolean);
+                return DataSizeVariant(vm::Data::boolean);
             case ast::expr::Binary::Not:
                 args.previous_segment->add(ir::Instruction::WithoutType(Bytecode::Not));
-                return vm::Data(vm::Data::boolean);
+                return DataSizeVariant(vm::Data::boolean);
             case ast::expr::Binary::EQ:
                 args.previous_segment->add(ir::Instruction::WithType(Bytecode::EQ, lhs_data));
-                return vm::Data(vm::Data::boolean);
+                return DataSizeVariant(vm::Data::boolean);
             case ast::expr::Binary::NE:
                 args.previous_segment->add(ir::Instruction::WithType(Bytecode::NE, lhs_data));
-                return vm::Data(vm::Data::boolean);
+                return DataSizeVariant(vm::Data::boolean);
             case ast::expr::Binary::GE:
                 args.previous_segment->add(ir::Instruction::WithType(Bytecode::GE, lhs_data));
-                return vm::Data(vm::Data::boolean);
+                return DataSizeVariant(vm::Data::boolean);
             case ast::expr::Binary::LE:
                 args.previous_segment->add(ir::Instruction::WithType(Bytecode::LE, lhs_data));
-                return vm::Data(vm::Data::boolean);
+                return DataSizeVariant(vm::Data::boolean);
             case ast::expr::Binary::GT:
                 args.previous_segment->add(ir::Instruction::WithType(Bytecode::GT, lhs_data));
-                return vm::Data(vm::Data::boolean);
+                return DataSizeVariant(vm::Data::boolean);
             case ast::expr::Binary::LT:
                 args.previous_segment->add(ir::Instruction::WithType(Bytecode::LT, lhs_data));
-                return vm::Data(vm::Data::boolean);
+                return DataSizeVariant(vm::Data::boolean);
             case ast::expr::Binary::ADD:
                 args.previous_segment->add(ir::Instruction::WithType(Bytecode::Add, lhs_data));
-                return lhs_data;
+                return DataSizeVariant(lhs_data);
             case ast::expr::Binary::MINUS:
                 args.previous_segment->add(ir::Instruction::WithType(Bytecode::Sub, lhs_data));
-                return lhs_data;
+                return DataSizeVariant(lhs_data);
             case ast::expr::Binary::MUL:
                 args.previous_segment->add(ir::Instruction::WithType(Bytecode::Mul, lhs_data));
-                return lhs_data;
+                return DataSizeVariant(lhs_data);
             case ast::expr::Binary::DIV:
                 args.previous_segment->add(ir::Instruction::WithType(Bytecode::Div, lhs_data));
-                return lhs_data;
+                return DataSizeVariant(lhs_data);
             case ast::expr::Binary::FDIV:
                 args.previous_segment->add(ir::Instruction::WithType(Bytecode::FDiv, lhs_data));
-                return lhs_data;//TODO FIDV support
+                return DataSizeVariant(lhs_data);//TODO FIDV support
             case ast::expr::Binary::ASSIGN:
                 if(args.need_dup_in_assignment){
                     args.previous_segment->add(ir::Instruction::WithType(Bytecode::Dup, lhs_data));
                 }
                 args.previous_segment->add(ir::Instruction::WithType(Bytecode::Store, lhs_data));
-                return lhs_data;
+                return DataSizeVariant(lhs_data);
             case ast::expr::Binary::Empty:
                 ASSERT(true,"unexpected instruction");
                 break;
@@ -410,35 +411,64 @@ namespace evoBasic{
     }
 
     std::any IRGen::visitUnary(ast::expr::Unary *unit_node, IRGenArgs args) {
-        auto data = any_cast<vm::Data>(visitExpression(unit_node->terminal,args));
-        args.previous_segment->add(ir::Instruction::WithType(Bytecode::Neg, data));
-        return data;
+        auto data_size_variant = any_cast<DataSizeVariant>(visitExpression(unit_node->terminal,args));
+        args.previous_segment->add(ir::Instruction::WithType(Bytecode::Neg, get<0>(data_size_variant)));
+        return data_size_variant;
     }
 
-    std::any IRGen::visitLink(ast::expr::Link *link_node, IRGenArgs args) {
-        vm::Data link_data(vm::Data::void_);
-        shared_ptr<type::Domain> iterator = args.domain;
-        args.in_terminal_list = &iterator;
-        for(auto &ter:link_node->terminal_list){
-            switch (ter->terminal_kind) {
-                case ast::expr::Terminal::parentheses_:
-                case ast::expr::Terminal::digit_:
-                case ast::expr::Terminal::decimal_:
-                case ast::expr::Terminal::string_:
-                case ast::expr::Terminal::char_:
-                case ast::expr::Terminal::boolean_:
-                    if(&ter != &link_node->terminal_list.front()) ASSERT(true,"invalid link");
-                    link_data = any_cast<vm::Data>(visitTerminal(ter,args));
-                    break;
-                case ast::expr::Terminal::callee_:
-                    args.need_lookup = (&ter == &link_node->terminal_list.front());
-                    args.is_last_terminal = (&ter == &link_node->terminal_list.back());
-                    link_data = any_cast<vm::Data>(visitTerminal(ter,args));
-                    break;
-            }
+//    std::any IRGen::visitLink(ast::expr::Link *link_node, IRGenArgs args) {
+//        DataSizeVariant link_data_size_variant(vm::Data::void_);
+//        shared_ptr<type::Domain> iterator = args.domain;
+//        args.in_terminal_list = &iterator;
+//        for(auto &ter:link_node->terminal_list){
+//            switch (ter->terminal_kind) {
+//                case ast::expr::Expression::parentheses_:
+//                case ast::expr::Expression::digit_:
+//                case ast::expr::Expression::decimal_:
+//                case ast::expr::Expression::string_:
+//                case ast::expr::Expression::char_:
+//                case ast::expr::Expression::boolean_:
+//                    if(&ter != &link_node->terminal_list.front()) ASSERT(true,"invalid link");
+//                    link_data_size_variant = any_cast<DataSizeVariant>(visitTerminal(ter,args));
+//                    break;
+//                case ast::expr::Expression::callee_:
+//                    args.need_lookup = (&ter == &link_node->terminal_list.front());
+//                    args.is_last_terminal = (&ter == &link_node->terminal_list.back());
+//                    link_data_size_variant = any_cast<DataSizeVariant>(visitTerminal(ter,args));
+//                    break;
+//            }
+//        }
+//        args.in_terminal_list = nullptr;
+//        return link_data_size_variant;
+//    }
+
+    DataSizeVariant IRGen::visitFunctionCall(ast::expr::Callee *callee_node,IRGenArgs args,shared_ptr<type::Function> target){
+        args.function = target->as_shared<type::Function>();
+        //visitArgsList(callee_node->args,args);
+        args.previous_segment->add(ir::Instruction::Invoke(target->mangling()));
+        return DataSizeVariant(convertSymbolToDataKind(callee_node->type->prototype));
+    }
+
+    DataSizeVariant IRGen::visitVariableCall(ast::expr::Callee *callee_node,IRGenArgs args,shared_ptr<type::Variable> target){
+        if(target->getKind() == type::DeclarationEnum::Variable || target->getKind() == type::DeclarationEnum::Argument){
+            auto variable = target->as_shared<evoBasic::type::Variable>();
+            auto base = variable->isGlobal() ? Bytecode::PushGlobalBase : Bytecode::PushFrameBase;
+            args.previous_segment->add(ir::Instruction::WithoutType(base));
+            args.previous_segment->add(ir::Instruction::Push(ir::IR::ptr,new ir::Const<data::u32>(variable->getOffset())));
+            args.previous_segment->add(ir::Instruction::WithType(Bytecode::Add, ir::IR::ptr));
+            *args.in_terminal_list=(variable->getPrototype()->as_shared<type::Domain>());
         }
-        args.in_terminal_list = nullptr;
-        return link_data;
+        else{
+            *args.in_terminal_list=(target->as_shared<type::Domain>());
+        }
+
+        if(args.is_last_terminal){
+            auto field = target->as_shared<type::Variable>();
+            auto data = convertSymbolToDataKind(field);
+            if(!args.reserve_address)
+                args.previous_segment->add(ir::Instruction::WithType(Bytecode::Load, data));
+            return DataSizeVariant(data);
+        }
     }
 
     std::any IRGen::visitCallee(ast::expr::Callee *callee_node, IRGenArgs args) {
@@ -451,123 +481,114 @@ namespace evoBasic{
             target = (*args.in_terminal_list)->find(getID(callee_node->name));
         NotNull(target.get());
 
-        if(callee_node->args){
-            visitArgsList(callee_node->args,args);
-            args.previous_segment->add(ir::Instruction::Invoke(target->mangling()));
-            return convertSymbolToDataKind(callee_node->type->prototype);
+//        if(callee_node->args){
+//            //function call
+//            return visitFunctionCall(callee_node,args,target->as_shared<type::Function>());
+//        }
+//        else if(target->getKind() == type::DeclarationEnum::Variable){
+//            //variable
+//            return visitVariableCall(callee_node,args,target->as_shared<type::Variable>());
+//        }
+//        else {
+//            (*args.in_terminal_list) = target->as_shared<type::Domain>();
+//            return DataSizeVariant(vm::Data::void_);
+//        }
+    }
+//
+//    std::any IRGen::visitArgsList(ast::expr::ArgsList *args_list_node, IRGenArgs args) {
+//        args.current_args_index = 0;
+//        for(auto &arg : args_list_node->arg_list){
+//            visitArg(arg,args);
+//            args.current_args_index++;
+//        }
+//        return nullptr;
+//    }
+
+    std::any IRGen::visitArg(ast::expr::Callee::Argument *arg_node, IRGenArgs args) {
+        /*
+          *   Param\Arg          ByVal                  ByRef            Undefined
+          *   ByVal      Yes,allow implicit conversion  Error      Yes,allow implicit conversion
+          *   ByRef      store value to tmp address,                   Error when arg
+          *              allow implicit conversion      Yes             is not lvalue
+          */
+        auto &param = args.function->getArgsSignature()[args.current_args_index];
+        auto arg_type = arg_node->expr->type;
+        if(param->isByval()){
+            switch (arg_node->pass_kind) {
+                case ast::expr::Callee::Argument::undefined:
+                case ast::expr::Callee::Argument::byval:
+                    visitExpression(arg_node->expr,args);
+                    break;
+            }
         }
         else{
-            if(target->getKind() == type::DeclarationEnum::Variable || target->getKind() == type::DeclarationEnum::Argument){
-                auto variable = target->as_shared<evoBasic::type::Variable>();
-                auto base = variable->isGlobal() ? Bytecode::PushGlobalBase : Bytecode::PushFrameBase;
-                args.previous_segment->add(ir::Instruction::WithoutType(base));
-                args.previous_segment->add(ir::Instruction::Push(ir::IR::ptr,new ir::Const<data::u32>(variable->getOffset())));
-                args.previous_segment->add(ir::Instruction::WithType(Bytecode::Add, ir::IR::ptr));
-                *args.in_terminal_list=(variable->getPrototype()->as_shared<type::Domain>());
-            }
-            else{
-                *args.in_terminal_list=(target->as_shared<type::Domain>());
-            }
-
-            if(args.is_last_terminal){
-                auto field = target->as_shared<type::Variable>();
-                auto data = convertSymbolToDataKind(field);
-                if(!args.in_left_of_assignment)
-                    args.previous_segment->add(ir::Instruction::WithType(Bytecode::Load, data));
-                return data;
+            switch (arg_node->pass_kind) {
+                case ast::expr::Callee::Argument::byval:
+                    visitExpression(arg_node->expr,args);
+                    switch (param->getPrototype()->getKind()) {
+                        case type::DeclarationEnum::Type:
+                        case type::DeclarationEnum::Array:
+                            args.previous_segment->add(ir::Instruction::Push(
+                                    vm::Data::ptr,new ir::Const<data::u32>(arg_node->temp_address->getOffset())));
+                            args.previous_segment->add(ir::Instruction::StoreMemory(
+                                    new ir::Const<data::u32>(param->getRealByteLength())));
+                            break;
+                        case type::DeclarationEnum::Primitive:
+                            args.previous_segment->add(ir::Instruction::Push(
+                                    vm::Data::ptr,new ir::Const<data::u32>(arg_node->temp_address->getOffset())));
+                            args.previous_segment->add(ir::Instruction::WithType(
+                                    Bytecode::Store,
+                                    arg_node->temp_address->as_shared<type::primitive::Primitive>()->getDataKind()
+                                    ));
+                            break;
+                    }
+                    break;
+                case ast::expr::Callee::Argument::byref:
+                case ast::expr::Callee::Argument::undefined:
+                    args.reserve_address = true;
+                    visitExpression(arg_node->expr,args);
+                    break;
             }
         }
-
-        return vm::Data(vm::Data::void_);
-    }
-
-    std::any IRGen::visitArgsList(ast::expr::ArgsList *args_list_node, IRGenArgs args) {
-        args.current_args_index = 0;
-        for(auto &arg : args_list_node->arg_list){
-            visitArg(arg,args);
-            args.current_args_index++;
-        }
-    }
-
-    std::any IRGen::visitArg(ast::expr::Arg *arg_node, IRGenArgs args) {
-        /*
-              *   Param\Arg          ByVal                  ByRef            Undefined
-              *   ByVal      Yes,allow implicit conversion  Error      Yes,allow implicit conversion
-              *   ByRef      store value to tmp address,                   Error when arg
-              *              allow implicit conversion      Yes             is not lvalue
-              */
-//        auto param = args.function->getArgsSignature()[args.current_args_index];
-//        auto arg_type = arg_node->expr->type;
-//        if(param->isByval()){
-//            switch (arg_node->pass_kind) {
-//                case ast::expr::Arg::undefined:
-//                case ast::expr::Arg::byval:
-//                    visitExpression(arg_node->expr,args);
-//                    break;
-//            }
-//        }
-//        else{
-//            switch (arg_node->pass_kind) {
-//                case ast::expr::Arg::byval:
-//                    if(!param->getPrototype()->equal(arg_type->prototype)){
-//                        if(!try_implicit_conversion())report_type_error();
-//                    }
-//                    break;
-//                case ast::expr::Arg::byref:
-//                    if(!param->getPrototype()->equal(arg_type->prototype)){
-//                        report_type_error();
-//                    }
-//                    break;
-//                case ast::expr::Arg::undefined:
-//                    if(arg_type->value_kind != ExpressionType::lvalue){
-//                        Logger::error(arg_node->location,format()<<"can not pass a temporary value ByRef."
-//                                                                 <<"Change parameter to Byval or explicit declare 'ByVal' here.\n"
-//                                                                 <<"Syntax: exampleFunction(Byval <Expression>) ");
-//                    }
-//                    else if(!param->getPrototype()->equal(arg_type->prototype)){
-//                        report_type_error();
-//                    }
-//                    break;
-//            }
-//        }
         return nullptr;
     }
 
 
-    std::any IRGen::visitCast(ast::expr::Cast *cast_node, IRGenArgs args) {
-        auto dst_data = any_cast<vm::Data>(visitAnnotation(cast_node->dst,args));
-        auto src_data = any_cast<vm::Data>(visitExpression(cast_node->src,args));
-        args.previous_segment->add(ir::Instruction::Cast(dst_data,src_data));
-        return dst_data;
-    }
+//    std::any IRGen::visitCast(ast::expr::Cast *cast_node, IRGenArgs args) {
+//        auto dst_data = any_cast<vm::Data>(visitAnnotation(cast_node->dst,args));
+//        auto src_data = any_cast<vm::Data>(visitExpression(cast_node->src,args));
+//        args.previous_segment->add(ir::Instruction::Cast(dst_data,src_data));
+//        return dst_data;
+//    }
 
-    std::any IRGen::visitBoolean(ast::expr::literal::Boolean *bl_node, IRGenArgs args) {
+    std::any IRGen::visitBoolean(ast::expr::Boolean *bl_node, IRGenArgs args) {
         auto push = ir::Instruction::Push(vm::Data::boolean,new ir::Const<data::boolean>(bl_node->value));
         args.previous_segment->add(push);
-        return vm::Data(vm::Data::boolean);;
+        return DataSizeVariant(vm::Data::boolean);
     }
 
-    std::any IRGen::visitChar(ast::expr::literal::Char *ch_node, IRGenArgs args) {
+    std::any IRGen::visitChar(ast::expr::Char *ch_node, IRGenArgs args) {
         auto push = ir::Instruction::Push(vm::Data::i8,new ir::Const<data::i8>(ch_node->value));
         args.previous_segment->add(push);
-        return vm::Data(vm::Data::i8);;
+        return DataSizeVariant(vm::Data::i8);
     }
 
-    std::any IRGen::visitDigit(ast::expr::literal::Digit *digit_node, IRGenArgs args) {
+    std::any IRGen::visitDigit(ast::expr::Digit *digit_node, IRGenArgs args) {
         auto push = ir::Instruction::Push(vm::Data::i32, new ir::Const<data::i32>(digit_node->value));
         args.previous_segment->add(push);
-        return vm::Data(vm::Data::i32);;
+        return DataSizeVariant(vm::Data::i32);
     }
 
-    std::any IRGen::visitDecimal(ast::expr::literal::Decimal *decimal_node, IRGenArgs args) {
+    std::any IRGen::visitDecimal(ast::expr::Decimal *decimal_node, IRGenArgs args) {
         auto push = ir::Instruction::Push(vm::Data::f64, new ir::Const<data::f64>(decimal_node->value));
         args.previous_segment->add(push);
-        return vm::Data(vm::Data::f64);;
+        return DataSizeVariant(vm::Data::f64);
     }
 
-    std::any IRGen::visitString(ast::expr::literal::String *str_node, IRGenArgs args) {
-        return Visitor::visitString(str_node, args);
-        //TODO string support
+    std::any IRGen::visitString(ast::expr::String *str_node, IRGenArgs args) {
+        auto push = ir::Instruction::PushMemory(new ir::Const<data::u32>((data::u32)str_node->value.size()),str_node->value);
+        args.previous_segment->add(push);
+        return DataSizeVariant((data::u32)str_node->value.size());
     }
 
     std::any IRGen::visitParentheses(ast::expr::Parentheses *parentheses_node, IRGenArgs args) {
@@ -592,11 +613,9 @@ namespace evoBasic{
                 return convertSymbolToDataKind(symbol->as_shared<type::Variable>()->getPrototype());
             case type::DeclarationEnum::Primitive:
                 return (symbol->as_shared<type::primitive::Primitive>()->getDataKind());
-            case type::DeclarationEnum::ArgumentScope:
             case type::DeclarationEnum::Interface:
             case type::DeclarationEnum::Error:
             case type::DeclarationEnum::TmpDomain:
-            case type::DeclarationEnum::FunctionScope:
             case type::DeclarationEnum::EnumMember:
             case type::DeclarationEnum::Module:
                 ASSERT(true,"error");
@@ -607,44 +626,42 @@ namespace evoBasic{
         Visitor::visitExprStmt(expr_stmt_node, args);
         return (ir::Segment*)nullptr;
     }
-
-    std::any IRGen::visitAnnotation(ast::Annotation *anno_node, IRGenArgs args) {
-        if(anno_node->is_array)return vm::Data(vm::Data::u32);
-
-        shared_ptr<type::Symbol> target = args.domain;
-        for(auto &unit:anno_node->unit_list){
-            auto name = getID(unit->name);
-            auto domain = target->as_shared<type::Domain>();
-            NotNull(domain.get());
-            if(&unit == &anno_node->unit_list.front()){
-                target = domain->lookUp(name);
-            }
-            else{
-                target = domain->find(name);
-            }
-            NotNull(target.get());
-        }
-
-        switch (target->getKind()) {
-            case type::DeclarationEnum::Class:
-            case type::DeclarationEnum::Type:
-            case type::DeclarationEnum::Function:
-            case type::DeclarationEnum::Interface:
-            case type::DeclarationEnum::Array:
-            case type::DeclarationEnum::Enum_:
-                return vm::Data(vm::Data::u32);
-            case type::DeclarationEnum::Primitive:
-                return target->as_shared<type::primitive::Primitive>()->getDataKind();
-            case type::DeclarationEnum::Argument:
-            case type::DeclarationEnum::ArgumentScope:
-            case type::DeclarationEnum::TmpDomain:
-            case type::DeclarationEnum::FunctionScope:
-            case type::DeclarationEnum::EnumMember:
-            case type::DeclarationEnum::Module:
-            case type::DeclarationEnum::Variable:
-            case type::DeclarationEnum::Error:
-            case type::DeclarationEnum::Variant:
-                ASSERT(true,"invalid annotation");
-        }
-    }
+//
+//    std::any IRGen::visitAnnotation(ast::Annotation *anno_node, IRGenArgs args) {
+//        if(anno_node->array_size)return vm::Data(vm::Data::u32);
+//
+//        shared_ptr<type::Symbol> target = args.domain;
+//        for(auto &unit:anno_node->unit_list){
+//            auto name = getID(unit->name);
+//            auto domain = target->as_shared<type::Domain>();
+//            NotNull(domain.get());
+//            if(&unit == &anno_node->unit_list.front()){
+//                target = domain->lookUp(name);
+//            }
+//            else{
+//                target = domain->find(name);
+//            }
+//            NotNull(target.get());
+//        }
+//
+//        switch (target->getKind()) {
+//            case type::DeclarationEnum::Class:
+//            case type::DeclarationEnum::Type:
+//            case type::DeclarationEnum::Function:
+//            case type::DeclarationEnum::Interface:
+//            case type::DeclarationEnum::Array:
+//            case type::DeclarationEnum::Enum_:
+//                return vm::Data(vm::Data::u32);
+//            case type::DeclarationEnum::Primitive:
+//                return target->as_shared<type::primitive::Primitive>()->getDataKind();
+//            case type::DeclarationEnum::Argument:
+//            case type::DeclarationEnum::TmpDomain:
+//            case type::DeclarationEnum::EnumMember:
+//            case type::DeclarationEnum::Module:
+//            case type::DeclarationEnum::Variable:
+//            case type::DeclarationEnum::Error:
+//            case type::DeclarationEnum::Variant:
+//                ASSERT(true,"invalid annotation");
+//        }
+//    }
 }

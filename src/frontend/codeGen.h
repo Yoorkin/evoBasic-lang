@@ -8,6 +8,7 @@
 #include "ir.h"
 #include "context.h"
 #include "semantic.h"
+#include <variant>
 
 namespace evoBasic{
     struct IRGenArgs{
@@ -15,7 +16,7 @@ namespace evoBasic{
         std::shared_ptr<type::Domain> domain;
         std::shared_ptr<type::Domain> *in_terminal_list = nullptr;
         bool need_lookup = false;
-        bool in_left_of_assignment = false;
+        bool reserve_address = false;
         bool is_last_terminal = false;
         bool need_dup_in_assignment = false;
         std::shared_ptr<Context> context;
@@ -25,6 +26,8 @@ namespace evoBasic{
         std::shared_ptr<ir::IR> ir;
         int current_args_index = 0;
     };
+
+    using DataSizeVariant = std::variant<vm::Data,data::u32>; // primitive\ptr or Array\Type
 
     class IRGen : public Visitor<IRGenArgs>{
     public:
@@ -55,21 +58,19 @@ namespace evoBasic{
 
         std::any visitBinary(ast::expr::Binary *logic_node, IRGenArgs args) override;
         std::any visitUnary(ast::expr::Unary *unit_node, IRGenArgs args) override;
-        std::any visitLink(ast::expr::Link *link_node, IRGenArgs args) override;
         std::any visitCallee(ast::expr::Callee *callee_node, IRGenArgs args) override;
-        std::any visitArgsList(ast::expr::ArgsList *args_list_node, IRGenArgs args) override;
-        std::any visitArg(ast::expr::Arg *arg_node, IRGenArgs args) override;
+        std::any visitArg(ast::expr::Callee::Argument *arg_node, IRGenArgs args) override;
 
-        std::any visitCast(ast::expr::Cast *cast_node, IRGenArgs args) override;
-        std::any visitBoolean(ast::expr::literal::Boolean *bl_node, IRGenArgs args) override;
-        std::any visitChar(ast::expr::literal::Char *ch_node, IRGenArgs args) override;
-        std::any visitDigit(ast::expr::literal::Digit *digit_node, IRGenArgs args) override;
-        std::any visitDecimal(ast::expr::literal::Decimal *decimal, IRGenArgs args) override;
-        std::any visitString(ast::expr::literal::String *str_node, IRGenArgs args) override;
+        std::any visitBoolean(ast::expr::Boolean *bl_node, IRGenArgs args) override;
+        std::any visitChar(ast::expr::Char *ch_node, IRGenArgs args) override;
+        std::any visitDigit(ast::expr::Digit *digit_node, IRGenArgs args) override;
+        std::any visitDecimal(ast::expr::Decimal *decimal, IRGenArgs args) override;
+        std::any visitString(ast::expr::String *str_node, IRGenArgs args) override;
         std::any visitParentheses(ast::expr::Parentheses *parentheses_node, IRGenArgs args) override;
         std::any visitExprStmt(ast::stmt::ExprStmt *expr_stmt_node, IRGenArgs args) override;
 
-        std::any visitAnnotation(ast::Annotation *anno_node, IRGenArgs args) override;
+        DataSizeVariant visitFunctionCall(ast::expr::Callee *callee_node,IRGenArgs args,std::shared_ptr<type::Function> target);
+        DataSizeVariant visitVariableCall(ast::expr::Callee *callee_node,IRGenArgs args,std::shared_ptr<type::Variable> target);
     };
 
 }

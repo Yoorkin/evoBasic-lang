@@ -23,8 +23,8 @@ namespace evoBasic::type{
 #define PRIMITIVE               Variant,Integer,Long,Byte,Boolean
 
 #define INSTANCE_ENUM_LIST      PRIMITIVE,Object,Enum_
-#define DECLARATION_ENUM_LIST   Class,Enum_,EnumMember,Type,Function,Module,Variant,Primitive,FunctionScope,TmpDomain, \
-                                Variable,Error,Interface,ArgumentScope,Argument,Array
+#define DECLARATION_ENUM_LIST   Class,Enum_,EnumMember,Type,Function,Module,Variant,Primitive,TmpDomain, \
+                                Variable,Error,Interface,Argument,Array
 #define FUNCTION_ENUM_LIST      User,External,Intrinsic
 
     enum class InstanceEnum{INSTANCE_ENUM_LIST};
@@ -91,10 +91,14 @@ namespace evoBasic::type{
 
 
     class Prototype : public Symbol{
+        data::u32 byte_length = 0;
     public:
         Prototype(const Prototype&)=delete;
         explicit Prototype(DeclarationEnum kind): Symbol(kind){};
         virtual bool equal(std::shared_ptr<Prototype> ptr)=0;
+
+        virtual data::u32 getByteLength();
+        virtual void setByteLength(data::u32 value);
     };
 
     class Error : public Prototype{
@@ -125,12 +129,14 @@ namespace evoBasic::type{
         std::string debug(int indent)override;
         std::size_t getOffset();
         void setOffset(std::size_t value);
+        virtual data::u32 getRealByteLength();
     };
 
     //domain interface
     class Domain : public Prototype{
         using MemberMap = std::map<std::string,std::shared_ptr<Symbol>>;
         MemberMap childs;
+        std::vector<std::shared_ptr<Variable>> memory_layout;
     public:
         class iterator : public std::iterator<std::input_iterator_tag,
                                                     std::shared_ptr<Symbol>,
@@ -154,6 +160,8 @@ namespace evoBasic::type{
         virtual std::shared_ptr<Symbol> lookUp(const std::string& name); //search object in members and importedModule
         iterator begin();
         iterator end();
+        void updateMemoryLayout();
+        void addMemoryLayout(std::shared_ptr<Variable> variable);
     };
 
     class Module : public Domain{
@@ -170,8 +178,6 @@ namespace evoBasic::type{
 
     class Record : public Domain {
         std::vector<std::shared_ptr<Variable>> fields;
-    protected:
-        std::size_t size_ = -1;
     public:
         explicit Record() : Domain(DeclarationEnum::Type){}
         explicit Record(DeclarationEnum kind) : Domain(kind){}
@@ -180,7 +186,6 @@ namespace evoBasic::type{
         const std::vector<std::shared_ptr<Variable>>& getFields();
         void add(std::shared_ptr<Symbol> symbol)override;
         std::string debug(int indent)override;
-        std::size_t getByteLength();
     };
 
     class Class : public Record {
@@ -192,7 +197,7 @@ namespace evoBasic::type{
         std::shared_ptr<Function> constructor;
     public:
         Class(const Class&)=delete;
-        explicit Class(): Record(DeclarationEnum::Class){}
+        explicit Class();
         explicit Class(DeclarationEnum kind): Record(kind){}
 
         bool equal(std::shared_ptr<Prototype> ptr)override;
@@ -263,30 +268,32 @@ namespace evoBasic::type{
         std::string debug(int indent)override;
         bool isByval();
         bool isOptional();
+        data::u32 getRealByteLength()override;
     };
 
     class Array : public Class{
         std::shared_ptr<Prototype> element_type;
+        data::u32 size_;
     public:
-        static const std::size_t ArraySize;
-        explicit Array(std::shared_ptr<Prototype> element);
+        explicit Array(std::shared_ptr<Prototype> element,data::u32 size);
         std::shared_ptr<Prototype> getElementPrototype();
         bool equal(std::shared_ptr<Prototype> ptr)override;
         std::string debug(int indent)override;
+        data::u32 getByteLength()override;
+        data::u32 getSize(){return size_;}
     };
 
 
     class Function: public Domain{
     private:
-        std::size_t local_variable_offset = 0;
         std::vector<std::shared_ptr<Argument>> argsSignature;
         std::shared_ptr<Prototype> retSignature;
         std::size_t tmp_domain_count = 0;
     public:
         Function(const Function&)=delete;
-        explicit Function(): Domain(DeclarationEnum::Function){};
+        explicit Function();
 
-        void add(std::shared_ptr<Symbol> symbol)final;
+        void add(std::shared_ptr<Symbol> symbol)override;
 
         const std::vector<std::shared_ptr<Argument>>& getArgsSignature();
         std::shared_ptr<Prototype> getRetSignature();
@@ -295,12 +302,10 @@ namespace evoBasic::type{
         std::string debug(int indent)override;
 
         bool equal(std::shared_ptr<Prototype> ptr)override;
-        virtual data::u32 getCallStackLength() = 0;
     };
 
 
     class UserFunction: public Function{
-        data::u32 callstack_length = 0;
         ast::Function *function_node;
         MethodFlag flag;
     public:
@@ -308,7 +313,6 @@ namespace evoBasic::type{
         explicit UserFunction(MethodFlag flag,ast::Function *function_node);
         ast::Function *getFunctionNode();
         MethodFlag getMethodFlag()override{return flag;}
-        data::u32 getCallStackLength()override;
     };
 
 //    class InitFunction: public UserFunction{
@@ -324,18 +328,15 @@ namespace evoBasic::type{
         ExternalFunction(const ExternalFunction&)=delete;
         explicit ExternalFunction(std::string library,std::string name);
         MethodFlag getMethodFlag()override{return MethodFlag::NonMethod;}
-        data::u32 getCallStackLength()override;
     };
 
     class TemporaryDomain : public Domain {
-        std::map<std::string,std::shared_ptr<type::Symbol>> local_variables;
+        std::shared_ptr<UserFunction> parent_function;
     public:
-        explicit TemporaryDomain(std::weak_ptr<type::Domain> parent);
+        explicit TemporaryDomain(std::weak_ptr<type::Domain> parent,std::shared_ptr<UserFunction> function);
         void add(std::shared_ptr<type::Symbol> symbol)override;
         bool equal(std::shared_ptr<Prototype> ptr)override{throw "error";};
         std::string debug(int indent)override;
-
-        unsigned char getCallStackLength();
     };
 
 }

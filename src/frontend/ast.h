@@ -10,6 +10,9 @@ namespace evoBasic{
     enum class AccessFlag {Public,Private,Friend,Protected};
     enum class MethodFlag {Static,Virtual,Override,NonMethod};
     struct ExpressionType;
+    namespace type{
+        class Variable;
+    }
 }
 
 namespace evoBasic::ast{
@@ -29,9 +32,7 @@ namespace evoBasic::ast{
     struct Enum;
     struct Type;
     struct Parameter;
-    struct ID;
     struct Annotation;
-    struct AnnotationUnit;
     struct Generic;
 
     namespace stmt{
@@ -55,14 +56,11 @@ namespace evoBasic::ast{
         struct Unary;
         struct Terminal;
         struct Callee;
-        struct GenericArgs;
-        struct ArgsList;
-        namespace literal{
-            struct Digit;
-            struct Decimal;
-            struct String;
-            struct Char;
-        }
+        struct ID;
+        struct Digit;
+        struct Decimal;
+        struct String;
+        struct Char;
     }
 
 
@@ -90,7 +88,7 @@ namespace evoBasic::ast{
 
     struct Class : Member{
         Class(){member_kind = MemberKind::class_;}
-        ID *name = nullptr;
+        expr::ID *name = nullptr;
         Annotation *extend = nullptr;
         std::list<Annotation*> impl_list{};
         std::list<Member*> member_list{};
@@ -99,7 +97,7 @@ namespace evoBasic::ast{
 
     struct Module : Member{
         Module(){member_kind = MemberKind::module_;}
-        ID *name = nullptr;
+        expr::ID *name = nullptr;
         std::list<Member*> member_list;
         void debug(std::ostream &stream,std::string prefix)override;
     };
@@ -119,16 +117,16 @@ namespace evoBasic::ast{
     };
 
     struct Variable : Node{
-        ID *name = nullptr;
+        expr::ID *name = nullptr;
         Annotation *annotation = nullptr;
-        Expr *initial = nullptr;
+        expr::Expression *initial = nullptr;
         void debug(std::ostream &stream,std::string prefix)override;
     };
 
     struct Function : Member{
         Function(){member_kind = MemberKind::function_;}
         MethodFlag method_flag;
-        ID *name = nullptr;
+        expr::ID *name = nullptr;
         std::list<Parameter*> parameter_list{};
         Annotation *return_type = nullptr;
         std::list<stmt::Statement*> statement_list{};
@@ -137,8 +135,8 @@ namespace evoBasic::ast{
 
     struct External : Member{
         External(){member_kind = MemberKind::external_;}
-        ID *name = nullptr;
-        expr::literal::String *lib = nullptr,*alias = nullptr;
+        expr::ID *name = nullptr;
+        expr::String *lib = nullptr,*alias = nullptr;
         std::list<Parameter*> parameter_list{};
         Annotation *return_annotation = nullptr;
         void debug(std::ostream &stream,std::string prefix)override;
@@ -153,26 +151,25 @@ namespace evoBasic::ast{
 
     struct Operator : Member{
         Operator(){member_kind = MemberKind::operator_;}
-        ID *name = nullptr;
+        expr::ID *name = nullptr;
         std::list<Parameter*> parameter_list{};
         Annotation *return_annotation;
         std::list<stmt::Statement*> statement_list{};
         void debug(std::ostream &stream,std::string prefix)override;
     };
 
-    using EnumMember = std::pair<ID*,expr::literal::Digit*>;
+    using EnumMember = std::pair<expr::ID*,expr::Digit*>;
     struct Enum : Member{
         Enum(){member_kind = MemberKind::enum_;}
-        ID *name;
+        expr::ID *name;
         std::list<EnumMember> member_list{};
         void debug(std::ostream &stream,std::string prefix)override;
     };
 
-    using TypeMember = std::pair<ID*,Annotation*>;
     struct Type : Member{
         Type(){member_kind = MemberKind::type_;}
-        ID *name;
-        std::list<TypeMember> member_list{};
+        expr::ID *name;
+        std::list<Variable*> member_list;
         void debug(std::ostream &stream,std::string prefix)override;
     };
 
@@ -180,30 +177,8 @@ namespace evoBasic::ast{
     struct Parameter : Node{
         bool is_byval = false;
         bool is_optional = false;
-        ID *name = nullptr;
+        expr::ID *name = nullptr;
         Annotation *annotation = nullptr;
-        void debug(std::ostream &stream,std::string prefix)override;
-    };
-
-    struct ID : Node{
-        std::string lexeme;
-        void debug(std::ostream &stream,std::string prefix)override;
-    };
-
-    struct Annotation : Node{
-        std::list<AnnotationUnit*> unit_list{};
-        bool is_array = false;
-        void debug(std::ostream &stream,std::string prefix)override;
-    };
-
-    struct AnnotationUnit : Node{
-        ID *name = nullptr;
-        expr::GenericArgs *generic_args;
-        void debug(std::ostream &stream,std::string prefix)override;
-    };
-
-    struct Generic : Node{
-        std::list<ID*> generic_list{};
         void debug(std::ostream &stream,std::string prefix)override;
     };
 
@@ -275,10 +250,20 @@ namespace evoBasic::ast{
         };
     }
 
-
     struct Case : Node{
         Expr *condition = nullptr;
         std::list<stmt::Statement*> statement_list{};
+        void debug(std::ostream &stream,std::string prefix)override;
+    };
+
+    struct AnnotationUnit : Node{
+        expr::ID *name = nullptr;
+        void debug(std::ostream &stream,std::string prefix)override;
+    };
+
+    struct Annotation : Node{
+        std::list<AnnotationUnit*> unit_list;
+        expr::Digit *array_size = nullptr;
         void debug(std::ostream &stream,std::string prefix)override;
     };
 
@@ -286,7 +271,8 @@ namespace evoBasic::ast{
 
         struct Expression : Node{
             enum ExpressionKind{
-                error_ = 0,binary_,cast_,unary_,link_,terminal_
+                error_ = 0,binary_,unary_,parentheses_,ID_,cast_,
+                digit_,decimal_,string_,char_,boolean_,callee_,annotation_
             }expression_kind = error_;
             void debug(std::ostream &stream,std::string prefix)override;
             ExpressionType *type = nullptr;
@@ -296,7 +282,7 @@ namespace evoBasic::ast{
             Binary(){expression_kind = ExpressionKind::binary_;}
             enum Enum{
                 Empty,And,Or,Xor,Not,EQ,NE,GE,LE,GT,LT,
-                ADD,MINUS,MUL,DIV,FDIV,ASSIGN
+                ADD,MINUS,MUL,DIV,FDIV,ASSIGN,Cast,Dot,Index
             };
             Binary(Expression *lhs,Enum op,Expression *rhs):Binary(){
                 NotNull(lhs);
@@ -313,15 +299,13 @@ namespace evoBasic::ast{
         };
 
         struct Cast : Expression{
-            Cast()=delete;
-            Cast(Expression *src,Annotation *dst){
-                expression_kind = ExpressionKind::cast_;
-                this->src = src;
-                this->dst = dst;
-                this->location = new Location(src->location,dst->location);
+            Cast(Expression *expression,Annotation *annotation){
+                expression_kind = cast_;
+                this->expr = expression;
+                this->annotation = annotation;
             }
-            Expression *src = nullptr;
-            Annotation *dst = nullptr;
+            Expression *expr = nullptr;
+            Annotation *annotation = nullptr;
             void debug(std::ostream &stream,std::string prefix)override;
         };
 
@@ -337,104 +321,77 @@ namespace evoBasic::ast{
             void debug(std::ostream &stream,std::string prefix)override;
         };
 
-        struct Link : Expression{
-            Link(){expression_kind = ExpressionKind::link_;}
-            std::list<Terminal*> terminal_list;
-            void debug(std::ostream &stream,std::string prefix)override;
-        };
-
-        struct Terminal : Expression{
-            enum TerminalKind{
-                error = 0,parentheses_,digit_,decimal_,callee_,string_,char_,boolean_
-            }terminal_kind = error;
-            void debug(std::ostream &stream,std::string prefix)override;
-        };
-
-        struct Parentheses : Terminal{
+        struct Parentheses : Expression{
             Parentheses(){
-                expression_kind = ExpressionKind::terminal_;
-                terminal_kind = TerminalKind::parentheses_;
+                expression_kind = ExpressionKind::parentheses_;
             }
             Expression *expr = nullptr;
             void debug(std::ostream &stream,std::string prefix)override;
         };
 
-        struct Callee : Terminal{
+        struct ID : Expression{
+            ID(){
+                expression_kind = ExpressionKind::ID_;
+            }
+            std::string lexeme;
+            void debug(std::ostream &stream,std::string prefix)override;
+        };
+
+        struct Callee : Expression{
+            struct Argument : Node{
+                enum PassKind{undefined,byref,byval}pass_kind = undefined;
+                std::shared_ptr<type::Variable> temp_address = nullptr;
+                expr::Expression *expr = nullptr;
+                void debug(std::ostream &stream,std::string prefix)override;
+            };
+
             Callee(){
-                expression_kind = ExpressionKind::terminal_;
-                terminal_kind = TerminalKind::callee_;
+                expression_kind = ExpressionKind::callee_;
             }
             ID *name = nullptr;
-            ArgsList *args = nullptr;
-            GenericArgs *generic_args = nullptr;
-            Expr *index_arg = nullptr;
+            std::vector<Argument*> arg_list;
             void debug(std::ostream &stream,std::string prefix)override;
         };
 
-        struct GenericArgs : Node{
-            std::list<Annotation*> annotation_list;
+        struct Digit : Expression{
+            Digit(){
+                expression_kind = ExpressionKind::digit_;
+            }
+            data::i32 value = 0;
             void debug(std::ostream &stream,std::string prefix)override;
         };
 
-
-        struct Arg : Node{
-            enum PassKind{undefined,byref,byval}pass_kind = undefined;
-            expr::Expression *expr = nullptr;
+        struct Decimal : Expression{
+            Decimal(){
+                expression_kind = ExpressionKind::decimal_;
+            }
+            data::f64 value = 0;
             void debug(std::ostream &stream,std::string prefix)override;
         };
 
-        struct ArgsList : Node{
-            std::list<Arg*> arg_list;
+        struct String : Expression{
+            String(){
+                expression_kind = ExpressionKind::string_;
+            }
+            std::string value;
             void debug(std::ostream &stream,std::string prefix)override;
         };
 
+        struct Char : Expression{
+            Char(){
+                expression_kind = ExpressionKind::char_;
+            }
+            data::i8 value = 0;
+            void debug(std::ostream &stream,std::string prefix)override;
+        };
 
-        namespace literal{
-            struct Digit : Terminal{
-                Digit(){
-                    expression_kind = ExpressionKind::terminal_;
-                    terminal_kind = TerminalKind::digit_;
-                }
-                data::i32 value = 0;
-                void debug(std::ostream &stream,std::string prefix)override;
-            };
-
-            struct Decimal : Terminal{
-                Decimal(){
-                    expression_kind = ExpressionKind::terminal_;
-                    terminal_kind = TerminalKind::decimal_;
-                }
-                data::f64 value = 0;
-                void debug(std::ostream &stream,std::string prefix)override;
-            };
-
-            struct String : Terminal{
-                String(){
-                    expression_kind = ExpressionKind::terminal_;
-                    terminal_kind = TerminalKind::string_;
-                }
-                std::string value;
-                void debug(std::ostream &stream,std::string prefix)override;
-            };
-
-            struct Char : Terminal{
-                Char(){
-                    expression_kind = ExpressionKind::terminal_;
-                    terminal_kind = TerminalKind::char_;
-                }
-                data::i8 value = 0;
-                void debug(std::ostream &stream,std::string prefix)override;
-            };
-
-            struct Boolean : Terminal{
-                Boolean(){
-                    expression_kind = ExpressionKind::terminal_;
-                    terminal_kind = TerminalKind::boolean_;
-                }
-                data::boolean value = false;
-                void debug(std::ostream &stream,std::string prefix)override;
-            };
-        }
+        struct Boolean : Expression{
+            Boolean(){
+                expression_kind = ExpressionKind::boolean_;
+            }
+            data::boolean value = false;
+            void debug(std::ostream &stream,std::string prefix)override;
+        };
     }
 
 }

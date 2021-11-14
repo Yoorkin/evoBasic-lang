@@ -155,9 +155,7 @@ namespace evoBasic::ast{
         else {
             stream<<'\n';
             for(auto& m:member_list){
-                m.first->debug(stream,prefix + prefix_unit);
-                m.second->debug(stream," : ");
-                stream<<'\n';
+                m->debug(stream,"");
             }
             stream<<prefix<<"}\n";
         }
@@ -171,30 +169,10 @@ namespace evoBasic::ast{
         annotation->debug(stream," : ");
     }
 
-    void ID::debug(std::ostream &stream, std::string prefix) {
+    void expr::ID::debug(std::ostream &stream, std::string prefix) {
         stream<<prefix<<lexeme;
     }
 
-    void Annotation::debug(std::ostream &stream, std::string prefix) {
-        stream<<prefix;
-        for(auto &u:unit_list){
-            if(&u == &unit_list.front())
-                u->debug(stream,"");
-            else
-                u->debug(stream,".");
-        }
-        if(is_array)stream<<"[]";
-    }
-
-    void AnnotationUnit::debug(std::ostream &stream, std::string prefix) {
-        stream<<prefix;
-        name->debug(stream,"");
-        if(generic_args)generic_args->debug(stream,"");
-    }
-
-    void Generic::debug(std::ostream &stream, std::string prefix) {
-        //TODO
-    }
 
     void stmt::Let::debug(std::ostream &stream, std::string prefix) {
         stream<<prefix<<"Let{\n";
@@ -336,76 +314,37 @@ namespace evoBasic::ast{
         stream<<prefix<<"}\n";
     }
 
-    void expr::Cast::debug(std::ostream &stream, std::string prefix) {
-        stream<<prefix<<"Cast{\n";
-        src->debug(stream,prefix + prefix_unit);
-        dst->debug(stream,prefix + prefix_unit);
-        stream<<'\n'<<prefix<<"}\n";
-    }
-
     void expr::Callee::debug(std::ostream &stream, std::string prefix) {
         name->debug(stream,prefix);
-        if(args)args->debug(stream,prefix);
-        if(index_arg){
-            stream<<" Index[\n";
-            index_arg->debug(stream,prefix_unit + prefix);
-            stream<<prefix<<"]";
-        }
-    }
-
-    void expr::GenericArgs::debug(std::ostream &stream, std::string prefix) {
-        //TODO
-    }
-
-    void expr::ArgsList::debug(std::ostream &stream, std::string prefix) {
-        stream<<" ArgsList(\n";
-        for(auto &a:arg_list){
-            a->debug(stream,prefix + prefix_unit);
-        }
+        stream<<prefix<<" ArgsList(\n";
+        for(auto &arg:arg_list)
+            arg->debug(stream,prefix+prefix_unit);
         stream<<prefix<<")";
     }
 
-    void expr::literal::Digit::debug(std::ostream &stream, std::string prefix) {
+
+    void expr::Digit::debug(std::ostream &stream, std::string prefix) {
         stream<<prefix<<to_string(value);
     }
 
-    void expr::literal::Decimal::debug(std::ostream &stream, std::string prefix) {
+    void expr::Decimal::debug(std::ostream &stream, std::string prefix) {
         stream<<prefix<<to_string(value);
     }
 
-    void expr::literal::String::debug(std::ostream &stream, std::string prefix) {
+    void expr::String::debug(std::ostream &stream, std::string prefix) {
         stream<<prefix<<'"'<<value<<'"';
     }
 
-    void expr::literal::Char::debug(std::ostream &stream, std::string prefix) {
+    void expr::Char::debug(std::ostream &stream, std::string prefix) {
         stream<<prefix<<'\''<<value<<'\'';
     }
 
-    void expr::literal::Boolean::debug(std::ostream &stream,std::string prefix) {
+    void expr::Boolean::debug(std::ostream &stream,std::string prefix) {
         stream<<prefix<<(value ? "true" : "false");
     }
 
     void expr::Expression::debug(ostream &stream, std::string prefix) {
         stream<<"< Exp Error >\n";
-    }
-
-    void expr::Link::debug(ostream &stream, std::string prefix) {
-        if(terminal_list.size()==1){
-            terminal_list.front()->debug(stream,prefix);
-            stream<<'\n';
-        }
-        else{
-            stream<<prefix<<"{\n";
-            for(auto& ter:terminal_list){
-                ter->debug(stream,prefix + prefix_unit);
-                stream<<'\n';
-            }
-            stream<<prefix<<"}\n";
-        }
-    }
-
-    void expr::Terminal::debug(ostream &stream, std::string prefix) {
-        stream<<prefix<<"< error terminal >";
     }
 
     void expr::Parentheses::debug(ostream &stream, std::string prefix) {
@@ -414,12 +353,24 @@ namespace evoBasic::ast{
         stream<<prefix<<")";
     }
 
-    void expr::Arg::debug(ostream &stream, std::string prefix) {
+    void expr::Callee::Argument::debug(ostream &stream, std::string prefix) {
         switch (pass_kind) {
             case byval: stream<<"Byval "; break;
             case byref: stream<<"Byref";  break;
         }
         expr->debug(stream,prefix + prefix_unit);
+    }
+
+    void AnnotationUnit::debug(ostream &stream, std::string prefix) {
+
+    }
+
+    void Annotation::debug(ostream &stream, std::string prefix) {
+
+    }
+
+    void expr::Cast::debug(ostream &stream, std::string prefix) {
+        Expression::debug(stream, prefix);
     }
 }
 

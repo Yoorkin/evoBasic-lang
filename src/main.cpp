@@ -27,10 +27,9 @@ int main() {
     Semantic::typeCheck(ast,context);
     cout<<context->getGlobal()->debug(0)<<endl;
 
-    Semantic::solveTypeInferenceDependencies(context);
-    Semantic::solveByteLengthDependencies(context);
-
     if(Logger::errorCount == 0){
+        Semantic::solveByteLengthDependencies(context);
+
         IRGen gen;
         auto ir = gen.gen(ast,context);
         ir->toString(cout);

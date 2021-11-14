@@ -44,6 +44,9 @@ namespace evoBasic::ir{
         static Instruction *WithoutType(vm::Bytecode op);
         static Instruction *Invoke(std::string label);
         static Instruction *Push(vm::Data type,IRBase *const_value);
+        static Instruction *StoreMemory(IRBase *const_value);
+        static Instruction *LoadMemory(IRBase *const_value);
+        static Instruction *PushMemory(IRBase *const_value,std::string memory);
         static Instruction *Jmp(Segment *segment);
         static Instruction *Jif(Segment *segment);
     };

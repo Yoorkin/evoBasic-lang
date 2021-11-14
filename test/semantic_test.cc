@@ -67,6 +67,7 @@ TEST(TypeInference,TopoSort_Succeed){
      *  let a = b + s
      *  let b = s - 100
      *  let s = 50
+     *  let i = 100
      */
 
     inf.addDependent('a','b');
@@ -77,12 +78,17 @@ TEST(TypeInference,TopoSort_Succeed){
     inf.addDependent('e','a');
     inf.addDependent('e','b');
     inf.addDependent('e','s');
+    inf.addDependent('e','s');
+    inf.addDependent('e','s');
+    inf.addDependent('e','s');
+
+    inf.addIsolate('i');
 
     auto succeed = inf.solve();
     const list<char> order = inf.getTopologicalOrder();
 
     ASSERT_TRUE(succeed);
-    ASSERT_EQ(order.size(),4);
+    ASSERT_EQ(order.size(),5);
 
     auto iter = order.begin();
     ASSERT_EQ(*iter,'s');
@@ -92,6 +98,8 @@ TEST(TypeInference,TopoSort_Succeed){
     ASSERT_EQ(*iter,'a');
     iter++;
     ASSERT_EQ(*iter,'e');
+    iter++;
+    ASSERT_EQ(*iter,'i');
 }
 
 TEST(TypeInference,TopoSort_Succeed_with_two_element){

@@ -105,6 +105,7 @@ namespace evoBasic::vm{
         enum Value{
             MetaSegment,ConstSegment,CodeSegment,
             Define,Jmp,Jif,EQ,NE,LT,GT,LE,GE,Add,Sub,Mul,Div,FDiv,Neg,And,Or,Xor,Not,Load,Store,Invoke,Push,Pop,Ret,Cast,Dup,
+            Stm,Ldm,Psm,
             PushFrameBase, /* push current stack frame address */
             PushGlobalBase, /* push global address */
             Nop
@@ -143,6 +144,7 @@ namespace evoBasic::vm{
         data::u8 toHex();
         int getSize();
         static Data fromHex(data::u8 hex);
+        static Data ptr;
         bool operator==(const Data &data);
     };
 }

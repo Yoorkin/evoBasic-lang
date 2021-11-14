@@ -6,6 +6,7 @@
 #include "parser.h"
 #include "nullSafe.h"
 #include "bytecode.h"
+#include "semantic.h"
 using namespace std;
 using namespace evoBasic::type;
 using namespace evoBasic::type::primitive;
@@ -151,12 +152,10 @@ namespace evoBasic{
             case DeclarationEnum::Variant:
                 break;
             case DeclarationEnum::Primitive:
-                *expression = new ast::expr::Cast(
-                        *expression,
-                        constructAnnotationAST(format()<<"global."<<dst->getName())
-                        );
-                break;
-            case DeclarationEnum::FunctionScope:
+//                *expression = new ast::expr::Binary(
+//                        *expression,
+//                        constructAnnotationAST(format()<<"global."<<dst->getName())
+//                        );
                 break;
             case DeclarationEnum::TmpDomain:
                 break;
@@ -166,13 +165,12 @@ namespace evoBasic{
                 break;
             case DeclarationEnum::Interface:
                 break;
-            case DeclarationEnum::ArgumentScope:
-                break;
             case DeclarationEnum::Argument:
                 break;
             case DeclarationEnum::Array:
                 break;
         }
+        (*expression)->type = new ExpressionType(dst,ExpressionType::rvalue);
     }
 
 

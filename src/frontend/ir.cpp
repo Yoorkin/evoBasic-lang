@@ -174,6 +174,30 @@ namespace evoBasic::ir{
         return ret;
     }
 
+    Instruction *Instruction::StoreMemory(IRBase *const_value) {
+        auto ret = new Instruction;
+        ret->op = vm::Bytecode::Stm;
+        ret->const_value = const_value;
+        return ret;
+    }
+
+    Instruction *Instruction::LoadMemory(IRBase *const_value) {
+        auto ret = new Instruction;
+        ret->op = vm::Bytecode::Ldm;
+        ret->const_value = const_value;
+        return ret;
+    }
+
+    Instruction *Instruction::PushMemory(IRBase *const_value, std::string memory) {
+        auto ret = new Instruction;
+        ret->op = vm::Bytecode::Psm;
+        ret->const_value = const_value;
+        ret->label = move(memory);
+        return ret;
+    }
+
+
+
     data::u32 Instruction::getByteLength() {
         switch (inst_type) {
             case InstType::with_type:       return 2;
@@ -322,7 +346,6 @@ namespace evoBasic::ir{
                 break;
         }
     }
-
 
     const vm::Data IR::ptr = vm::Data::u32;
 

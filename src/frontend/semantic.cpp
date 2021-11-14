@@ -8,6 +8,8 @@
 
 using namespace std;
 using namespace evoBasic::type;
+using namespace evoBasic::ast;
+using namespace evoBasic::ast::expr;
 namespace evoBasic{
 
     void Semantic::collectSymbol(AST *ast, std::shared_ptr<Context> context) {
@@ -39,9 +41,26 @@ namespace evoBasic{
 
     bool Semantic::solveByteLengthDependencies(std::shared_ptr<Context> context) {
         if(context->byteLengthDependencies.solve()){
-
+            Logger::dev("update memory layout topo order:  ");
+            for(auto &domain : context->byteLengthDependencies.getTopologicalOrder()){
+                domain->updateMemoryLayout();
+                Logger::dev(format()<<"->"<<domain->getName()<<"("<<domain->getByteLength()<<")");
+            }
+            Logger::dev("\n");
         }
-
+        else{
+            format msg;
+            msg<<"Recursive declaration in Type.The recursive paths is \n";
+            for(auto & circle : context->byteLengthDependencies.getCircles()){
+                msg<<"\t";
+                for(auto & t : circle){
+                    msg<<"'"<<t->getName()<<"'";
+                    if(&t != &circle.back())msg<<"->";
+                }
+                msg<<"\n";
+            }
+            Logger::error(msg);
+        }
 
         return false;
     }
@@ -55,7 +74,7 @@ namespace evoBasic{
         return true;
     }
 
-    string getID(ast::ID *id) {
+    string getID(ast::expr::ID *id) {
         NotNull(id);
         string ret = id->lexeme;
         transform(ret.begin(),ret.end(),ret.begin(),[](char c){
@@ -64,12 +83,12 @@ namespace evoBasic{
         return ret;
     }
 
-    int getDigit(ast::expr::literal::Digit *digit){
+    int getDigit(ast::expr::Digit *digit){
         NotNull(digit);
         return digit->value;
     }
 
-    string getString(ast::expr::literal::String *str){
+    string getString(ast::expr::String *str){
         return str->value;
     }
 
@@ -136,6 +155,13 @@ namespace evoBasic{
         ty->setName(any_cast<string>(visitID(ty_node->name,args)));
         ty->setAccessFlag(ty_node->access);
         ty->setLocation(ty_node->location);
+        for(auto &var_node:ty_node->member_list){
+            auto symbol = any_cast<shared_ptr<type::Symbol>>(visitVariable(var_node,args));
+            symbol->setAccessFlag(AccessFlag::Public);
+            if(is_name_valid(symbol->getName(), var_node->location, args.domain)){
+                ty->add(symbol);
+            }
+        }
         return ty->as_shared<type::Symbol>();
     }
 
@@ -144,9 +170,8 @@ namespace evoBasic{
         shared_ptr<type::Symbol> symbol;
         for(const auto& var:dim->variable_list){
             symbol = any_cast<shared_ptr<type::Symbol>>(visitVariable(var,args));
-            symbol->as_shared<Variable>()->setGlobal();
+            symbol->as_shared<type::Variable>()->setGlobal();
             symbol->setAccessFlag(dim->access);
-            if(&var == &dim->variable_list.back())break;
             if(is_name_valid(symbol->getName(), var->location, args.domain)){
                 args.domain->add(symbol);
             }
@@ -163,7 +188,7 @@ namespace evoBasic{
         return field->as_shared<type::Symbol>();
     }
 
-    std::any SymbolCollector::visitID(ast::ID *id, SymbolCollectorArgs args) {
+    std::any SymbolCollector::visitID(ast::expr::ID *id, SymbolCollectorArgs args) {
         NotNull(id);
         return id->lexeme;
     }
@@ -178,7 +203,6 @@ namespace evoBasic{
         }
         return {};
     }
-
 
 
 
@@ -209,8 +233,8 @@ namespace evoBasic{
             Logger::error(anno_node->location,"Type expression invalid");
             return make_shared<type::Error>();
         }
-        if(anno_node->is_array){
-            prototype = make_shared<type::Array>(prototype);
+        if(anno_node->array_size){
+            prototype = make_shared<type::Array>(prototype, getDigit(anno_node->array_size));
         }
         return prototype;
     }
@@ -219,6 +243,7 @@ namespace evoBasic{
         NotNull(unit_node);
         return getID(unit_node->name);
     }
+
 
 
 
@@ -244,9 +269,10 @@ namespace evoBasic{
     std::any DetailCollector::visitClass(ast::Class *cls_node, BaseArgs args) {
         NotNull(cls_node);
         auto name = getID(cls_node->name);
-        auto cls = args.domain->find(name);
+        auto cls = args.domain->find(name)->as_shared<type::Domain>();
         NotNull(cls.get());
-        args.domain = cls->as_shared<type::Domain>();
+        args.context->byteLengthDependencies.addIsolate(cls);
+        args.domain = cls;
         for(const auto& member:cls_node->member_list)
             visitMember(member,args);
         return nullptr;
@@ -280,18 +306,18 @@ namespace evoBasic{
         auto name = getID(ty_node->name);
         auto ty = args.domain->find(name)->as_shared<type::Record>();
         NotNull(ty.get());
-        for(auto& p:ty_node->member_list){
-            auto field_name = getID(p.first);
-            if(is_name_valid(field_name,p.first->location,args.domain)){
-                auto field = make_shared<type::Variable>();
-                field->setName(field_name);
-                auto prototype = any_cast<shared_ptr<type::Prototype>>(visitAnnotation(p.second,args));
-                if(prototype->getKind() == DeclarationEnum::Type){
-
-                }
-                field->setPrototype(prototype);
-                ty->add(field);
+        for(auto& var_node:ty_node->member_list){
+            auto var_name = getID(var_node->name);
+            auto variable = ty->find(var_name)->as_shared<type::Variable>();
+            NotNull(variable.get());
+            auto prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(var_node->annotation,args));
+            switch (prototype->getKind()) {
+                case type::DeclarationEnum::Type:
+                case type::DeclarationEnum::Array:
+                    args.context->byteLengthDependencies.addDependent(ty,prototype->as_shared<Domain>());
             }
+            args.context->byteLengthDependencies.addIsolate(ty);
+            variable->setPrototype(prototype);
         }
         return nullptr;
     }
@@ -307,7 +333,13 @@ namespace evoBasic{
         auto name = getID(var_node->name);
         auto var = args.domain->find(name)->as_shared<type::Variable>();
         NotNull(var.get());
-        auto prototype = any_cast<shared_ptr<type::Prototype>>(visitAnnotation(var_node->annotation,args));
+        auto prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(var_node->annotation,args));
+        auto parent_kind = args.domain->getKind();
+        switch (prototype->getKind()) {
+            case type::DeclarationEnum::Type:
+            case type::DeclarationEnum::Array:
+                args.context->byteLengthDependencies.addDependent(args.user_function,prototype->as_shared<Domain>());
+        }
         var->setPrototype(prototype);
         return nullptr;
     }
@@ -319,12 +351,14 @@ namespace evoBasic{
             auto func = make_shared<type::UserFunction>(func_node->method_flag,func_node);
             func->setLocation(func_node->name->location);
             func->setName(name);
+
             args.domain->add(func);
             if(func_node->return_type){
-                auto prototype = any_cast<shared_ptr<type::Prototype>>(visitAnnotation(func_node->return_type,args));
+                auto prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(func_node->return_type,args));
                 func->setRetSignature(prototype);
             }
 
+            args.user_function = func;
             args.domain = func;
             for(auto& param_node:func_node->parameter_list){
                 visitParameter(param_node,args);
@@ -343,7 +377,7 @@ namespace evoBasic{
             func->setName(name);
             args.domain->add(func);
             if(ext_node->return_annotation){
-                auto prototype = any_cast<shared_ptr<type::Prototype>>(visitAnnotation(ext_node->return_annotation,args));
+                auto prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(ext_node->return_annotation,args));
                 func->setRetSignature(prototype);
             }
             args.domain = func;
@@ -356,9 +390,16 @@ namespace evoBasic{
 
     std::any DetailCollector::visitParameter(ast::Parameter *param_node, BaseArgs args) {
         auto name = getID(param_node->name);
-        auto prototype = any_cast<shared_ptr<type::Prototype>>(visitAnnotation(param_node->annotation,args));
+        auto prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(param_node->annotation,args));
         NotNull(prototype.get());
         auto arg = make_shared<type::Argument>(name,prototype,param_node->is_byval,param_node->is_optional);
+        if(param_node->is_byval){
+            switch (prototype->getKind()) {
+                case type::DeclarationEnum::Type:
+                case type::DeclarationEnum::Array:
+                    args.context->byteLengthDependencies.addDependent(args.user_function,prototype->as_shared<Domain>());
+            }
+        }
         if(is_name_valid(name,param_node->name->location,args.domain)){
             args.domain->add(arg);
         }
@@ -380,115 +421,134 @@ namespace evoBasic{
         return {};
     }
 
+    std::any DetailCollector::visitBinary(ast::expr::Binary *logic_node, BaseArgs args) {
+        switch (logic_node->op) {
+            case ast::expr::Binary::Dot:{
+                auto lhs_type = any_cast<ExpressionType*>(visitExpression(logic_node->lhs,args));
+                if(lhs_type->value_kind == ExpressionType::error)return lhs_type;
+                auto rhs_name = getID((ID*)logic_node->rhs);
+                auto domain = lhs_type->prototype->as_shared<Domain>();
+                shared_ptr<Prototype> target;
+                if(domain && (target = domain->find(rhs_name)->as_shared<Prototype>())){
+                    return new ExpressionType(target,ExpressionType::path);
+                }
+                else{
+                    Logger::error(logic_node->location,"object not find");
+                    return ExpressionType::Error;
+                }
+            }
+            break;
+            default:
+                Logger::error(logic_node->location,"invalid expression");
+                return ExpressionType::Error;
+        }
+    }
 
+    std::any DetailCollector::visitID(ast::expr::ID *id_node, BaseArgs args) {
+        auto name = getID(id_node);
+        auto target = args.domain->lookUp(name)->as_shared<Prototype>();
+        if(!target){
+            Logger::error(id_node->location,"object not find");
+            return ExpressionType::Error;
+        }
+        return new ExpressionType(target,ExpressionType::path);
+    }
 
 
     ExpressionType *ExpressionType::Error = new ExpressionType(make_shared<type::Error>(),error);
 
 
-    std::any TypeAnalyzer::visitDigit(ast::expr::literal::Digit *digit_node, BaseArgs args) {
+
+
+
+    std::any visitID(ast::expr::ID *id_node, BaseArgs args){
+        auto name = getID(id_node);
+
+        if(!args.dot_expression_context){
+            auto target = args.domain->lookUp(name)->as_shared<Prototype>();
+            if(!target){
+                Logger::error(id_node->location,"object not find");
+                return ExpressionType::Error;
+            }
+            return new ExpressionType(target,ExpressionType::lvalue);
+        }
+        else{
+            auto domain = args.dot_expression_context->as_shared<Domain>();
+            shared_ptr<Prototype> target;
+            if(domain && (target = domain->find(name)->as_shared<Prototype>())){
+                return new ExpressionType(target,ExpressionType::lvalue);
+            }
+            else{
+                Logger::error(id_node->location,"object not find");
+                return ExpressionType::Error;
+            }
+        }
+    }
+
+    std::any TypeAnalyzer::visitDigit(ast::expr::Digit *digit_node, BaseArgs args) {
         auto prototype = args.context->getBuiltIn().getPrimitive(vm::Data::i32)->as_shared<type::Class>();
         return digit_node->type = new ExpressionType(prototype,ExpressionType::rvalue);
     }
 
-    std::any TypeAnalyzer::visitDecimal(ast::expr::literal::Decimal *decimal, BaseArgs args) {
+    std::any TypeAnalyzer::visitDecimal(ast::expr::Decimal *decimal, BaseArgs args) {
         auto prototype = args.context->getBuiltIn().getPrimitive(vm::Data::f64)->as_shared<type::Class>();
         return decimal->type = new ExpressionType(prototype,ExpressionType::rvalue);
     }
 
-    std::any TypeAnalyzer::visitBoolean(ast::expr::literal::Boolean *bl_node, BaseArgs args) {
+    std::any TypeAnalyzer::visitBoolean(ast::expr::Boolean *bl_node, BaseArgs args) {
         auto prototype = args.context->getBuiltIn().getPrimitive(vm::Data::boolean)->as_shared<type::Class>();
         return bl_node->type = new ExpressionType(prototype,ExpressionType::rvalue);
     }
 
-    std::any TypeAnalyzer::visitChar(ast::expr::literal::Char *ch_node, BaseArgs args) {
+    std::any TypeAnalyzer::visitChar(ast::expr::Char *ch_node, BaseArgs args) {
         auto prototype = args.context->getBuiltIn().getPrimitive(vm::Data::i8)->as_shared<type::Class>();
         return ch_node->type = new ExpressionType(prototype,ExpressionType::rvalue);
     }
 
-    std::any TypeAnalyzer::visitString(ast::expr::literal::String *str_node, BaseArgs args) {
+    std::any TypeAnalyzer::visitString(ast::expr::String *str_node, BaseArgs args) {
         throw "unimpl";//TODO String supprot
     }
 
 
     std::any TypeAnalyzer::visitCallee(ast::expr::Callee *callee_node, BaseArgs args) {
-        auto name = getID(callee_node->name);
-        shared_ptr<type::Symbol> target;
-        if(args.need_lookup){
-            target = args.in_terminal_list->lookUp(name);
-        }
-        else{
-            target = args.in_terminal_list->find(name);
+        auto target_type = any_cast<ExpressionType*>(visitID(callee_node->name,args));
+
+
+        if(target_type->value_kind == ExpressionType::error){
+            return target_type;
         }
 
-        if(!target){
-            Logger::error(callee_node->location,"object not found");
+        auto func = target_type->prototype->as_shared<type::Function>();
+
+        if(!func){
+            Logger::error(callee_node->name->location,format()<<"'"<<target_type->prototype->getName()<<"' is not a callable target");
             return ExpressionType::Error;
         }
 
-        //TODO process generic args
-        ExpressionType::ValueKind value_kind = ExpressionType::lvalue;
-        auto func = target->as_shared<type::Function>();
-        if(callee_node->args){
-            if(func){
-                args.in_terminal_list = func;
-                visitArgsList(callee_node->args,args);
-                target = func->getRetSignature();
-                value_kind = ExpressionType::rvalue;
-            }
-            else{
-                Logger::error(callee_node->name->location,format()<<"'"<<name<<"' is not a callable target");
-                return ExpressionType::Error;
-            }
-        }
-
-        if(callee_node->index_arg){
-            if(target->getKind() != type::DeclarationEnum::Array){
-                Logger::error(callee_node->location,format()<<"type '"<<target->getName()<<"' is not Array");
-                return ExpressionType::Error;
-            }
-            target = target->as_shared<type::Array>()->getElementPrototype();
-        }
-
-        if(target->getKind() == type::DeclarationEnum::EnumMember){
-            target = target->getParent().lock();
-            value_kind = ExpressionType::rvalue;
-        }
-        else if(target->getKind() == type::DeclarationEnum::Variable || target->getKind() == type::DeclarationEnum::Argument){
-            target = target->as_shared<type::Variable>()->getPrototype();
-        }
-        else if(callee_node->index_arg == nullptr){
-            value_kind = ExpressionType::rvalue;
-        }
-
-        return callee_node->type = new ExpressionType(target->as_shared<type::Prototype>(),value_kind);
-    }
-
-    std::any TypeAnalyzer::visitArgsList(ast::expr::ArgsList *args_list_node, BaseArgs args) {
-        auto func = args.in_terminal_list->as_shared<evoBasic::type::Function>();
-        NotNull(func.get());
         int i=0;
-        for(auto &arg : args_list_node->arg_list){
+        for(auto &arg : callee_node->arg_list){
             args.checking_args_index = i;
             visitArg(arg,args);
             i++;
         }
-        auto args_count = args_list_node->arg_list.size();
+        auto args_count = callee_node->arg_list.size();
         auto params_count = func->getArgsSignature().size();
         if(args_count > params_count){
-            Logger::error(args_list_node->location,format()<<"too many arguments to function call, expected "
-                                                    <<params_count<<", have "<<args_count);
+            Logger::error(callee_node->location,format()<<"too many arguments to function call, expected "
+                                                           <<params_count<<", have "<<args_count);
         }
         else if(args_count < params_count){
-            Logger::error(args_list_node->location,format()<<"too few arguments to function call, expected "
-                                                     <<params_count<<", have "<<args_count);
+            Logger::error(callee_node->location,format()<<"too few arguments to function call, expected "
+                                                           <<params_count<<", have "<<args_count);
         }
 
-        return nullptr;
+        auto ret = func->getRetSignature();
+        return callee_node->type = new ExpressionType(ret->as_shared<type::Prototype>(),ExpressionType::rvalue);
     }
 
-    std::any TypeAnalyzer::visitArg(ast::expr::Arg *arg_node, BaseArgs args) {
-        auto func = args.in_terminal_list->as_shared<evoBasic::type::Function>();
+    std::any TypeAnalyzer::visitArg(ast::expr::Callee::Argument *arg_node, BaseArgs args) {
+        auto func = args.dot_expression_context->as_shared<evoBasic::type::Function>();
+        if(args.checking_args_index >= func->getArgsSignature().size())return {};
         auto param =  func->getArgsSignature()[args.checking_args_index];
         auto arg_type = any_cast<ExpressionType*>(visitExpression(arg_node->expr,args));
         if(arg_type->value_kind == ExpressionType::error)return {};
@@ -520,30 +580,33 @@ namespace evoBasic{
 
         if(param->isByval()){
             switch (arg_node->pass_kind) {
-                case ast::expr::Arg::undefined:
-                case ast::expr::Arg::byval:
+                case ast::expr::Callee::Argument::undefined:
+                case ast::expr::Callee::Argument::byval:
                     if(!param->getPrototype()->equal(arg_type->prototype)){
                         if(!try_implicit_conversion())report_type_error();
                     }
                     break;
-                case ast::expr::Arg::byref:
+                case ast::expr::Callee::Argument::byref:
                     Logger::error(arg_node->location,"require ByVal but declared ByRef");
                     break;
             }
         }
         else{
             switch (arg_node->pass_kind) {
-                case ast::expr::Arg::byval:
+                case ast::expr::Callee::Argument::byval:
                     if(!param->getPrototype()->equal(arg_type->prototype)){
                         if(!try_implicit_conversion())report_type_error();
                     }
+                    arg_node->temp_address = make_shared<type::Variable>();
+                    arg_node->temp_address->setPrototype(param->getPrototype());
+                    args.user_function->addMemoryLayout(arg_node->temp_address);
                     break;
-                case ast::expr::Arg::byref:
+                case ast::expr::Callee::Argument::byref:
                     if(!param->getPrototype()->equal(arg_type->prototype)){
                         report_type_error();
                     }
                     break;
-                case ast::expr::Arg::undefined:
+                case ast::expr::Callee::Argument::undefined:
                     if(arg_type->value_kind != ExpressionType::lvalue){
                         Logger::error(arg_node->location,format()<<"can not pass a temporary value ByRef."
                                                                  <<"Change parameter to Byval or explicit declare 'ByVal' here.\n"
@@ -559,53 +622,15 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitLink(ast::expr::Link *link_node, BaseArgs args) {
-        using sharedCls = shared_ptr<type::Class>;
-        using sharedSym = shared_ptr<type::Symbol>;
-        using namespace ast::expr::literal;
-        using namespace ast::expr;
-        using namespace ast;
-        args.in_terminal_list = args.domain;
-        ExpressionType *type = nullptr;
-        for(auto& terminal:link_node->terminal_list){
-            if(&terminal == &link_node->terminal_list.front()){
-                switch (terminal->terminal_kind) {
-                    case ast::expr::Terminal::boolean_:
-                    case ast::expr::Terminal::digit_:
-                    case ast::expr::Terminal::decimal_:
-                    case ast::expr::Terminal::string_:
-                    case ast::expr::Terminal::char_:
-                    case ast::expr::Terminal::parentheses_:
-                        type = any_cast<ExpressionType*>(visitTerminal(terminal,args));
-                        break;
-                    case ast::expr::Terminal::callee_:
-                        args.need_lookup = true;
-                        type = any_cast<ExpressionType*>(visitCallee((Callee*)terminal,args));
-                        break;
-                }
-            }
-            else{
-                auto domain = type->prototype->as_shared<type::Domain>();
-                if(domain){
-                    args.in_terminal_list = domain;
-                    args.need_lookup = false;
-                    type = any_cast<ExpressionType*>(visitCallee((Callee*)terminal,args));
-                }
-                else{
-                    Logger::error(link_node->location,"invalid expression");
-                    return ExpressionType::Error;
-                }
-            }
-
-            if(type->value_kind == ExpressionType::error)return ExpressionType::Error;
-        }
-
-        return link_node->type = type;
-    }
-
     std::any TypeAnalyzer::visitBinary(ast::expr::Binary *logic_node, BaseArgs args) {
+
         auto lhs_type = any_cast<ExpressionType*>(visitExpression(logic_node->lhs,args));
+        if(logic_node->op == ast::expr::Binary::Dot){
+            args.dot_expression_context = lhs_type->prototype;
+        }
         auto rhs_type = any_cast<ExpressionType*>(visitExpression(logic_node->rhs,args));
+
+
         if(lhs_type->value_kind == ExpressionType::error || rhs_type->value_kind == ExpressionType::error)
             return logic_node->type = ExpressionType::Error;
 
@@ -655,41 +680,68 @@ namespace evoBasic{
             case ast::expr::Binary::Or:
             case ast::expr::Binary::Xor:
                 if(!is_boolean(lhs_type,logic_node->lhs->location) || !is_boolean(rhs_type,logic_node->rhs->location)){
-                    return ExpressionType::error;
+                    return ExpressionType::Error;
                 }
                 return logic_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue);
-                break;
             case ast::expr::Binary::Not:
                 if(!is_boolean(rhs_type,logic_node->rhs->location)){
-                    return ExpressionType::error;
+                    return ExpressionType::Error;
                 }
                 return logic_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue);
-                break;
+
             case ast::expr::Binary::EQ:
             case ast::expr::Binary::NE:
             case ast::expr::Binary::GE:
             case ast::expr::Binary::LE:
             case ast::expr::Binary::GT:
             case ast::expr::Binary::LT:
-                if(!is_binary_op_vaild(lhs_type, rhs_type, &(logic_node->lhs), &(logic_node->rhs)))return ExpressionType::error;
+                if(!is_binary_op_vaild(lhs_type, rhs_type, &(logic_node->lhs), &(logic_node->rhs)))return ExpressionType::Error;
                 return logic_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue);
-                break;
+
             case ast::expr::Binary::ADD:
             case ast::expr::Binary::MINUS:
             case ast::expr::Binary::MUL:
             case ast::expr::Binary::DIV:
             case ast::expr::Binary::FDIV:
-                if(!is_binary_op_vaild(lhs_type, rhs_type, &(logic_node->lhs), &(logic_node->rhs)))return ExpressionType::error;
+                if(!is_binary_op_vaild(lhs_type, rhs_type, &(logic_node->lhs), &(logic_node->rhs)))return ExpressionType::Error;
                 return logic_node->type = new ExpressionType(lhs_type->prototype,ExpressionType::rvalue);
-                break;
+
             case ast::expr::Binary::ASSIGN:
-                if(!is_binary_op_vaild(lhs_type, rhs_type, &(logic_node->lhs), &(logic_node->rhs)))return ExpressionType::error;
+                if(!is_binary_op_vaild(lhs_type, rhs_type, &(logic_node->lhs), &(logic_node->rhs)))return ExpressionType::Error;
                 if(lhs_type->value_kind != ExpressionType::lvalue){
                     Logger::error(logic_node->lhs->location,"lvalue required as left operand of assignment");
-                    return ExpressionType::error;
+                    return ExpressionType::Error;
                 }
                 return logic_node->type = new ExpressionType(lhs_type->prototype,ExpressionType::lvalue);
-                break;
+
+            case ast::expr::Binary::Cast:
+                if(rhs_type->value_kind == ExpressionType::path){
+                    Logger::error(logic_node->rhs->location,format()<<"Conversion target expression must be a path");
+                    return ExpressionType::Error;
+                }
+
+                if(!args.context->getConversionRules().isExplicitCastRuleExist(lhs_type->prototype, rhs_type->prototype)){
+                    Logger::error(logic_node->rhs->location,format()<<"no known conversion from '"
+                                                              <<lhs_type->prototype->getName()<<"' to '"<<rhs_type->prototype->getName()<<"'");
+                    return ExpressionType::Error;
+                }
+                return logic_node->type = new ExpressionType(rhs_type->prototype,ExpressionType::rvalue);
+
+            case ast::expr::Binary::Index:
+                switch(lhs_type->prototype->getKind()) {
+                    case DeclarationEnum::Class:
+                        //TODO operator[] override
+                        break;
+                    case DeclarationEnum::Array:
+                        return new ExpressionType(lhs_type->prototype->as_shared<Array>()->getElementPrototype(),ExpressionType::rvalue);
+                        break;
+                    default:
+                        Logger::error(logic_node->location,"invalid expression");
+                        return ExpressionType::Error;
+                }
+
+            case ast::expr::Binary::Dot:
+                return rhs_type;
         }
     }
 
@@ -697,16 +749,6 @@ namespace evoBasic{
         return unit_node->type = any_cast<ExpressionType*>(visitExpression(unit_node->terminal,args));
     }
 
-    std::any TypeAnalyzer::visitCast(ast::expr::Cast *cast_node, BaseArgs args) {
-        auto src_type = any_cast<ExpressionType*>(visitExpression(cast_node->src,args));
-        auto dst_type = any_cast<shared_ptr<Prototype>>(visitAnnotation(cast_node->dst,args));
-        if(!args.context->getConversionRules().isExplicitCastRuleExist(src_type->prototype, dst_type)){
-            Logger::error(cast_node->location,format()<<"no known conversion from '"
-                            <<src_type->prototype->getName()<<"' to '"<<dst_type->getName()<<"'");
-            return ExpressionType::Error;
-        }
-        return cast_node->type = new ExpressionType(dst_type,ExpressionType::rvalue);
-    }
 
     std::any TypeAnalyzer::visitGlobal(ast::Global *global_node, BaseArgs args) {
         for(auto &m:global_node->member_list)
@@ -731,6 +773,7 @@ namespace evoBasic{
     std::any TypeAnalyzer::visitFunction(ast::Function *func_node, BaseArgs args) {
         auto function = args.domain->find(getID(func_node->name))->as_shared<type::Function>();
         NotNull(function.get());
+        args.user_function = function->as_shared<UserFunction>();
         args.domain = function;
         for(auto &s:func_node->statement_list)
             visitStatement(s,args);
@@ -746,7 +789,7 @@ namespace evoBasic{
                     auto init_type = any_cast<ExpressionType*>(visitExpression(var->initial,args));
                     if(init_type->value_kind == ExpressionType::error)continue;
                     if(var->annotation){
-                        auto anno_prototype = any_cast<shared_ptr<type::Prototype>>(BaseVisitor::visitAnnotation(var->annotation,args));
+                        auto anno_prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(var->annotation,args));
                         if(!init_type->prototype->equal(anno_prototype)){
                             if(args.context->getConversionRules().isImplicitCastRuleExist(init_type->prototype,anno_prototype)){
                                 Logger::warning(var->initial->location,format()<<"implicit conversion from '"<<init_type->prototype->getName()
@@ -761,19 +804,28 @@ namespace evoBasic{
                                 continue;
                             }
                         }
+                        result_prototype = anno_prototype;
                     }
-                    result_prototype = init_type->prototype;
+                    else{
+                        result_prototype = init_type->prototype;
+                    }
                 }
                 else if(var->initial != nullptr){
                     auto init_type = any_cast<ExpressionType*>(visitExpression(var->initial,args));
                     result_prototype = init_type->prototype;
                 }
                 else if(var->annotation != nullptr){
-                    result_prototype = any_cast<shared_ptr<type::Prototype>>(BaseVisitor::visitAnnotation(var->annotation,args));
+                    result_prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(var->annotation,args));
                 }
                 else{
                     Logger::error(var->location,"need initial expression or type mark");
                     continue;
+                }
+
+                switch (result_prototype->getKind()) {
+                    case type::DeclarationEnum::Type:
+                    case type::DeclarationEnum::Array:
+                        args.context->byteLengthDependencies.addDependent(args.user_function,result_prototype->as_shared<Domain>());
                 }
 
                 auto field = make_shared<type::Variable>();
@@ -872,7 +924,7 @@ namespace evoBasic{
     }
 
     void TypeAnalyzer::visitStatementList(std::list<ast::stmt::Statement*> &stmt_list, BaseArgs args) {
-        args.domain = make_shared<type::TemporaryDomain>(args.domain);
+        args.domain = make_shared<type::TemporaryDomain>(args.domain,args.user_function);
         for(auto& s:stmt_list)
             visitStatement(s,args);
     }
@@ -881,6 +933,33 @@ namespace evoBasic{
         auto type =  any_cast<ExpressionType*>(visitExpression(parentheses_node->expr,args));
         type->value_kind = ExpressionType::rvalue;
         return parentheses_node->type = type;
+    }
+
+    std::any TypeAnalyzer::visitID(ast::expr::ID *id_node, BaseArgs args) {
+        auto name = getID(id_node);
+        shared_ptr<Symbol> target;
+        if(!args.dot_expression_context){
+            target = args.domain->lookUp(name);
+            if(!target){
+                Logger::error(id_node->location,"object not find");
+                return ExpressionType::Error;
+            }
+        }
+        else{
+            auto domain = args.dot_expression_context->as_shared<Domain>();
+            if(!(domain && (target = domain->find(name)))){
+                Logger::error(id_node->location,"object not find");
+                return ExpressionType::Error;
+            }
+        }
+
+        switch (target->getKind()) {
+            case type::DeclarationEnum::Variable:
+            case type::DeclarationEnum::Argument:
+                return new ExpressionType(target->as_shared<type::Variable>()->getPrototype(),ExpressionType::lvalue);
+            default:
+                return new ExpressionType(target->as_shared<Prototype>(),ExpressionType::error);
+        }
     }
 
 }

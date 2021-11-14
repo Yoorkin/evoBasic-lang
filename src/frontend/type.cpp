@@ -39,7 +39,7 @@ namespace evoBasic::type{
 
 
     Enumeration::Enumeration() : Class(DeclarationEnum::Enum_) {
-        this->size_ = 4;
+        setByteLength(4);
     }
 
     std::string Enumeration::debug(int indent) {
@@ -56,7 +56,7 @@ namespace evoBasic::type{
 
     void Enumeration::add(std::shared_ptr<Symbol> symbol) {
         ASSERT(symbol->getKind() != DeclarationEnum::EnumMember,"symbol is not a EnumMember");
-        Class::add(symbol);
+        Domain::add(symbol);
     }
 
     Argument::Argument(std::string name,std::shared_ptr<Prototype> prototype,bool isByval,bool isOptional)
@@ -78,6 +78,15 @@ namespace evoBasic::type{
         for(int i=0;i<indent;i++)str<<indent_unit;
         str << getName() << " As " << getPrototype()->getName();
         return str.str();
+    }
+
+    data::u32 Argument::getRealByteLength() {
+        if(isByval()){
+            return Variable::getRealByteLength();
+        }
+        else{
+            return vm::Data::ptr.getSize();
+        }
     }
 
     shared_ptr<Prototype> Function::getRetSignature() {
@@ -114,23 +123,18 @@ namespace evoBasic::type{
     }
 
     void Function::add(shared_ptr<Symbol> symbol){
-        ASSERT(symbol->getKind() != DeclarationEnum::Variable
-              && symbol->getKind() != DeclarationEnum::Argument,"symbol is not a field or arugment");
-
-        if(symbol->getKind() == DeclarationEnum::Argument){
-            auto arg = symbol->as_shared<Argument>();
-            arg->setOffset(local_variable_offset);
-            local_variable_offset += arg->getPrototype()->as_shared<Record>()->getByteLength();
-            this->argsSignature.push_back(symbol->as_shared<Argument>());
-        }
-        else if(symbol->getKind() == DeclarationEnum::Variable){
-            auto field = symbol->as_shared<Variable>();
-            field->setOffset(local_variable_offset);
-            local_variable_offset += field->getPrototype()->as_shared<Record>()->getByteLength();
-        }
-        else if(symbol->getKind() == DeclarationEnum::TmpDomain){
-            symbol->setName(format()<<"#"<<tmp_domain_count);
-            tmp_domain_count++;
+        switch(symbol->getKind()){
+            case DeclarationEnum::Argument:
+                argsSignature.push_back(symbol->as_shared<Argument>());
+                addMemoryLayout(symbol->as_shared<Variable>());
+                break;
+            case DeclarationEnum::Variable:
+                addMemoryLayout(symbol->as_shared<Variable>());
+                break;
+            case DeclarationEnum::TmpDomain:
+                symbol->setName(format()<<"#"<<tmp_domain_count);
+                tmp_domain_count++;
+                break;
         }
         Domain::add(symbol);
     }
@@ -138,6 +142,8 @@ namespace evoBasic::type{
     const std::vector<std::shared_ptr<Argument>> &Function::getArgsSignature() {
         return argsSignature;
     }
+
+    Function::Function() : Domain(DeclarationEnum::Function){}
 
 
     UserFunction::UserFunction(MethodFlag flag,ast::Function *function_node)
@@ -147,26 +153,21 @@ namespace evoBasic::type{
         return this->function_node;
     }
 
-    unsigned int UserFunction::getCallStackLength() {
-        return callstack_length;
-    }
-
     ExternalFunction::ExternalFunction(std::string library, std::string name)
         : library(std::move(library)),name(std::move(name)){}
 
-    data::u32 ExternalFunction::getCallStackLength() {
-        return 0;
-    }
 
 
-    TemporaryDomain::TemporaryDomain(std::weak_ptr<type::Domain> parent)
-            : Domain(type::DeclarationEnum::TmpDomain){
+    TemporaryDomain::TemporaryDomain(std::weak_ptr<type::Domain> parent,shared_ptr<UserFunction> function)
+            : Domain(type::DeclarationEnum::TmpDomain),parent_function(function){
         setParent(std::move(parent));
     }
 
     void TemporaryDomain::add(std::shared_ptr<type::Symbol> symbol) {
-        ASSERT(symbol->getKind() != DeclarationEnum::Variable,"symbol is not a field");
-        Domain::add(symbol);
+        auto variable = symbol->as_shared<Variable>();
+        NotNull(variable.get());
+        parent_function->addMemoryLayout(variable);
+        Domain::add(variable);
     }
 
     std::string TemporaryDomain::debug(int indent) {
@@ -228,6 +229,7 @@ namespace evoBasic::type{
         else return mangling_name;
     }
 
+
     std::shared_ptr<Symbol> Domain::lookUp(const string &name) {
         std::shared_ptr<Domain> ptr = static_pointer_cast<Domain>(shared_from_this());
         shared_ptr<Domain> global = nullptr;
@@ -266,7 +268,18 @@ namespace evoBasic::type{
         return target->second;
     }
 
+    void Domain::addMemoryLayout(std::shared_ptr<Variable> variable) {
+        memory_layout.push_back(variable);
+    }
 
+    void Domain::updateMemoryLayout() {
+        data::u32 size = 0;
+        for(auto &variable:memory_layout){
+            variable->setOffset(size);
+            size += variable->getRealByteLength();
+        }
+        Prototype::setByteLength(size);
+    }
 
     std::string Module::debug(int indent) {
         stringstream str;
@@ -305,17 +318,16 @@ namespace evoBasic::type{
         this->impl_interface.push_back(interface);
     }
 
+    Class::Class() : Record(DeclarationEnum::Class){
+        setByteLength(4);
+    }
+
 
     void Record::add(std::shared_ptr<Symbol> symbol) {
         auto field = symbol->as_shared<Variable>();
         NotNull(field.get());
         field->offset = getByteLength();
-        if(field->getPrototype()->getKind() == DeclarationEnum::Array){
-            size_ += Array::ArraySize;
-        }
-        else{
-            size_ += field->getPrototype()->as_shared<Record>()->getByteLength();
-        }
+        addMemoryLayout(field);
         Domain::add(symbol);
         fields.push_back(field);
     }
@@ -332,7 +344,7 @@ namespace evoBasic::type{
           : Class(DeclarationEnum::Primitive),kind_(data_kind){
             setName(std::move(name));
             setAccessFlag(AccessFlag::Public);
-            this->size_ = data_kind.getSize();
+            setByteLength(data_kind.getSize());
         }
 
         bool Primitive::equal(std::shared_ptr<Prototype> ptr) {
@@ -357,7 +369,7 @@ namespace evoBasic::type{
     bool Record::equal(std::shared_ptr<Prototype> ptr) {
         auto record = ptr->as_shared<Record>();
         if(!record)return false;
-        if(this->size_ != record->size_)return false;
+        if(this->getByteLength() != record->getByteLength())return false;
         for(int i=0;i<fields.size();i++){
             auto l = this->fields[i]->getPrototype();
             auto r = record->fields[i]->getPrototype();
@@ -382,10 +394,6 @@ namespace evoBasic::type{
 
     const std::vector<std::shared_ptr<Variable>> &Record::getFields() {
         return fields;
-    }
-
-    std::size_t Record::getByteLength() {
-        return size_;
     }
 
 
@@ -425,6 +433,7 @@ namespace evoBasic::type{
     }
 
     void Variable::setPrototype(std::shared_ptr<Prototype> ptr) {
+        NotNull(ptr.get());
         this->prototype = ptr;
     }
 
@@ -435,6 +444,20 @@ namespace evoBasic::type{
     void Variable::setGlobal() {
         is_global = true;
     }
+
+    data::u32 Variable::getRealByteLength() {
+        switch(prototype->getKind()){
+            case DeclarationEnum::Primitive:
+            case DeclarationEnum::Type:
+            case DeclarationEnum::Array:
+                return prototype->getByteLength();
+            case DeclarationEnum::Class:
+            case DeclarationEnum::Function:
+                return vm::Data(vm::Data::u32).getSize();
+        }
+        return 0;
+    }
+
 
     std::string EnumMember::debug(int indent) {
         stringstream str;
@@ -466,12 +489,10 @@ namespace evoBasic::type{
         return str.str();
     }
 
-    const size_t Array::ArraySize = vm::Data::u32;
 
-    Array::Array(std::shared_ptr<Prototype> element)
-        : Class(DeclarationEnum::Array),element_type(element){
-        setName(element->getName()+"[]");
-        this->size_ = Array::ArraySize;
+    Array::Array(std::shared_ptr<Prototype> element,data::u32 size)
+        : Class(DeclarationEnum::Array),element_type(element),size_(size){
+        setName(format()<<element->getName()<<"["<<size<<"]");
     }
 
     std::shared_ptr<Prototype> Array::getElementPrototype() {
@@ -480,10 +501,24 @@ namespace evoBasic::type{
 
 
     bool Array::equal(std::shared_ptr<Prototype> ptr) {
-        return ptr->equal(element_type);
+        auto array = ptr->as_shared<Array>();
+        if(!array)return false;
+        return array->getElementPrototype()->equal(element_type) && array->size_ == size_;
     }
 
     std::string Array::debug(int indent) {
         return format()<<"Ptr<"<<element_type->getName()<<">";
+    }
+
+    data::u32 Array::getByteLength() {
+        return size_ * getElementPrototype()->getByteLength();
+    }
+
+    data::u32 Prototype::getByteLength() {
+        return byte_length;
+    }
+
+    void Prototype::setByteLength(data::u32 value) {
+        byte_length = value;
     }
 }

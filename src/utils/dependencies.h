@@ -13,6 +13,7 @@ namespace evoBasic{
             int in_degree = 0;
             T obj;
             std::list<Data*> be_depend_list;
+            std::set<T> be_depend_set;
             bool visited = false;
         };
 
@@ -35,11 +36,17 @@ namespace evoBasic{
     public:
         explicit Dependencies()=default;
 
+        void addIsolate(T obj){
+            getData(obj);
+        }
+
         void addDependent(T obj,T depend){
-             auto obj_data = getData(obj);
              auto depend_data = getData(depend);
-             depend_data->be_depend_list.push_back(obj_data);
-             obj_data->in_degree++;
+             if(!depend_data->be_depend_set.contains(obj)){
+                 auto obj_data = getData(obj);
+                 depend_data->be_depend_list.push_back(obj_data);
+                 obj_data->in_degree++;
+             }
         }
 
         bool solve(){

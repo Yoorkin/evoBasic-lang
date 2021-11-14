@@ -11,7 +11,7 @@ namespace evoBasic{
 
     using AST = ast::Global;
 
-    std::string getID(ast::ID *id);
+    std::string getID(ast::expr::ID *id);
 
     class Semantic {
     public:
@@ -36,14 +36,15 @@ namespace evoBasic{
         std::any visitType(ast::Type *ty, SymbolCollectorArgs args) override;
         std::any visitDim(ast::Dim *dim, SymbolCollectorArgs args) override;
         std::any visitVariable(ast::Variable *var, SymbolCollectorArgs args) override;
-        std::any visitID(ast::ID *id, SymbolCollectorArgs args) override;
+        std::any visitID(ast::expr::ID *id, SymbolCollectorArgs args) override;
         std::any visitMember(ast::Member *member_node, SymbolCollectorArgs args) override;
     };
 
     struct BaseArgs{
         std::shared_ptr<Context> context;
+        std::shared_ptr<type::UserFunction> user_function;
         std::shared_ptr<type::Domain> domain;
-        std::shared_ptr<type::Domain> in_terminal_list;
+        std::shared_ptr<type::Symbol> dot_expression_context;
         int checking_args_index = 0;
         bool need_lookup = false;
     };
@@ -67,6 +68,8 @@ namespace evoBasic{
         std::any visitExternal(ast::External *ext_node, BaseArgs args) override;
         std::any visitParameter(ast::Parameter *param_node, BaseArgs args) override;
         std::any visitMember(ast::Member *member_node, BaseArgs args) override;
+        std::any visitBinary(ast::expr::Binary *logic_node, BaseArgs args) override;
+        std::any visitID(ast::expr::ID *id_node, BaseArgs args) override;
     };
 
     class TypeAnalyzer : public BaseVisitor{
@@ -88,25 +91,23 @@ namespace evoBasic{
         
         std::any visitBinary(ast::expr::Binary *logic_node, BaseArgs args) override;
         std::any visitUnary(ast::expr::Unary *unit_node, BaseArgs args) override;
-        std::any visitCast(ast::expr::Cast *cast_node, BaseArgs args) override;
 
-        std::any visitLink(ast::expr::Link *link_node, BaseArgs args) override;
         std::any visitCallee(ast::expr::Callee *callee_node, BaseArgs args) override;
-        std::any visitArgsList(ast::expr::ArgsList *args_list_node, BaseArgs args) override;
-        std::any visitArg(ast::expr::Arg *arg_node, BaseArgs args) override;
+        std::any visitArg(ast::expr::Callee::Argument *arg_node, BaseArgs args) override;
 
-        std::any visitDigit(ast::expr::literal::Digit *digit_node, BaseArgs args) override;
-        std::any visitDecimal(ast::expr::literal::Decimal *decimal, BaseArgs args) override;
-        std::any visitBoolean(ast::expr::literal::Boolean *bl_node, BaseArgs args) override;
-        std::any visitChar(ast::expr::literal::Char *ch_node, BaseArgs args) override;
-        std::any visitString(ast::expr::literal::String *str_node, BaseArgs args) override;
+        std::any visitID(ast::expr::ID *id_node, BaseArgs args) override;
+        std::any visitDigit(ast::expr::Digit *digit_node, BaseArgs args) override;
+        std::any visitDecimal(ast::expr::Decimal *decimal, BaseArgs args) override;
+        std::any visitBoolean(ast::expr::Boolean *bl_node, BaseArgs args) override;
+        std::any visitChar(ast::expr::Char *ch_node, BaseArgs args) override;
+        std::any visitString(ast::expr::String *str_node, BaseArgs args) override;
         std::any visitParentheses(ast::expr::Parentheses *parentheses_node,BaseArgs args)override;
 
     };
 
     struct ExpressionType{
         std::shared_ptr<type::Prototype> prototype;
-        enum ValueKind {lvalue,rvalue,error} value_kind;
+        enum ValueKind {lvalue,rvalue,path,error} value_kind;
         ExpressionType()=default;
         ExpressionType(std::shared_ptr<type::Prototype> prototype_,ValueKind kind){
             this->prototype = prototype_;
