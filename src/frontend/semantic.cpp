@@ -234,7 +234,11 @@ namespace evoBasic{
             return make_shared<type::Error>();
         }
         if(anno_node->array_size){
+            auto element_prototype = prototype;
             prototype = make_shared<type::Array>(prototype, getDigit(anno_node->array_size));
+
+            if(element_prototype->getKind() == DeclarationEnum::Type)
+                args.context->byteLengthDependencies.addDependent(prototype->as_shared<Domain>(),element_prototype->as_shared<Domain>());
         }
         return prototype;
     }
@@ -310,7 +314,7 @@ namespace evoBasic{
             auto var_name = getID(var_node->name);
             auto variable = ty->find(var_name)->as_shared<type::Variable>();
             NotNull(variable.get());
-            auto prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(var_node->annotation,args));
+            auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(var_node->annotation,args));
             switch (prototype->getKind()) {
                 case type::DeclarationEnum::Type:
                 case type::DeclarationEnum::Array:
@@ -333,7 +337,7 @@ namespace evoBasic{
         auto name = getID(var_node->name);
         auto var = args.domain->find(name)->as_shared<type::Variable>();
         NotNull(var.get());
-        auto prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(var_node->annotation,args));
+        auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(var_node->annotation,args));
         auto parent_kind = args.domain->getKind();
         switch (prototype->getKind()) {
             case type::DeclarationEnum::Type:
@@ -354,7 +358,7 @@ namespace evoBasic{
 
             args.domain->add(func);
             if(func_node->return_type){
-                auto prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(func_node->return_type,args));
+                auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(func_node->return_type,args));
                 func->setRetSignature(prototype);
             }
 
@@ -377,7 +381,7 @@ namespace evoBasic{
             func->setName(name);
             args.domain->add(func);
             if(ext_node->return_annotation){
-                auto prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(ext_node->return_annotation,args));
+                auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(ext_node->return_annotation,args));
                 func->setRetSignature(prototype);
             }
             args.domain = func;
@@ -390,7 +394,7 @@ namespace evoBasic{
 
     std::any DetailCollector::visitParameter(ast::Parameter *param_node, BaseArgs args) {
         auto name = getID(param_node->name);
-        auto prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(param_node->annotation,args));
+        auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(param_node->annotation,args));
         NotNull(prototype.get());
         auto arg = make_shared<type::Argument>(name,prototype,param_node->is_byval,param_node->is_optional);
         if(param_node->is_byval){
@@ -789,7 +793,7 @@ namespace evoBasic{
                     auto init_type = any_cast<ExpressionType*>(visitExpression(var->initial,args));
                     if(init_type->value_kind == ExpressionType::error)continue;
                     if(var->annotation){
-                        auto anno_prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(var->annotation,args));
+                        auto anno_prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(var->annotation,args));
                         if(!init_type->prototype->equal(anno_prototype)){
                             if(args.context->getConversionRules().isImplicitCastRuleExist(init_type->prototype,anno_prototype)){
                                 Logger::warning(var->initial->location,format()<<"implicit conversion from '"<<init_type->prototype->getName()
@@ -815,7 +819,7 @@ namespace evoBasic{
                     result_prototype = init_type->prototype;
                 }
                 else if(var->annotation != nullptr){
-                    result_prototype = any_cast<shared_ptr<Prototype>>(BaseVisitor::visitAnnotation(var->annotation,args));
+                    result_prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(var->annotation,args));
                 }
                 else{
                     Logger::error(var->location,"need initial expression or type mark");
@@ -907,7 +911,6 @@ namespace evoBasic{
                 }
             }
         }
-
 
         visitStatementList(forstmt_node->statement_list,args);
         return nullptr;

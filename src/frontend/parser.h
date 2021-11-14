@@ -40,7 +40,6 @@ namespace evoBasic{
         ast::stmt::Loop *parseLoop(const std::set<Token::Enum>& follows);
         ast::stmt::If *parseIf(const std::set<Token::Enum>& follows);
         ast::stmt::For *parseFor(const std::set<Token::Enum>& follows);
-       // ast::stmt::Control *parseControl(const std::set<Token::Enum>& follows);
         ast::stmt::Return *parseReturn(const std::set<Token::Enum>& follows);
         ast::stmt::Exit *parseExit(const std::set<Token::Enum>& follows);
 
