@@ -11,5 +11,5 @@ file(GLOB VM_SOURCE ${CMAKE_SOURCE_DIR}/src/vm/*)
 
 add_subdirectory(test ${CMAKE_BINARY_DIR}/test_dir)
 
-add_executable(evoBasic ${FRONTEND_SOURCE} ${UTILS_SOURCE} ${VM_SOURCE} src/main.cpp)
+add_executable(evoBasic ${FRONTEND_SOURCE} ${UTILS_SOURCE} ${VM_SOURCE} src/main.cpp src/utils/utils.cpp src/utils/utils.h)
 target_compile_options(evoBasic PRIVATE -Wall)

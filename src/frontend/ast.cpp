@@ -170,7 +170,7 @@ namespace evoBasic::ast{
     }
 
     void expr::ID::debug(std::ostream &stream, std::string prefix) {
-        stream<<prefix<<lexeme;
+        stream<<prefix<<lexeme<<"\n";
     }
 
 
@@ -296,6 +296,9 @@ namespace evoBasic::ast{
             case MUL: stream<<"* "; break;
             case DIV: stream<<"/ "; break;
             case FDIV:stream<<"\\ "; break;
+            case Index:stream<<"Index";break;
+            case Dot: stream<<". ";break;
+            case ASSIGN: stream<<"= ";break;
         }
         stream<<"{\n";
         lhs->debug(stream,prefix + prefix_unit);
@@ -324,23 +327,23 @@ namespace evoBasic::ast{
 
 
     void expr::Digit::debug(std::ostream &stream, std::string prefix) {
-        stream<<prefix<<to_string(value);
+        stream<<prefix<<to_string(value)<<"\n";
     }
 
     void expr::Decimal::debug(std::ostream &stream, std::string prefix) {
-        stream<<prefix<<to_string(value);
+        stream<<prefix<<to_string(value)<<"\n";
     }
 
     void expr::String::debug(std::ostream &stream, std::string prefix) {
-        stream<<prefix<<'"'<<value<<'"';
+        stream<<prefix<<'"'<<value<<'"'<<"\n";
     }
 
     void expr::Char::debug(std::ostream &stream, std::string prefix) {
-        stream<<prefix<<'\''<<value<<'\'';
+        stream<<prefix<<'\''<<value<<'\''<<"\n";
     }
 
     void expr::Boolean::debug(std::ostream &stream,std::string prefix) {
-        stream<<prefix<<(value ? "true" : "false");
+        stream<<prefix<<(value ? "true" : "false")<<"\n";
     }
 
     void expr::Expression::debug(ostream &stream, std::string prefix) {
@@ -370,7 +373,10 @@ namespace evoBasic::ast{
     }
 
     void expr::Cast::debug(ostream &stream, std::string prefix) {
-        Expression::debug(stream, prefix);
+        stream<<prefix<<"Cast{";
+        this->expr->debug(stream,prefix_unit + prefix);
+        this->annotation->debug(stream,prefix_unit + prefix);
+        stream<<prefix<<"}";
     }
 }
 

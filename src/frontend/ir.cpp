@@ -9,6 +9,74 @@
 using namespace std;
 namespace evoBasic::ir{
 
+    void IR::addMeta(Meta *meta_) {
+        this->meta.push_back(meta_);
+    }
+
+    void IR::addBlock(Block *block) {
+        auto label = block->getLabel();
+        auto conflict = label_name_count[label];
+        if(conflict > 0){
+            block->setLabel(label + '_' + std::to_string(conflict));
+        }
+        label_name_count[label]++;
+        blocks.push_back(block);
+    }
+
+
+
+
+
+    void IR::toHex(ostream &stream) {
+        //compute ir address
+        data::u8 address = 0;
+        for(auto &block : blocks){
+            for(auto &inst : block->getInstructions()){
+                inst->setAddress(address);
+                if(inst->op == vm::Bytecode::Invoke){
+                    auto &prop = get<Instruction::InvokeProp>(inst->prop);
+                    prop.target = function_block.find(prop.signature)->second;
+                }
+                address += inst->getByteLength();
+            }
+        }
+
+        stream<<vm::Bytecode(vm::Bytecode::MetaSegment).toHex();
+        for(auto &m : meta){
+            m->toHex(stream);
+        }
+
+        stream<<vm::Bytecode(vm::Bytecode::CodeSegment).toHex();
+        for(auto &block : blocks){
+            block->toHex(stream);
+        }
+    }
+
+    void IR::toString(ostream &stream) {
+        data::u8 address = 0;
+        for(auto &block : blocks){
+            for(auto &inst : block->getInstructions()){
+                inst->setAddress(address);
+                if(inst->op == vm::Bytecode::Invoke){
+                    auto &prop = get<Instruction::InvokeProp>(inst->prop);
+                    prop.target = function_block.find(prop.signature)->second;
+                }
+                address += inst->getByteLength();
+            }
+        }
+
+        stream<<"meta: \n";
+        for(auto &m : meta){
+            m->toHex(stream);
+        }
+
+        stream<<"code: \n";
+        for(auto &block : blocks){
+            block->toString(stream);
+        }
+    }
+
+
     Mark::Mark(std::string name, bool isRef, bool isArray)
             : name_(std::move(name)),is_ref(isRef),is_array(isArray){}
 
@@ -31,12 +99,12 @@ namespace evoBasic::ir{
     Function::Function(std::list<Pair *> params, Type *ret, std::string library)
             : params(std::move(params)),ret_type(ret),library_name(std::move(library)),external(true){}
 
-    Function::Function(std::list<Pair*> params,Type *ret,Segment *segment)
-            : params(std::move(params)),ret_type(ret),segment(segment),external(false){}
+    Function::Function(std::list<Pair*> params,Type *ret,Block *block)
+            : params(std::move(params)),ret_type(ret),block(block),external(false){}
 
     data::u32 Function::getAddress() {
         ASSERT(external,"invalid operation");
-        return segment->getAddress();
+        return block->getAddress();
     }
 
     void Function::toString(ostream &stream) {
@@ -88,214 +156,65 @@ namespace evoBasic::ir{
     }
 
 
-    Segment::Segment(std::string label_name) : label(move(label_name)) {}
-
-    Segment *Segment::add(IRBase *code) {
-        codes.push_back(code);
-        return this;
-    }
-
-    void Segment::toHex(std::ostream &stream) {
-        for(auto &c:codes) {
-            c->toHex(stream);
-        }
-    }
-
-    void Segment::toString(ostream &stream) {
-        stream<<label<<":\n";
-        for(auto &c:codes) {
-            stream<< ' '<< setw(8) << setfill(' ') << std::left;
-            stream<<c->getAddress();
-            stream<<"│ ";
-            c->toString(stream);
-            stream<<"\n";
-        }
-    }
-
-    std::string Segment::getLabel() {
-        return label;
-    }
-
-
-    Instruction *Instruction::WithType(vm::Bytecode op, vm::Data type){
-        auto ret = new Instruction;
-        ret->op = op;
-        ret->data1 = type;
-        ret->inst_type = with_type;
-        return ret;
-    }
-
-    Instruction *Instruction::WithoutType(vm::Bytecode op) {
-        auto ret = new Instruction;
-        ret->op = op;
-        ret->inst_type = without_type;
-        return ret;
-    }
-
-    Instruction *Instruction::Cast(vm::Data src, vm::Data dst) {
-        auto ret = new Instruction;
-        ret->op = vm::Bytecode::Cast;
-        ret->data2 = src;
-        ret->data1 = dst;
-        ret->inst_type = without_type;
-        return ret;
-    }
-
-    Instruction *Instruction::Invoke(std::string label) {
-        auto ret = new Instruction;
-        ret->op = vm::Bytecode::Invoke;
-        ret->label = move(label);
-        ret->inst_type = invoke;
-        return ret;
-    }
-
-    Instruction *Instruction::Push(vm::Data type, IRBase *const_value) {
-        auto ret = new Instruction;
-        ret->op = vm::Bytecode::Push;
-        ret->data1 = type;
-        ret->const_value = const_value;
-        ret->inst_type = push;
-        return ret;
-    }
-
-    Instruction *Instruction::Jmp(Segment *segment) {
-        auto ret = new Instruction;
-        ret->op = vm::Bytecode::Jmp;
-        ret->segment = segment;
-        ret->inst_type = jmp;
-        return ret;
-    }
-
-    Instruction *Instruction::Jif(Segment *segment) {
-        auto ret = new Instruction;
-        ret->op = vm::Bytecode::Jif;
-        ret->segment = segment;
-        ret->inst_type = jif;
-        return ret;
-    }
-
-    Instruction *Instruction::StoreMemory(IRBase *const_value) {
-        auto ret = new Instruction;
-        ret->op = vm::Bytecode::Stm;
-        ret->const_value = const_value;
-        return ret;
-    }
-
-    Instruction *Instruction::LoadMemory(IRBase *const_value) {
-        auto ret = new Instruction;
-        ret->op = vm::Bytecode::Ldm;
-        ret->const_value = const_value;
-        return ret;
-    }
-
-    Instruction *Instruction::PushMemory(IRBase *const_value, std::string memory) {
-        auto ret = new Instruction;
-        ret->op = vm::Bytecode::Psm;
-        ret->const_value = const_value;
-        ret->label = move(memory);
-        return ret;
-    }
-
 
 
     data::u32 Instruction::getByteLength() {
-        switch (inst_type) {
-            case InstType::with_type:       return 2;
-            case InstType::without_type:    return 1;
-            case InstType::push:            return 2 + data1.getSize();
-            case InstType::cast:            return 3;
-            case InstType::invoke:          
-            case InstType::jif:             
-            case InstType::jmp:             return 1 + vm::Data(vm::Data::u32).getSize();
+        switch (prop.index()) {
+            case 0:       return 1;
+            case 1:       return 2;
+            case 4:       return 2 + get<PushProp>(prop).const_value->getByteLength();
+            case 2:       return 3;
+            case 3:
+            case 5:       return 1 + vm::Data(vm::Data::u32).getSize();
+            case 6:       return sizeof(data::u32);
+            case 7:       return sizeof(data::u32) + get<PlmProp>(prop).size;
         }
     }
 
     void Instruction::toString(std::ostream &stream) {
+        stream<<op.toString();
         switch (op.getValue()) {
             case vm::Bytecode::Jmp:
-                stream<<"Jmp "<<segment->getLabel();
-                break;
             case vm::Bytecode::Jif:
-                stream<<"Jif "<<segment->getLabel();
-                break;
-            case vm::Bytecode::EQ:
-                stream<<"EQ."<<data1.toString();
-                break;
-            case vm::Bytecode::NE:
-                stream<<"NE."<<data1.toString();
-                break;
-            case vm::Bytecode::GT:
-                stream<<"GT."<<data1.toString();
-                break;
-            case vm::Bytecode::LT:
-                stream<<"LT."<<data1.toString();
-                break;
-            case vm::Bytecode::GE:
-                stream<<"GE."<<data1.toString();
-                break;
-            case vm::Bytecode::LE:
-                stream<<"LE."<<data1.toString();
-                break;
-            case vm::Bytecode::Add:
-                stream<<"Add."<<data1.toString();
-                break;
-            case vm::Bytecode::Sub:
-                stream<<"Sub."<<data1.toString();
-                break;
-            case vm::Bytecode::Load:
-                stream<<"Load."<<data1.toString();
-                break;
-            case vm::Bytecode::Store:
-                stream<<"Store."<<data1.toString();
+                stream<<" "<<get<JumpProp>(prop).target->getLabel();
                 break;
             case vm::Bytecode::Invoke:
-                stream<<"Invoke "<<label;
+                stream<<" "<<get<InvokeProp>(prop).signature;
+                break;
+            case vm::Bytecode::EQ:
+            case vm::Bytecode::NE:
+            case vm::Bytecode::GT:
+            case vm::Bytecode::LT:
+            case vm::Bytecode::GE:
+            case vm::Bytecode::LE:
+            case vm::Bytecode::Add:
+            case vm::Bytecode::Sub:
+            case vm::Bytecode::Mul:
+            case vm::Bytecode::Div:
+            case vm::Bytecode::FDiv:
+            case vm::Bytecode::Load:
+            case vm::Bytecode::Pop:
+            case vm::Bytecode::Store:
+            case vm::Bytecode::Dup:
+            case vm::Bytecode::Neg:
+                stream<<"."<<get<TypeProp>(prop).data.toString();
                 break;
             case vm::Bytecode::Push:
-                stream<<"Push."<<data1.toString()<<' ';
-                const_value->toString(stream);
-                break;
-            case vm::Bytecode::Pop:
-                stream<<"Pop."<<data1.toString();
+                stream<<"."<<get<PushProp>(prop).data.toString()<<' ';
+                get<PushProp>(prop).const_value->toString(stream);
                 break;
             case vm::Bytecode::Cast:
-                stream<<"Cast."<<data1.toString()<<' '<<data2.toString();
+                stream<<"."<<get<CastProp>(prop).src.toString()<<' '
+                           <<get<CastProp>(prop).dst.toString();
                 break;
             case vm::Bytecode::Ret:
-                stream<<"Ret";
-                break;
             case vm::Bytecode::PushFrameBase:
-                stream<<"PushFrameBase";
-                break;
             case vm::Bytecode::PushGlobalBase:
-                stream<<"PushGlobalBase";
-                break;
-            case vm::Bytecode::Mul:
-                stream<<"Mul."<<data1.toString();
-                break;
-            case vm::Bytecode::Div:
-                stream<<"Div."<<data1.toString();
-                break;
-            case vm::Bytecode::FDiv:
-                stream<<"FDiv."<<data1.toString();
-                break;
             case vm::Bytecode::And:
-                stream<<"And";
-                break;
             case vm::Bytecode::Or:
-                stream<<"Or";
-                break;
             case vm::Bytecode::Xor:
-                stream<<"Xor";
-                break;
             case vm::Bytecode::Not:
-                stream<<"Not";
-                break;
-            case vm::Bytecode::Dup:
-                stream<<"Dup."<<data1.toString();
-                break;
-            case vm::Bytecode::Neg:
-                stream<<"Neg."<<data1.toString();
+                //do nothing
                 break;
         }
     }
@@ -306,8 +225,11 @@ namespace evoBasic::ir{
         switch (op.getValue()) {
             case vm::Bytecode::Jmp:
             case vm::Bytecode::Jif:
+                address = get<JumpProp>(prop).target->getAddress();
+                stream.write((const char*)&address,sizeof(address));
+                break;
             case vm::Bytecode::Invoke:
-                address = segment->getAddress();
+                address = get<InvokeProp>(prop).target->getAddress();
                 stream.write((const char*)&address,sizeof(address));
                 break;
             case vm::Bytecode::EQ:
@@ -326,14 +248,15 @@ namespace evoBasic::ir{
             case vm::Bytecode::FDiv:
             case vm::Bytecode::Dup:
             case vm::Bytecode::Neg:
-                stream<<data1.toHex();
+                stream<<get<TypeProp>(prop).data.toHex();
                 break;
             case vm::Bytecode::Push:
-                stream<<data1.toHex();
-                const_value->toHex(stream);
+                stream<<get<PushProp>(prop).data.toHex();
+                get<PushProp>(prop).const_value->toHex(stream);
                 break;
             case vm::Bytecode::Cast:
-                stream<<data1.toHex()<<data2.toHex();
+                stream << get<CastProp>(prop).src.toHex()
+                       << get<CastProp>(prop).dst.toHex();
                 break;
             case vm::Bytecode::Ret:
             case vm::Bytecode::PushFrameBase:
@@ -347,51 +270,161 @@ namespace evoBasic::ir{
         }
     }
 
-    const vm::Data IR::ptr = vm::Data::u32;
 
-    void IR::toHex(ostream &stream) {
-        //compute ir address
-        data::u8 address = 0;
-        for(auto &seg : code_segments){
-            for(auto &inst : seg->codes){
-                inst->setAddress(address);
-                auto instuction = (Instruction*)inst;
-                if(instuction->inst_type==Instruction::InstType::invoke){
-                    instuction->segment = function_segment.find(instuction->label)->second;
-                }
-                address += inst->getByteLength();
-            }
-        }
-
-        stream<<vm::Bytecode(vm::Bytecode::MetaSegment).toHex();
-        meta->toHex(stream);
-        bool is_data = true;
-        stream<<vm::Bytecode(vm::Bytecode::ConstSegment).toHex();
-        for(auto &seg : code_segments){
-            seg->toHex(stream);
-            if(is_data){
-                is_data = false;
-                stream<<vm::Bytecode(vm::Bytecode::CodeSegment).toHex();
-            }
-        }
+    std::vector<Instruction *> Block::getInstructions() {
+        return instructons;
     }
 
-    void IR::toString(ostream &stream) {
-        data::u8 address = 0;
-        for(auto &seg : code_segments){
-            for(auto &inst : seg->codes){
-                inst->setAddress(address);
-                auto instuction = (Instruction*)inst;
-                if(instuction->inst_type==Instruction::InstType::invoke){
-                    instuction->segment = function_segment.find(instuction->label)->second;
-                }
-                address += inst->getByteLength();
-            }
-        }
+    std::string Block::getLabel() {
+        return label_;
+    }
 
-        meta->toString(stream);
-        for(auto &seg : code_segments){
-            seg->toString(stream);
-        }
+    std::string Block::setLabel(std::string label) {
+        label_ = move(label);
+    }
+
+    Block &Block::EQ() {
+        instructons.push_back(new Instruction(vm::Bytecode::EQ));
+        return *this;
+    }
+
+    Block &Block::NE() {
+        instructons.push_back(new Instruction(vm::Bytecode::NE));
+        return *this;
+    }
+
+    Block &Block::LT() {
+        instructons.push_back(new Instruction(vm::Bytecode::NE));
+        return *this;
+    }
+
+    Block &Block::GT() {
+        instructons.push_back(new Instruction(vm::Bytecode::GT));
+        return *this;
+    }
+
+    Block &Block::LE() {
+        instructons.push_back(new Instruction(vm::Bytecode::LE));
+        return *this;
+    }
+
+    Block &Block::GE() {
+        instructons.push_back(new Instruction(vm::Bytecode::GE));
+        return *this;
+    }
+
+    Block &Block::Add(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::Add,Instruction::TypeProp{data}));
+        return *this;
+    }
+
+    Block &Block::Sub(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::Sub,Instruction::TypeProp{data}));
+        return *this;
+    }
+
+    Block &Block::Mul(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::Mul,Instruction::TypeProp{data}));
+        return *this;
+    }
+
+    Block &Block::Div(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::Div,Instruction::TypeProp{data}));
+        return *this;
+    }
+
+    Block &Block::FDiv(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::FDiv,Instruction::TypeProp{data}));
+        return *this;
+    }
+
+    Block &Block::Neg(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::Neg,Instruction::TypeProp{data}));
+        return *this;
+    }
+
+    Block &Block::And() {
+        instructons.push_back(new Instruction(vm::Bytecode::And));
+        return *this;
+    }
+
+    Block &Block::Or() {
+        instructons.push_back(new Instruction(vm::Bytecode::Or));
+        return *this;
+    }
+
+    Block &Block::Xor() {
+        instructons.push_back(new Instruction(vm::Bytecode::Xor));
+        return *this;
+    }
+
+    Block &Block::Not() {
+        instructons.push_back(new Instruction(vm::Bytecode::Not));
+        return *this;
+    }
+
+    Block &Block::Load(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::Load,Instruction::TypeProp{data}));
+        return *this;
+    }
+
+    Block &Block::Store(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::Store,Instruction::TypeProp{data}));
+        return *this;
+    }
+
+    Block &Block::Invoke(std::string signature) {
+        instructons.push_back(new Instruction(vm::Bytecode::Invoke,Instruction::InvokeProp{nullptr,signature}));
+        return *this;
+    }
+
+    Block &Block::Push(vm::Data data, ConstBase *const_value) {
+        instructons.push_back(new Instruction(vm::Bytecode::Push,Instruction::PushProp{data,const_value}));
+        return *this;
+    }
+
+    Block &Block::Pop(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::Pop,Instruction::TypeProp{data}));
+        return *this;
+    }
+
+    Block &Block::Ret() {
+        instructons.push_back(new Instruction(vm::Bytecode::Ret));
+        return *this;
+    }
+
+    Block &Block::Cast(vm::Data src, vm::Data dst) {
+        instructons.push_back(new Instruction(vm::Bytecode::Cast,Instruction::CastProp{src,dst}));
+        return *this;
+    }
+
+    Block &Block::Dup(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::Dup,Instruction::TypeProp{data}));
+        return *this;
+    }
+
+    Block &Block::Stm(data::u32 size) {
+        instructons.push_back(new Instruction(vm::Bytecode::Stm,Instruction::MemProp{size}));
+        return *this;
+    }
+
+    Block &Block::Ldm(data::u32 size) {
+        instructons.push_back(new Instruction(vm::Bytecode::Ldm,Instruction::MemProp{size}));
+        return *this;
+    }
+
+    Block &Block::Psm(data::u32 size, char *memory) {
+        instructons.push_back(new Instruction(vm::Bytecode::Psm,Instruction::PlmProp{size,memory}));
+        return *this;
+    }
+
+    Block &Block::PushFrameBase() {
+        instructons.push_back(new Instruction(vm::Bytecode::PushFrameBase));
+        return *this;
+    }
+
+    Block &Block::PushGlobalBase() {
+        instructons.push_back(new Instruction(vm::Bytecode::PushGlobalBase));
+        return *this;
     }
 }

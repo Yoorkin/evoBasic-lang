@@ -10,11 +10,17 @@
 #include <map>
 #include <ostream>
 #include <memory>
+#include <variant>
 #include "data.h"
 #include "bytecode.h"
 namespace evoBasic::ir{
+
     class Segment;
     class IR;
+    class Function;
+    class Meta;
+    class Block;
+    class Pair;
 
     class IRBase{
         data::u8 address_ = 0;
@@ -26,90 +32,136 @@ namespace evoBasic::ir{
         virtual data::u32 getByteLength(){return 0;}
     };
 
+    class ConstBase : public IRBase{};
+
+    template<typename T>
+    class Const : public ConstBase{
+        T t_;
+    public:
+        explicit Const(T t) : t_(t){}
+        data::u32 getByteLength()override{
+            return sizeof(T);
+        }
+        void toString(std::ostream &stream)override{
+            stream<<t_;
+        }
+        void toHex(std::ostream &stream)override{
+            stream.write((const char*)&t_,sizeof(T));
+        }
+    };
+
     class Instruction : public IRBase{
         friend class IR;
+    public:
+        struct TypeProp{
+            vm::Data data = vm::Data::void_;
+        };
+
+        struct CastProp{
+            vm::Data src = vm::Data::void_,
+                    dst = vm::Data::void_;
+        };
+
+        struct InvokeProp{
+            Block *target = nullptr;
+            std::string signature;
+        };
+
+        struct PushProp{
+            vm::Data data = vm::Data::void_;
+            ConstBase *const_value = nullptr;
+        };
+
+        struct JumpProp{
+            Block *target = nullptr;
+        };
+
+        struct MemProp{
+            data::u32 size;
+        };
+
+        struct PlmProp{
+            data::u32 size;
+            char *memory = nullptr;
+        };
+
+        using Prop = std::variant<bool,TypeProp,CastProp,InvokeProp,PushProp,JumpProp,MemProp,PlmProp>;
+
+        Instruction(vm::Bytecode bytecode,Prop prop){
+            this->prop = prop;
+            op = bytecode;
+        }
+
+        Instruction(vm::Bytecode bytecode){
+            op = bytecode;
+        }
+    private:
         vm::Bytecode op = vm::Bytecode::Nop;
-        vm::Data data1 = vm::Data::void_,data2 = vm::Data::void_;
-        std::string label;
-        Segment *segment = nullptr;
-        IRBase *const_value = nullptr;
-        enum InstType{with_type,without_type,cast,invoke,push,jmp,jif}inst_type;
+        Prop prop{};
     public:
         void toHex(std::ostream &stream)override;
         void toString(std::ostream &stream)override;
         data::u32 getByteLength()override;
-
-        static Instruction *WithType(vm::Bytecode op,vm::Data type);
-        static Instruction *Cast(vm::Data src,vm::Data dst);
-        static Instruction *WithoutType(vm::Bytecode op);
-        static Instruction *Invoke(std::string label);
-        static Instruction *Push(vm::Data type,IRBase *const_value);
-        static Instruction *StoreMemory(IRBase *const_value);
-        static Instruction *LoadMemory(IRBase *const_value);
-        static Instruction *PushMemory(IRBase *const_value,std::string memory);
-        static Instruction *Jmp(Segment *segment);
-        static Instruction *Jif(Segment *segment);
-    };
-    /*
- *  Jmp,Jif,EQ,NE,LT,GT,LE,GE,Add,Sub,Mul,Div,FDiv,Neg,And,Or,Xor,Not,Load,Store,pop,dup
- *  pushframebase,pushglobalbase,ret
- *  invoke
- *  push
- *  cast
- */
-
-
-
-    class Segment : public IRBase{
-        std::string label;
-        std::vector<IRBase*> codes;
-        friend class IR;
-        explicit Segment(std::string label_name);
-    public:
-        Segment *add(IRBase *code);
-        void toHex(std::ostream &stream)override;
-        void toString(std::ostream &stream)override;
-        std::string getLabel();
     };
 
     class IR{
-        std::vector<Segment*> code_segments;
-        std::map<std::string,Segment*> function_segment;
+        std::map<std::string,Block*> function_block;
         std::map<std::string,int> label_name_count;
-        Segment *meta = new Segment("meta");
-        Segment *data = new Segment("data");
+
+        std::vector<Meta*> meta;
+        std::vector<Block*> blocks;
     public:
-        static const vm::Data ptr;
 
-        IR(){
-            code_segments.push_back(data);
-        }
-
-        Segment *getMetaSegment(){
-            return meta;
-        }
-        Segment *getDataSegment(){
-            return data;
-        }
-
-        Segment *createSegment(const std::string& label){
-            auto ret = new Segment(label);
-            auto conflict = label_name_count[label];
-            if(conflict > 0){
-                ret->label=ret->label + "_" + std::to_string(conflict);
-            }
-            label_name_count[label]++;
-            return ret;
-        }
-
-        void add(Segment *segment){
-            code_segments.push_back(segment);
-            function_segment.insert({segment->getLabel(),segment});
-        }
+        void addMeta(Meta *meta);
+        void addBlock(Block *block);
 
         void toString(std::ostream &stream);
         void toHex(std::ostream &stream);
     };
+
+    class Block : public IRBase{
+        std::string label_;
+        std::vector<Instruction*> instructons;
+    public:
+        std::vector<Instruction*> getInstructions();
+        std::string getLabel();
+        std::string setLabel(std::string label);
+        Block &Jmp(Block *block);
+        Block &Jif(Block *block);
+        Block &EQ();
+        Block &NE();
+        Block &LT();
+        Block &GT();
+        Block &LE();
+        Block &GE();
+        Block &Add(vm::Data data);
+        Block &Sub(vm::Data data);
+        Block &Mul(vm::Data data);
+        Block &Div(vm::Data data);
+        Block &FDiv(vm::Data data);
+        Block &Neg(vm::Data data);
+        Block &And();
+        Block &Or();
+        Block &Xor();
+        Block &Not();
+        Block &Load(vm::Data data);
+        Block &Store(vm::Data data);
+        Block &Invoke(std::string signature);
+        Block &Push(vm::Data data,ConstBase *const_value);
+        Block &Pop(vm::Data data);
+        Block &Ret();
+        Block &Cast(vm::Data src,vm::Data dst);
+        Block &Dup(vm::Data data);
+        Block &Stm(data::u32 size);
+        Block &Ldm(data::u32 size);
+        Block &Psm(data::u32 size,char *memory);
+        Block &PushFrameBase();
+        Block &PushGlobalBase();
+    };
+
+
+
+
 
     class Meta : public IRBase{
     public:
@@ -134,6 +186,8 @@ namespace evoBasic::ir{
         std::string name_;
         Type *type_;
     public:
+        std::string getName(){return name_;}
+        Type *getType(){return type_;}
         Pair(std::string name,Type *type);
         void toString(std::ostream &stream)override;
     };
@@ -145,10 +199,10 @@ namespace evoBasic::ir{
         Type *ret_type = nullptr;
         bool external = false;
         std::string library_name;
-        Segment *segment = nullptr;
+        Block *block = nullptr;
     public:
         Function(std::list<Pair*> params,Type *ret,std::string library);
-        Function(std::list<Pair*> params,Type *ret,Segment *segment);
+        Function(std::list<Pair*> params,Type *ret,Block *block);
         void toString(std::ostream &stream)override;
         data::u32 getAddress()override;
     };
@@ -175,21 +229,7 @@ namespace evoBasic::ir{
         void toString(std::ostream &stream)override;
     };
 
-    template<typename T>
-    class Const : public IRBase{
-        T t_;
-    public:
-        explicit Const(T t) : t_(t){}
-        data::u32 getByteLength()override{
-            return sizeof(T);
-        }
-        void toString(std::ostream &stream)override{
-            stream<<t_;
-        }
-        void toHex(std::ostream &stream)override{
-            stream.write((const char*)&t_,sizeof(T));
-        }
-    };
+
 
 
 }

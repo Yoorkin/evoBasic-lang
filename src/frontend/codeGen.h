@@ -14,7 +14,7 @@ namespace evoBasic{
     struct IRGenArgs{
         std::shared_ptr<type::Function> function;
         std::shared_ptr<type::Domain> domain;
-        std::shared_ptr<type::Domain> *in_terminal_list = nullptr;
+        std::shared_ptr<type::Symbol> dot_expression_context;
         bool need_lookup = false;
         bool reserve_address = false;
         bool is_last_terminal = false;
@@ -27,13 +27,14 @@ namespace evoBasic{
         int current_args_index = 0;
     };
 
-    using DataSizeVariant = std::variant<vm::Data,data::u32>; // primitive\ptr or Array\Type
+    // primitive\ptr or Array\Type or Prototype
+    using DataSizeVariant = std::variant<vm::Data,data::u32,std::shared_ptr<type::Prototype>>;
 
     class IRGen : public Visitor<IRGenArgs>{
     public:
         std::shared_ptr<ir::IR> gen(AST *ast,std::shared_ptr<Context> context);
 
-        vm::Data convertSymbolToDataKind(std::shared_ptr<type::Symbol> symbol);
+        DataSizeVariant convertSymbolToDataKind(std::shared_ptr<type::Symbol> symbol);
 
         std::any visitGlobal(ast::Global *global_node, IRGenArgs args) override;
         std::any visitModule(ast::Module *mod_node, IRGenArgs args) override;
@@ -57,10 +58,12 @@ namespace evoBasic{
         std::any visitExit(ast::stmt::Exit *exit_node, IRGenArgs args) override;
 
         std::any visitBinary(ast::expr::Binary *logic_node, IRGenArgs args) override;
+        std::shared_ptr<type::Prototype> visitDot(ast::expr::Expression *dot_node,IRGenArgs args);
         std::any visitUnary(ast::expr::Unary *unit_node, IRGenArgs args) override;
         std::any visitCallee(ast::expr::Callee *callee_node, IRGenArgs args) override;
         std::any visitArg(ast::expr::Callee::Argument *arg_node, IRGenArgs args) override;
 
+        std::any visitID(ast::expr::ID *id_node, IRGenArgs args) override;
         std::any visitBoolean(ast::expr::Boolean *bl_node, IRGenArgs args) override;
         std::any visitChar(ast::expr::Char *ch_node, IRGenArgs args) override;
         std::any visitDigit(ast::expr::Digit *digit_node, IRGenArgs args) override;
@@ -69,8 +72,12 @@ namespace evoBasic{
         std::any visitParentheses(ast::expr::Parentheses *parentheses_node, IRGenArgs args) override;
         std::any visitExprStmt(ast::stmt::ExprStmt *expr_stmt_node, IRGenArgs args) override;
 
-        DataSizeVariant visitFunctionCall(ast::expr::Callee *callee_node,IRGenArgs args,std::shared_ptr<type::Function> target);
+        std::any visitAnnotation(ast::Annotation *anno_node, IRGenArgs args)override;
+
         DataSizeVariant visitVariableCall(ast::expr::Callee *callee_node,IRGenArgs args,std::shared_ptr<type::Variable> target);
+
+        std::any visitCast(ast::expr::Cast *cast_node, IRGenArgs args);
+        void dereference(std::shared_ptr<type::Symbol> symbol);
     };
 
 }

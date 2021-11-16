@@ -5,6 +5,7 @@
 #include "semantic.h"
 #include "nullSafe.h"
 #include "logger.h"
+#include "utils.h"
 
 using namespace std;
 using namespace evoBasic::type;
@@ -73,25 +74,6 @@ namespace evoBasic{
         }
         return true;
     }
-
-    string getID(ast::expr::ID *id) {
-        NotNull(id);
-        string ret = id->lexeme;
-        transform(ret.begin(),ret.end(),ret.begin(),[](char c){
-            return tolower(c);
-        });
-        return ret;
-    }
-
-    int getDigit(ast::expr::Digit *digit){
-        NotNull(digit);
-        return digit->value;
-    }
-
-    string getString(ast::expr::String *str){
-        return str->value;
-    }
-
 
     std::any SymbolCollector::visitGlobal(evoBasic::ast::Global *global, evoBasic::SymbolCollectorArgs args) {
         NotNull(global);

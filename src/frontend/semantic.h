@@ -11,8 +11,6 @@ namespace evoBasic{
 
     using AST = ast::Global;
 
-    std::string getID(ast::expr::ID *id);
-
     class Semantic {
     public:
         static void collectSymbol(AST *ast,std::shared_ptr<Context> context);
