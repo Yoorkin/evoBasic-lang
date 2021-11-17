@@ -338,6 +338,8 @@ namespace evoBasic{
             func->setLocation(func_node->name->location);
             func->setName(name);
 
+            args.context->byteLengthDependencies.addIsolate(func);
+
             args.domain->add(func);
             if(func_node->return_type){
                 auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(func_node->return_type,args));

@@ -11,7 +11,7 @@ namespace evoBasic{
     using namespace ir;
     using namespace type;
     
-    IRBase *convertNumberToConst(Data kind,long long number){
+    ConstBase *convertNumberToConst(Data kind,long long number){
         switch (kind.getValue()) {
             case Data::void_: ASSERT(true,"error");
             case Data::boolean: return new Const<data::boolean>(number);
@@ -34,7 +34,6 @@ namespace evoBasic{
         args.ir = ir;
         args.domain = context->getGlobal();
         args.context = context;
-        args.previous_segment = ir->getMetaSegment();
         visitGlobal(ast,args);
         return ir;
     }
@@ -60,7 +59,7 @@ namespace evoBasic{
             members.push_back(new Pair(p->getName(),field_type_ir));
         }
         auto record_ir = new ir::Record(members);
-        args.previous_segment->add(new Pair(ty->mangling(), record_ir));
+        args.ir->addMeta(new Pair(ty->mangling(), record_ir));
         return nullptr;
     }
 
@@ -73,7 +72,7 @@ namespace evoBasic{
             members.push_back(new Pair(p->getName(),field_type_ir));
         }
         auto record_ir = new ir::Record(members);
-        args.previous_segment->add(new Pair(ty->mangling(), record_ir));
+        args.ir->addMeta(new Pair(ty->mangling(), record_ir));
         return nullptr;
     }
 
@@ -87,7 +86,7 @@ namespace evoBasic{
             members.emplace_back(key,value);
         }
         auto enum_ir = new Enum(members);
-        args.previous_segment->add(new Pair(em->mangling(), enum_ir));
+        args.ir->addMeta(new Pair(em->mangling(), enum_ir));
         return nullptr;
     }
 
@@ -103,7 +102,7 @@ namespace evoBasic{
         auto name = getID(var_node->name);
         auto field = args.domain->find(name)->as_shared<Variable>();
         auto type_ref = new Mark(field->getPrototype()->mangling(),false,false);
-        args.previous_segment->add(new Pair(field->mangling(), type_ref));
+        args.ir->addMeta(new Pair(field->mangling(), type_ref));
         return nullptr;
     }
 
@@ -145,24 +144,24 @@ namespace evoBasic{
 
         args.domain = func;
         //create function segment
-        auto function_segment = args.ir->createSegment(args.domain->mangling());
-        auto func_ir = new ir::Function(params,ret_mark,function_segment);
-        args.previous_segment->add(new Pair(func->mangling(), func_ir));
-        args.ir->add(function_segment);
+        auto function_block = new Block(args.domain->mangling());
+        auto func_ir = new ir::Function(params, ret_mark, function_block);
+        args.ir->addMeta(new Pair(func->mangling(), func_ir));
+        args.ir->addBlock(function_block);
 
-        args.previous_segment = function_segment;
-        auto after_segment = visitStatementList(func_node->statement_list,args);
-        after_segment->add(Instruction::WithoutType(Bytecode::Ret));
+        args.previous_block = function_block;
+        auto after_block = visitStatementList(func_node->statement_list,args);
+        after_block->Ret();
         return nullptr;
     }
 
 
-    Segment *IRGen::visitStatementList(std::list<ast::stmt::Statement*> &stmt_list, IRGenArgs args) {
+    Block *IRGen::visitStatementList(std::list<ast::stmt::Statement*> &stmt_list, IRGenArgs args) {
         for(auto& s:stmt_list){
-            auto *after_segment = any_cast<Segment*>(visitStatement(s,args));
-            if(after_segment)args.previous_segment = after_segment;
+            auto *after_block = any_cast<Block*>(visitStatement(s,args));
+            if(after_block)args.previous_block = after_block;
         }
-        return args.previous_segment;
+        return args.previous_block;
     }
 
     std::any IRGen::visitLet(ast::stmt::Let *let_node, IRGenArgs args) {
@@ -170,9 +169,9 @@ namespace evoBasic{
             auto tmp = args.domain->find(getID(var->name));
             auto field = tmp->as_shared<Variable>();
             auto offset = field->getOffset();
-            args.previous_segment->add(Instruction::WithoutType(Bytecode::PushFrameBase))
-                                 ->add(Instruction::Push(IR::ptr,new Const<data::u32>(field->getOffset())))
-                                 ->add(Instruction::WithType(Bytecode::Add, IR::ptr));
+            args.previous_block->PushFrameBase()
+                                .Push(Data::ptr,new Const<data::u32>(field->getOffset()))
+                                .Add(Data::ptr);
 
             auto field_kind = field->getPrototype()->getKind();
             if(field_kind == DeclarationEnum::Primitive){
@@ -182,9 +181,9 @@ namespace evoBasic{
                 }
                 else {
                     auto data =  primitive_type->getDataKind();
-                    args.previous_segment->add(Instruction::Push(data,convertNumberToConst(data,0)));
+                    args.previous_block->Push(data,convertNumberToConst(data,0));
                 }
-                args.previous_segment->add(Instruction::WithType(Bytecode::Store, primitive_type->getDataKind()));
+                args.previous_block->Store(primitive_type->getDataKind());
             }
             else if(field_kind == DeclarationEnum::Type){
                 //TODO
@@ -196,29 +195,29 @@ namespace evoBasic{
                 //TODO
             }
         }
-        return (Segment*)nullptr;
+        return (Block*)nullptr;
     }
 
     std::any IRGen::visitIf(ast::stmt::If *ifstmt_node, IRGenArgs args) {
-        auto after_if_segment = args.ir->createSegment(args.domain->mangling() + "_if_after");
-        args.next_segment = after_if_segment;
+        auto after_if_block = new Block(args.domain->mangling() + "_if_after");
+        args.next_block = after_if_block;
         for(auto &ca:ifstmt_node->case_list){
             visitCase(ca,args);
         }
-        args.previous_segment->add(Instruction::Jmp(after_if_segment));
-        args.ir->add(after_if_segment);
-        return after_if_segment;
+        args.previous_block->Jmp(after_if_block);
+        args.ir->addBlock(after_if_block);
+        return after_if_block;
     }
 
     std::any IRGen::visitCase(ast::Case *ca_node, IRGenArgs args) {
         if(ca_node->condition) {
             visitExpression(ca_node->condition, args);
-            auto case_segment = args.ir->createSegment(args.function->mangling() + "_case");
-            args.ir->add(case_segment);
-            args.previous_segment->add(Instruction::Jif(case_segment));
-            args.previous_segment = case_segment;
-            auto after_stmts_segment = visitStatementList(ca_node->statement_list, args);
-            after_stmts_segment->add(Instruction::Jmp(args.next_segment));
+            auto case_block = new Block(args.function->mangling() + "_case");
+            args.ir->addBlock(case_block);
+            args.previous_block->Jif(case_block);
+            args.previous_block = case_block;
+            auto after_stmts_block = visitStatementList(ca_node->statement_list, args);
+            after_stmts_block->Jmp(args.next_block);
         }
         else{
             visitStatementList(ca_node->statement_list, args);
@@ -227,46 +226,46 @@ namespace evoBasic{
     }
 
     std::any IRGen::visitLoop(ast::stmt::Loop *loop_node, IRGenArgs args) {
-        auto condition_segment = args.ir->createSegment(args.function->mangling() + "_condition");
-        auto loop_segment = args.ir->createSegment(args.function->mangling() + "_loop");
-        auto after_loop_segment = args.ir->createSegment(args.function->mangling() + "_loop_after");
+        auto condition_block = new Block(args.function->mangling() + "_condition");
+        auto loop_block = new Block(args.function->mangling() + "_loop");
+        auto after_loop_block = new Block(args.function->mangling() + "_loop_after");
 
         //jump from previous segment to condition segment
-        args.previous_segment->add(Instruction::Jmp(condition_segment));
+        args.previous_block->Jmp(condition_block);
 
         //loop condition ir
-        args.ir->add(condition_segment);
-        args.previous_segment = condition_segment;
+        args.ir->addBlock(condition_block);
+        args.previous_block = condition_block;
         visitExpression(loop_node->condition,args);
-        condition_segment->add(Instruction::Jif(loop_segment));
-        condition_segment->add(Instruction::Jmp(after_loop_segment));
+        condition_block->Jif(loop_block);
+        condition_block->Jmp(after_loop_block);
 
         //loop body ir
-        args.ir->add(loop_segment);
-        args.previous_segment = loop_segment;
-        args.next_segment = after_loop_segment;
+        args.ir->addBlock(loop_block);
+        args.previous_block = loop_block;
+        args.next_block = after_loop_block;
         visitStatementList(loop_node->statement_list,args);
-        loop_segment->add(Instruction::Jmp(condition_segment));
+        loop_block->Jmp(condition_block);
 
-        args.ir->add(after_loop_segment);
-        return after_loop_segment;
+        args.ir->addBlock(after_loop_block);
+        return after_loop_block;
     }
 
     std::any IRGen::visitSelect(ast::stmt::Select *select_node, IRGenArgs args) {
-        auto after_select_segment = args.ir->createSegment(args.domain->mangling() + "_select_after");
-        args.next_segment = after_select_segment;
+        auto after_select_block = new Block(args.domain->mangling() + "_select_after");
+        args.next_block = after_select_block;
         for(auto &ca:select_node->case_list){
             visitCase(ca,args);
         }
-        args.previous_segment->add(Instruction::Jmp(after_select_segment));
-        args.ir->add(after_select_segment);
-        return after_select_segment;
+        args.previous_block->Jmp(after_select_block);
+        args.ir->addBlock(after_select_block);
+        return after_select_block;
     }
 
     std::any IRGen::visitFor(ast::stmt::For *forstmt_node, IRGenArgs args) {
-        auto condition_segment = args.ir->createSegment(args.function->mangling() + "_condition");
-        auto loop_segment = args.ir->createSegment(args.function->mangling() + "_loop");
-        auto after_loop_segment = args.ir->createSegment(args.function->mangling() + "_loop_after");
+        auto condition_block = new Block(args.function->mangling() + "_condition");
+        auto loop_block = new Block(args.function->mangling() + "_loop");
+        auto after_loop_block = new Block(args.function->mangling() + "_loop_after");
 
 
         //load iterator address and begin expression value
@@ -275,142 +274,179 @@ namespace evoBasic{
         args.reserve_address = false;
         auto data = any_cast<Data>(visitExpression(forstmt_node->begin,args));
         //store value in address
-        args.previous_segment->add(Instruction::WithType(Bytecode::Store, data));
-        //jump from previous previous_segment to looping segment
-        args.previous_segment->add(Instruction::Jmp(loop_segment));
-        //generate ir in loop previous_segment
+        args.previous_block->Store(data);
+        //jump from previous previous_block to looping segment
+        args.previous_block->Jmp(loop_block);
+        //generate ir in loop previous_block
 
 
-        args.ir->add(condition_segment);
-        //generate condition previous_segment ir
+        args.ir->addBlock(condition_block);
+        //generate condition previous_block ir
         // increase iterator
-        args.previous_segment = condition_segment;
+        args.previous_block = condition_block;
         visitExpression(forstmt_node->iterator,args);
         if(forstmt_node->step)
             visitExpression(forstmt_node->step,args);
         else
-            condition_segment->add(Instruction::Push(data, convertNumberToConst(data,1)));
-        args.previous_segment->add(Instruction::WithType(Bytecode::Add, data));
+            condition_block->Push(data, convertNumberToConst(data, 1));
+        args.previous_block->Add(data);
         //duplicate increased value and store in iterator address
-        args.previous_segment->add(Instruction::WithType(Bytecode::Dup, data));
+        args.previous_block->Dup(data);
         args.reserve_address = true;
         visitExpression(forstmt_node->iterator,args);
         args.reserve_address = false;
-        args.previous_segment->add(Instruction::WithType(Bytecode::Store, data));
+        args.previous_block->Store(data);
         //load end expression value
         visitExpression(forstmt_node->end,args);
-        //compare iterator and end,if less than or equal the end value,jump to loop previous_segment
-        args.previous_segment->add(Instruction::WithType(Bytecode::LE, data));
-        args.previous_segment->add(Instruction::Jif(loop_segment));
+        //compare iterator and end,if less than or equal the end value,jump to loop previous_block
+        args.previous_block->LE(data);
+        args.previous_block->Jif(loop_block);
         //otherwise jump to after loop segment
-        args.previous_segment->add(Instruction::Jmp(after_loop_segment));
+        args.previous_block->Jmp(after_loop_block);
 
 
 
-        args.ir->add(loop_segment);
-        args.previous_segment = loop_segment;
-        args.next_segment = after_loop_segment;
-        args.continue_segment = condition_segment;
+        args.ir->addBlock(loop_block);
+        args.previous_block = loop_block;
+        args.next_block = after_loop_block;
+        args.continue_block = condition_block;
         auto after_stmts_segment = visitStatementList(forstmt_node->statement_list,args);
-        //jump from loop end to condition previous_segment
-        after_stmts_segment->add(Instruction::Jmp(condition_segment));
+        //jump from loop end to condition previous_block
+        after_stmts_segment->Jmp(condition_block);
 
-        args.ir->add(after_loop_segment);
-        return after_loop_segment;
+        args.ir->addBlock(after_loop_block);
+        return after_loop_block;
     }
 
     std::any IRGen::visitContinue(ast::stmt::Continue *cont_node, IRGenArgs args) {
-        args.previous_segment->add(Instruction::Jmp(args.continue_segment));
-        return (Segment*)nullptr;
+        args.previous_block->Jmp(args.continue_block);
+        return (Block*)nullptr;
     }
 
     std::any IRGen::visitReturn(ast::stmt::Return *ret_node, IRGenArgs args) {
-        args.need_dup_in_assignment = true;
+        args.need_return_value = true;
         visitExpression(ret_node->expr,args);
-        args.previous_segment->add(Instruction::WithoutType(Bytecode::Ret));
-        return (Segment*)nullptr;
+        args.previous_block->Ret();
+        return (Block*)nullptr;
     }
 
     std::any IRGen::visitExit(ast::stmt::Exit *exit_node, IRGenArgs args) {
         switch (exit_node->exit_flag) {
             case ast::stmt::Exit::For:
             case ast::stmt::Exit::While:
-                args.previous_segment->add(Instruction::Jmp(args.next_segment));
+                args.previous_block->Jmp(args.next_block);
                 break;
             case ast::stmt::Exit::Sub:
-                args.previous_segment->add(Instruction::WithoutType(Bytecode::Ret));
+                args.previous_block->Ret();
                 break;
         }
-        return (Segment*)nullptr;
+        return (Block*)nullptr;
+    }
+
+    OperandDataType IRGen::visitAssign(ast::expr::Binary *node,IRGenArgs args) {
+        bool need_return_value = args.need_return_value;
+        args.need_return_value = true;
+
+        auto lhs_data_type = any_cast<OperandDataType>(visitExpression(node->lhs,args));
+        auto rhs_data_type = any_cast<OperandDataType>(visitExpression(node->rhs,args));
+
+        switch (rhs_data_type.index()) {
+            case 0: //DataType
+                args.previous_block->Store(get<DataType>(rhs_data_type).data);
+                break;
+            case 1: //MemType
+                args.previous_block->Stm(get<MemType>(rhs_data_type).size);
+                break;
+            case 2: {//PtrType
+                auto ptr_type = get<PtrType>(rhs_data_type);
+                switch (ptr_type.element) {
+                    case PtrType::primitive_:
+                        args.previous_block->Load(ptr_type.data);
+                        args.previous_block->Store(get<DataType>(rhs_data_type).data);
+                        break;
+                    case PtrType::mem_:
+                        args.previous_block->Ldm(get<PtrType>(rhs_data_type).mem_size);
+                        args.previous_block->Stm(get<PtrType>(rhs_data_type).mem_size);
+                        break;
+                    case PtrType::class_:
+                        args.previous_block->Load(Data::ptr);
+                        args.previous_block->Store(Data::ptr);
+                        break;
+                }
+                break;
+            }
+        }
+
+        if(need_return_value)
+            return any_cast<OperandDataType>(visitExpression(node->lhs,args));
+        else
+            return OperandDataType(DataType{Data::void_});
     }
 
     std::any IRGen::visitBinary(ast::expr::Binary *logic_node, IRGenArgs args) {
         using Op = ast::expr::Binary::Enum;
         set<Op> logic_op = {Op::And,Op::Or,Op::Xor,Op::Not,Op::Not};
         set<Op> calculate_op = {Op::EQ,Op::NE,Op::LE,Op::GE,Op::LT,Op::GT,Op::ADD,Op::MINUS,Op::MUL,Op::DIV,Op::FDIV};
+        auto boolean = OperandDataType(DataType{Data::boolean});
         if(logic_op.contains(logic_node->op)){
             switch (logic_node->op) {
                 case Op::And:
-                    args.previous_segment->add(Instruction::WithoutType(Bytecode::And));
-                    return DataSizeVariant(Data::boolean);
+                    args.previous_block->And();
+                    return boolean;
                 case Op::Or:
-                    args.previous_segment->add(Instruction::WithoutType(Bytecode::Or));
-                    return DataSizeVariant(Data::boolean);
+                    args.previous_block->Or();
+                    return boolean;
                 case Op::Xor:
-                    args.previous_segment->add(Instruction::WithoutType(Bytecode::Xor));
-                    return DataSizeVariant(Data::boolean);
+                    args.previous_block->Xor();
+                    return boolean;
                 case Op::Not:
-                    args.previous_segment->add(Instruction::WithoutType(Bytecode::Not));
-                    return DataSizeVariant(Data::boolean);
+                    args.previous_block->Not();
+                    return boolean;
             }
         }
         else if(calculate_op.contains(logic_node->op)){
-            auto lhs_data = any_cast<Data>(visitExpression(logic_node->lhs,args));
+            auto lhs_data_type = any_cast<OperandDataType>(visitExpression(logic_node->lhs,args));
+            auto lhs_data = get<DataType>(lhs_data_type).data;
             visitExpression(logic_node->rhs,args);
             switch (logic_node->op) {
                 case Op::EQ:
-                    args.previous_segment->add(Instruction::WithType(Bytecode::EQ, lhs_data));
-                    return DataSizeVariant(Data::boolean);
+                    args.previous_block->EQ(lhs_data);
+                    return boolean;
                 case Op::NE:
-                    args.previous_segment->add(Instruction::WithType(Bytecode::NE, lhs_data));
-                    return DataSizeVariant(Data::boolean);
+                    args.previous_block->NE(lhs_data);
+                    return boolean;
                 case Op::GE:
-                    args.previous_segment->add(Instruction::WithType(Bytecode::GE, lhs_data));
-                    return DataSizeVariant(Data::boolean);
+                    args.previous_block->GE(lhs_data);
+                    return boolean;
                 case Op::LE:
-                    args.previous_segment->add(Instruction::WithType(Bytecode::LE, lhs_data));
-                    return DataSizeVariant(Data::boolean);
+                    args.previous_block->LE(lhs_data);
+                    return boolean;
                 case Op::GT:
-                    args.previous_segment->add(Instruction::WithType(Bytecode::GT, lhs_data));
-                    return DataSizeVariant(Data::boolean);
+                    args.previous_block->GT(lhs_data);
+                    return boolean;
                 case Op::LT:
-                    args.previous_segment->add(Instruction::WithType(Bytecode::LT, lhs_data));
-                    return DataSizeVariant(Data::boolean);
+                    args.previous_block->LT(lhs_data);
+                    return boolean;
                 case Op::ADD:
-                    args.previous_segment->add(Instruction::WithType(Bytecode::Add, lhs_data));
-                    return DataSizeVariant(lhs_data);
+                    args.previous_block->Add(lhs_data);
+                    return lhs_data_type;
                 case Op::MINUS:
-                    args.previous_segment->add(Instruction::WithType(Bytecode::Sub, lhs_data));
-                    return DataSizeVariant(lhs_data);
+                    args.previous_block->Sub(lhs_data);
+                    return lhs_data_type;
                 case Op::MUL:
-                    args.previous_segment->add(Instruction::WithType(Bytecode::Mul, lhs_data));
-                    return DataSizeVariant(lhs_data);
+                    args.previous_block->Mul(lhs_data);
+                    return lhs_data_type;
                 case Op::DIV:
-                    args.previous_segment->add(Instruction::WithType(Bytecode::Div, lhs_data));
-                    return DataSizeVariant(lhs_data);
+                    args.previous_block->Div(lhs_data);
+                    return lhs_data_type;
                 case Op::FDIV:
-                    args.previous_segment->add(Instruction::WithType(Bytecode::FDiv, lhs_data));
-                    return DataSizeVariant(lhs_data);//TODO FIDV support
+                    args.previous_block->FDiv(lhs_data);
+                    return lhs_data_type;//TODO FIDV support
             }
         }
         else if(logic_node->op == Op::ASSIGN){
-            args.reserve_address = true;
-            auto lhs_data = any_cast<Data>(visitExpression(logic_node->lhs,args));
-            args.reserve_address = false;
-            if(args.need_dup_in_assignment) args.previous_segment->add(Instruction::WithType(Bytecode::Dup, lhs_data));
-            visitExpression(logic_node->rhs,args);
-            args.previous_segment->add(Instruction::WithType(Bytecode::Store, lhs_data));
-            return DataSizeVariant(lhs_data);
+            args.need_return_value = false;
+            return visitAssign(logic_node,args);
         }
         else if(logic_node->op == Op::Dot){
             args.dot_expression_context = args.domain;
@@ -421,137 +457,63 @@ namespace evoBasic{
 
     std::any IRGen::visitID(ast::expr::ID *id_node, IRGenArgs args) {
         auto name = getID(id_node);
-        if(args.need_lookup)
-            return args.domain->lookUp(name);
-        else
-            return args.domain->find(name);
+        if(args.need_lookup) {
+            return args.dot_expression_context->as_shared<Domain>()->lookUp(name);
+        }
+        else{
+            return args.dot_expression_context->as_shared<Domain>()->find(name);
+        }
     }
 
 
     std::any IRGen::visitCallee(ast::expr::Callee *callee_node, IRGenArgs args) {
-        shared_ptr<type::Function> function = any_cast<Symbol>(visitID(callee_node->name,args)).as_shared<type::Function>();
-        //TODO args code gen
+        shared_ptr<type::Function> function = any_cast<shared_ptr<Symbol>>(visitID(callee_node->name,args))->as_shared<type::Function>();
+        args.function = function;
+        for(auto iter=callee_node->arg_list.cend();iter!=callee_node->arg_list.cbegin();iter++){
+            visitArg(*iter,args);
+        }
         return function->getRetSignature();
     }
 
-    DataSizeVariant IRGen::convertSymbolToDataKind(std::shared_ptr<Symbol> symbol) {
-        NotNull(symbol.get());
-        switch (symbol->getKind()) {
-            case DeclarationEnum::Class:
-                return Data::ptr;
-            case DeclarationEnum::Enum_:
-                return Data::u32;
-            case DeclarationEnum::Array:
-            case DeclarationEnum::Type:
-                return symbol->as_shared<Domain>()->getByteLength();
-            case DeclarationEnum::Argument:{
-                auto argument = symbol->as_shared<Argument>();
-                if(argument->isByval())
-                    return Data::ptr;
-                else
-                    return convertSymbolToDataKind(argument->getPrototype());
-            }
-            case DeclarationEnum::Variable:
-                return convertSymbolToDataKind(symbol->as_shared<Variable>()->getPrototype());
-            case DeclarationEnum::Primitive:
-                return (symbol->as_shared<primitive::Primitive>()->getDataKind());
-            default:
-                ASSERT(true,"error");
+    void loadFromAddress(OperandDataType operand_variant,Block *block){
+        switch(operand_variant.index()){
+            case 0: ASSERT(true,"invalid");
+            case 1: block->Ldm(get<MemType>(operand_variant).size); break;
+            case 2: block->Load(get<PtrType>(operand_variant).data); break;
         }
     }
 
-    void IRGen::dereference(std::shared_ptr<type::Symbol> symbol){
-
-    }
-
-    shared_ptr<Prototype> IRGen::visitDot(ast::expr::Expression *dot_node,IRGenArgs args){
-        using namespace ast::expr;
-        using Op = Binary::Enum;
-        using PrototypePtr = shared_ptr<Prototype>;
-        auto node = (Binary*)dot_node;
-        PrototypePtr lhs,rhs;
-        if(node->expression_kind == Expression::ID_){
-            args.need_lookup = true;
-            lhs = any_cast<PrototypePtr>(visitID((ID*)node->lhs,args));
-            switch(lhs->getKind()){
-
-            }
-            if(lhs->getKind() == DeclarationEnum::Argument){
-                auto argument = lhs->as_shared<Argument>();
-                if(!argument->isByval()){
-                    //dereference ByRef argument
-                    args.previous_segment->add(Instruction::WithType(Bytecode::Load,Data::u32));
-                }
-            }
+    void pushVariableAddress(const std::shared_ptr<Variable> &variable, Block *block, bool need_push_base){
+        if(need_push_base){
+            if(variable->isGlobal())
+                block->PushGlobalBase();
+            else
+                block->PushFrameBase();
         }
-        else if(node->expression_kind == Expression::callee_){
-            args.need_lookup = true;
-            lhs = any_cast<PrototypePtr>(visitCallee((Callee*)node->lhs,args));
-        }
+        block->Push(Data::ptr,new Const<data::ptr>(variable->getOffset()));
+        block->Add(Data::ptr);
+        //push variable address to operand
 
-
-
-
-        if(dot_node->expression_kind == Expression::ID_){
-            return any_cast<shared_ptr<Prototype>>(visitID((ID*)dot_node,args));
-        }
-        else if(dot_node->expression_kind == Expression::callee_){
-            return any_cast<shared_ptr<Prototype>>(visitCallee((Callee*)dot_node,args));
-        }
-        else if(dot_node->expression_kind == Expression::binary_){
-            switch (((Binary*)dot_node)->op) {
-                case Op::Dot: {
-                    auto lhs_prototype = visitDot(((Binary*) dot_node)->lhs, args);
-                    auto rhs_prototype = visitDot(((Binary*) dot_node)->lhs, args);
-                    using ty = DeclarationEnum;
-                    switch (lhs_prototype->getKind()) {
-                        case ty::Array:
-                        case ty::Type:
-                        case ty::Variable:
-                        case ty::Argument:
-                        break;
-                    }
-                }
-                break;
-                case Op::Index:
-                    auto array = visitDot(((Binary*)dot_node)->lhs,args);
-                    visitExpression(((Binary*)dot_node)->rhs,args);
-                    args.previous_segment->add(Instruction::WithType(Bytecode::Add,Data::ptr));
-                    return array->as_shared<Array>()->getElementPrototype();
-            }
+        auto argument = variable->as_shared<Argument>();
+        if(argument && !argument->isByval()){
+            block->Load(Data::ptr);
+            //push referencing address to operand
         }
     }
 
+    shared_ptr<Prototype> IRGen::visitIndex(ast::expr::Binary *index,IRGenArgs args,bool need_push_base){
+        auto symbol = any_cast<shared_ptr<Symbol>>(visitID((ast::expr::ID*)index->lhs,args));
+        auto variable = symbol->as_shared<Variable>();
+        pushVariableAddress(variable, args.previous_block,need_push_base);
+        auto array = variable->getPrototype()->as_shared<Array>();
+        NotNull(array.get());
 
-    std::any IRGen::visitUnary(ast::expr::Unary *unit_node, IRGenArgs args) {
-        auto data_size_variant = any_cast<DataSizeVariant>(visitExpression(unit_node->terminal,args));
-        args.previous_segment->add(Instruction::WithType(Bytecode::Neg, get<0>(data_size_variant)));
-        return data_size_variant;
+        visitExpression(index->rhs,args);
+        args.previous_block->Push(Data::ptr,new Const<data::ptr>(array->getElementPrototype()->getByteLength()));
+        args.previous_block->Mul(Data::ptr);
+        args.previous_block->Add(Data::ptr);
+        return array->getElementPrototype();
     }
-
-    DataSizeVariant IRGen::visitVariableCall(ast::expr::Callee *callee_node,IRGenArgs args,shared_ptr<Variable> target){
-        if(target->getKind() == DeclarationEnum::Variable || target->getKind() == DeclarationEnum::Argument){
-            auto variable = target->as_shared<evoBasic::Variable>();
-            auto base = variable->isGlobal() ? Bytecode::PushGlobalBase : Bytecode::PushFrameBase;
-            args.previous_segment->add(Instruction::WithoutType(base));
-            args.previous_segment->add(Instruction::Push(IR::ptr,new Const<data::u32>(variable->getOffset())));
-            args.previous_segment->add(Instruction::WithType(Bytecode::Add, IR::ptr));
-            //*args.in_terminal_list=(variable->getPrototype()->as_shared<Domain>());
-        }
-        else{
-            //*args.in_terminal_list=(target->as_shared<Domain>());
-        }
-
-        if(args.is_last_terminal){
-            auto field = target->as_shared<Variable>();
-            auto data = convertSymbolToDataKind(field);
-            if(!args.reserve_address)
-                args.previous_segment->add(Instruction::WithType(Bytecode::Load, data));
-            return DataSizeVariant(data);
-        }
-    }
-
-
     std::any IRGen::visitArg(ast::expr::Callee::Argument *arg_node, IRGenArgs args) {
         /*
           *   Param\Arg          ByVal                  ByRef            Undefined
@@ -565,7 +527,8 @@ namespace evoBasic{
             switch (arg_node->pass_kind) {
                 case ast::expr::Callee::Argument::undefined:
                 case ast::expr::Callee::Argument::byval:
-                    visitExpression(arg_node->expr,args);
+                    auto operand_variant = any_cast<OperandDataType>(visitExpression(arg_node->expr,args));
+                    loadFromAddress(operand_variant,args.previous_block);
                     break;
             }
         }
@@ -576,66 +539,204 @@ namespace evoBasic{
                     switch (param->getPrototype()->getKind()) {
                         case DeclarationEnum::Type:
                         case DeclarationEnum::Array:
-                            args.previous_segment->add(Instruction::Push(
-                                    Data::ptr,new Const<data::u32>(arg_node->temp_address->getOffset())));
-                            args.previous_segment->add(Instruction::StoreMemory(
-                                    new Const<data::u32>(param->getRealByteLength())));
+                            args.previous_block->Push(Data::ptr,new Const<data::u32>(arg_node->temp_address->getOffset()));
+                            args.previous_block->Stm(param->getRealByteLength());
                             break;
                         case DeclarationEnum::Primitive:
-                            args.previous_segment->add(Instruction::Push(
-                                    Data::ptr,new Const<data::u32>(arg_node->temp_address->getOffset())));
-                            args.previous_segment->add(Instruction::WithType(
-                                    Bytecode::Store,
-                                    arg_node->temp_address->as_shared<primitive::Primitive>()->getDataKind()
-                                    ));
+                            args.previous_block->Push(Data::ptr,new Const<data::u32>(arg_node->temp_address->getOffset()));
+                            args.previous_block->Store(arg_node->temp_address->as_shared<primitive::Primitive>()->getDataKind());
                             break;
                     }
                     break;
                 case ast::expr::Callee::Argument::byref:
                 case ast::expr::Callee::Argument::undefined:
-                    args.reserve_address = true;
-                    visitExpression(arg_node->expr,args);
+                    auto data_size_variant = any_cast<OperandDataType>(visitExpression(arg_node->expr,args));
+                    loadFromAddress(data_size_variant,args.previous_block);
                     break;
             }
         }
         return nullptr;
     }
 
+    OperandDataType IRGen::convertSymbolToDataKind(std::shared_ptr<Symbol> symbol) {
+        NotNull(symbol.get());
+        switch (symbol->getKind()) {
+            case DeclarationEnum::Class:
+                return PtrType{PtrType::class_,Data::ptr};
+            case DeclarationEnum::Enum_:
+                return DataType{Data::u32};
+            case DeclarationEnum::Array:
+            case DeclarationEnum::Type:
+                return MemType{symbol->as_shared<Domain>()->getByteLength()};
+            case DeclarationEnum::Argument:{
+                auto argument = symbol->as_shared<Argument>();
+                if(argument->isByval())
+                    return convertSymbolToDataKind(argument->getPrototype());
+                else{
+                    auto operand_type = convertSymbolToDataKind(argument->getPrototype());
+                    switch (operand_type.index()) {
+                        case 0: //DataType
+                            return PtrType{PtrType::primitive_,get<DataType>(operand_type).data};
+                        case 1: //MemType
+                            return PtrType{PtrType::mem_,vm::Data::ptr,get<MemType>(operand_type).size};
+                        case 2: ASSERT(true,"invalid");
+                    }
+                }
+            }
+            case DeclarationEnum::Variable:
+                return convertSymbolToDataKind(symbol->as_shared<Variable>()->getPrototype());
+            case DeclarationEnum::Primitive:
+                return DataType{symbol->as_shared<primitive::Primitive>()->getDataKind()};
+            default:
+                ASSERT(true,"error");
+        }
+    }
+
+    shared_ptr<Prototype> IRGen::visitDot(ast::expr::Expression *dot_node,IRGenArgs args){
+        using namespace ast::expr;
+        using Op = Binary::Enum;
+        auto node = (Binary*)dot_node;
+        shared_ptr<Symbol> lhs,rhs;
+
+        args.need_lookup = true;
+        args.dot_expression_context = args.domain;
+        if(node->lhs->expression_kind == Expression::ID_){
+            lhs = any_cast<shared_ptr<Symbol>>(visitID((ID*)node->lhs,args));
+            if(auto variable = lhs->as_shared<Variable>()){
+                pushVariableAddress(variable, args.previous_block,true);
+                lhs = variable->getPrototype();
+            }
+        }
+        else if(node->lhs->expression_kind == Expression::callee_){
+            lhs = any_cast<shared_ptr<Prototype>>(visitCallee((Callee*)node->lhs,args));
+        }
+        else if(node->lhs->expression_kind == Expression::binary_){
+            auto bin_node = (Binary*)node->lhs;
+            if(bin_node->op == Op::Dot)
+                lhs = visitDot(node->lhs,args);
+            else if(bin_node->op == Op::Index)
+                lhs = visitIndex((Binary*)node->lhs,args,true);
+        }
+
+        NotNull(lhs.get());
+
+        args.need_lookup = false;
+        args.dot_expression_context = lhs;
+        if(node->rhs->expression_kind == Expression::ID_){
+            rhs = any_cast<shared_ptr<Symbol>>(visitID((ID*)node->rhs,args));
+            if(auto variable = rhs->as_shared<Variable>()){
+                switch(lhs->getKind()){
+                    case DeclarationEnum::Array:
+                    case DeclarationEnum::Type:
+                        args.previous_block->Push(Data::ptr,new Const<data::u32>(variable->getOffset()));
+                        args.previous_block->Add(Data::ptr);
+                        break;
+                    default:
+                        pushVariableAddress(variable, args.previous_block,true);
+                        break;
+                }
+                rhs = variable->getPrototype();
+            }
+        }
+        else if(node->rhs->expression_kind == Expression::callee_){
+            args.need_lookup = false;
+            rhs = any_cast<shared_ptr<Prototype>>(visitCallee((Callee*)node->lhs,args));
+        }
+        else if(node->rhs->expression_kind == Expression::binary_){
+            auto bin_node = (Binary*)node->rhs;
+            if(bin_node->op == Op::Index){
+                switch(lhs->getKind()){
+                    case DeclarationEnum::Array:
+                    case DeclarationEnum::Type:
+                        rhs = visitIndex(bin_node,args,false);
+                        break;
+                    default:
+                        rhs = visitIndex(bin_node,args,true);
+                        break;
+                }
+            }
+        }
+
+        NotNull(rhs.get());
+        return rhs->as_shared<Prototype>();
+    }
+
+
+    std::any IRGen::visitExpression(ast::expr::Expression *expr_node, IRGenArgs args) {
+        switch (expr_node->expression_kind) {
+            case ast::expr::Expression::binary_:
+                return visitBinary((ast::expr::Binary*)expr_node,args);
+            case ast::expr::Expression::unary_:
+                return visitUnary((ast::expr::Unary*)expr_node, args);
+            case ast::expr::Expression::digit_:
+                return visitDigit((ast::expr::Digit*)expr_node,args);
+            case ast::expr::Expression::decimal_:
+                return visitDecimal((ast::expr::Decimal *)expr_node,args);
+            case ast::expr::Expression::string_:
+                return visitString((ast::expr::String*)expr_node,args);
+            case ast::expr::Expression::char_:
+                return visitChar((ast::expr::Char*)expr_node,args);
+            case ast::expr::Expression::parentheses_:
+                return visitParentheses((ast::expr::Parentheses*)expr_node,args);
+            case ast::expr::Expression::boolean_:
+                return visitBoolean((ast::expr::Boolean*)expr_node,args);
+            case ast::expr::Expression::callee_:{
+                args.dot_expression_context = args.domain;
+                args.need_lookup = true;
+                auto prototype = any_cast<shared_ptr<Prototype>>(visitCallee((ast::expr::Callee*)expr_node,args));
+                return convertSymbolToDataKind(prototype);
+            }
+            case ast::expr::Expression::ID_:{
+                args.dot_expression_context = args.domain;
+                args.need_lookup = true;
+                auto symbol = any_cast<shared_ptr<Symbol>>(visitID((ast::expr::ID*)expr_node,args));
+                if(auto variable = symbol->as_shared<Variable>())
+                    pushVariableAddress(variable,args.previous_block,true);
+                return convertSymbolToDataKind(symbol);
+            }
+        }
+    }
+
+
+    std::any IRGen::visitUnary(ast::expr::Unary *unit_node, IRGenArgs args) {
+        auto data_type = any_cast<OperandDataType>(visitExpression(unit_node->terminal,args));
+        args.previous_block->Neg(get<DataType>(data_type).data);
+        return data_type;
+    }
+
+
+
     std::any IRGen::visitCast(ast::expr::Cast *cast_node, IRGenArgs args) {
         auto dst_data = any_cast<Data>(visitAnnotation(cast_node->annotation,args));
         auto src_data = any_cast<Data>(visitExpression(cast_node->expr,args));
-        args.previous_segment->add(Instruction::Cast(dst_data,src_data));
+        args.previous_block->Cast(src_data,dst_data);
         return dst_data;
+        //TODO
     }
 
     std::any IRGen::visitBoolean(ast::expr::Boolean *bl_node, IRGenArgs args) {
-        auto push = Instruction::Push(Data::boolean,new Const<data::boolean>(bl_node->value));
-        args.previous_segment->add(push);
-        return DataSizeVariant(Data::boolean);
+        args.previous_block->Push(Data::boolean,new Const<data::boolean>(bl_node->value));
+        return OperandDataType(DataType{Data::boolean});
     }
 
     std::any IRGen::visitChar(ast::expr::Char *ch_node, IRGenArgs args) {
-        auto push = Instruction::Push(Data::i8,new Const<data::i8>(ch_node->value));
-        args.previous_segment->add(push);
-        return DataSizeVariant(Data::i8);
+        args.previous_block->Push(Data::i8,new Const<data::i8>(ch_node->value));
+        return OperandDataType(DataType{Data::i8});
     }
 
     std::any IRGen::visitDigit(ast::expr::Digit *digit_node, IRGenArgs args) {
-        auto push = Instruction::Push(Data::i32, new Const<data::i32>(digit_node->value));
-        args.previous_segment->add(push);
-        return DataSizeVariant(Data::i32);
+        args.previous_block->Push(Data::i32, new Const<data::i32>(digit_node->value));
+        return OperandDataType(DataType{Data::i32});
     }
 
     std::any IRGen::visitDecimal(ast::expr::Decimal *decimal_node, IRGenArgs args) {
-        auto push = Instruction::Push(Data::f64, new Const<data::f64>(decimal_node->value));
-        args.previous_segment->add(push);
-        return DataSizeVariant(Data::f64);
+        args.previous_block->Push(Data::f64, new Const<data::f64>(decimal_node->value));
+        return OperandDataType(DataType{Data::f64});
     }
 
     std::any IRGen::visitString(ast::expr::String *str_node, IRGenArgs args) {
-        auto push = Instruction::PushMemory(new Const<data::u32>((data::u32)str_node->value.size()),str_node->value);
-        args.previous_segment->add(push);
-        return DataSizeVariant((data::u32)str_node->value.size());
+        args.previous_block->Psm(str_node->value.size(),str_node->value.c_str());
+        return OperandDataType(MemType{(data::u32)str_node->value.size()});
     }
 
     std::any IRGen::visitParentheses(ast::expr::Parentheses *parentheses_node, IRGenArgs args) {
@@ -645,7 +746,7 @@ namespace evoBasic{
 
     std::any IRGen::visitExprStmt(ast::stmt::ExprStmt *expr_stmt_node, IRGenArgs args) {
         Visitor::visitExprStmt(expr_stmt_node, args);
-        return (Segment*)nullptr;
+        return (Block*)nullptr;
     }
 
     std::any IRGen::visitAnnotation(ast::Annotation *anno_node, IRGenArgs args) {
@@ -685,5 +786,6 @@ namespace evoBasic{
                 ASSERT(true,"invalid annotation");
         }
     }
+
 
 }

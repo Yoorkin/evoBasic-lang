@@ -711,7 +711,8 @@ namespace evoBasic{
                     break;
                 case Token::ASSIGN:
                     lexer->match(Token::ASSIGN);
-                    lhs = new Binary(lhs,Binary::ASSIGN, parseLogic(addition_follows));
+                    //ASSIGN 语法树向右生长
+                    return new Binary(lhs,Binary::ASSIGN, parseLogic(addition_follows));
                     break;
                 default:
                     return lhs;

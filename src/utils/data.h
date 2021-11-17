@@ -20,5 +20,7 @@ namespace evoBasic::data{
     using u16 = unsigned char;
     using u32 = unsigned int;
     using u64 = unsigned long long;
+
+    using ptr = u32;
 }
 #endif //EVOBASIC_DATADEF_H

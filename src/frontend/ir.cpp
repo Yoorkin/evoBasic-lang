@@ -4,6 +4,7 @@
 
 #include "ir.h"
 #include "nullSafe.h"
+#include "utils.h"
 #include <utility>
 #include <iomanip>
 using namespace std;
@@ -68,6 +69,7 @@ namespace evoBasic::ir{
         stream<<"meta: \n";
         for(auto &m : meta){
             m->toHex(stream);
+            stream<<"\n";
         }
 
         stream<<"code: \n";
@@ -159,6 +161,15 @@ namespace evoBasic::ir{
 
 
     data::u32 Instruction::getByteLength() {
+//        return std::visit(overloaded {
+//                [](auto){return 0;},
+//                [](TypeProp){return 2;},
+//                [](CastProp){return 3;},
+//                [](InvokeProp){return 1 + vm::Data(vm::Data::u32).getSize();},
+//                //[](PushProp &p){return 2 + p.const_value->getByteLength();},
+//                [](JumpProp){return 1 + vm::Data(vm::Data::u32).getSize();},
+//                [](MemProp){return sizeof(data::u32);},
+//        }, prop);
         switch (prop.index()) {
             case 0:       return 1;
             case 1:       return 2;
@@ -172,6 +183,8 @@ namespace evoBasic::ir{
     }
 
     void Instruction::toString(std::ostream &stream) {
+        stream<<std::setfill(' ')<<std::setw(5)<<std::left<<getAddress();
+        stream<<"│ ";
         stream<<op.toString();
         switch (op.getValue()) {
             case vm::Bytecode::Jmp:
@@ -283,33 +296,43 @@ namespace evoBasic::ir{
         label_ = move(label);
     }
 
-    Block &Block::EQ() {
-        instructons.push_back(new Instruction(vm::Bytecode::EQ));
+    Block &Block::Jmp(Block *block) {
+        instructons.push_back(new Instruction(vm::Bytecode::Jmp,Instruction::JumpProp{block}));
         return *this;
     }
 
-    Block &Block::NE() {
-        instructons.push_back(new Instruction(vm::Bytecode::NE));
+    Block &Block::Jif(Block *block) {
+        instructons.push_back(new Instruction(vm::Bytecode::Jif,Instruction::JumpProp{block}));
         return *this;
     }
 
-    Block &Block::LT() {
-        instructons.push_back(new Instruction(vm::Bytecode::NE));
+    Block &Block::EQ(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::EQ,Instruction::TypeProp{data}));
         return *this;
     }
 
-    Block &Block::GT() {
-        instructons.push_back(new Instruction(vm::Bytecode::GT));
+    Block &Block::NE(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::NE,Instruction::TypeProp{data}));
         return *this;
     }
 
-    Block &Block::LE() {
-        instructons.push_back(new Instruction(vm::Bytecode::LE));
+    Block &Block::LT(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::NE,Instruction::TypeProp{data}));
         return *this;
     }
 
-    Block &Block::GE() {
-        instructons.push_back(new Instruction(vm::Bytecode::GE));
+    Block &Block::GT(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::GT,Instruction::TypeProp{data}));
+        return *this;
+    }
+
+    Block &Block::LE(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::LE,Instruction::TypeProp{data}));
+        return *this;
+    }
+
+    Block &Block::GE(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::GE,Instruction::TypeProp{data}));
         return *this;
     }
 
@@ -413,7 +436,7 @@ namespace evoBasic::ir{
         return *this;
     }
 
-    Block &Block::Psm(data::u32 size, char *memory) {
+    Block &Block::Psm(data::u32 size,const char *memory) {
         instructons.push_back(new Instruction(vm::Bytecode::Psm,Instruction::PlmProp{size,memory}));
         return *this;
     }
@@ -427,4 +450,30 @@ namespace evoBasic::ir{
         instructons.push_back(new Instruction(vm::Bytecode::PushGlobalBase));
         return *this;
     }
+
+    Block::Block(std::string label){
+        label_ = std::move(label);
+    }
+
+    void Block::toString(ostream &stream) {
+        stream<<"<"<<label_<<">\n";
+        for(auto &inst:instructons) {
+            inst->toString(stream);
+            stream<<"\n";
+        }
+    }
+
+    void Block::toHex(ostream &stream) {
+        for(auto &inst:instructons)
+            inst->toHex(stream);
+    }
+
+    data::u32 Block::getByteLength() {
+        int ans = 0;
+        for(auto &inst : instructons)
+            ans += inst->getByteLength();
+        return ans;
+    }
+
+
 }

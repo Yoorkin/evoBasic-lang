@@ -82,7 +82,7 @@ namespace evoBasic::ir{
 
         struct PlmProp{
             data::u32 size;
-            char *memory = nullptr;
+            const char *memory = nullptr;
         };
 
         using Prop = std::variant<bool,TypeProp,CastProp,InvokeProp,PushProp,JumpProp,MemProp,PlmProp>;
@@ -123,17 +123,22 @@ namespace evoBasic::ir{
         std::string label_;
         std::vector<Instruction*> instructons;
     public:
+        explicit Block(std::string label);
+        void toString(std::ostream &stream)override;
+        void toHex(std::ostream &stream)override;
+        data::u32 getByteLength()override;
+
         std::vector<Instruction*> getInstructions();
         std::string getLabel();
         std::string setLabel(std::string label);
         Block &Jmp(Block *block);
         Block &Jif(Block *block);
-        Block &EQ();
-        Block &NE();
-        Block &LT();
-        Block &GT();
-        Block &LE();
-        Block &GE();
+        Block &EQ(vm::Data data);
+        Block &NE(vm::Data data);
+        Block &LT(vm::Data data);
+        Block &GT(vm::Data data);
+        Block &LE(vm::Data data);
+        Block &GE(vm::Data data);
         Block &Add(vm::Data data);
         Block &Sub(vm::Data data);
         Block &Mul(vm::Data data);
@@ -154,7 +159,8 @@ namespace evoBasic::ir{
         Block &Dup(vm::Data data);
         Block &Stm(data::u32 size);
         Block &Ldm(data::u32 size);
-        Block &Psm(data::u32 size,char *memory);
+        Block &Psm(data::u32 size,const char *memory);
+        Block &Dpm(data::u32 size);
         Block &PushFrameBase();
         Block &PushGlobalBase();
     };
