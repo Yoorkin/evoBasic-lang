@@ -469,7 +469,7 @@ namespace evoBasic{
     std::any IRGen::visitCallee(ast::expr::Callee *callee_node, IRGenArgs args) {
         shared_ptr<type::Function> function = any_cast<shared_ptr<Symbol>>(visitID(callee_node->name,args))->as_shared<type::Function>();
         args.function = function;
-        for(auto iter=callee_node->arg_list.cend();iter!=callee_node->arg_list.cbegin();iter++){
+        for(auto iter=callee_node->arg_list.cbegin();iter!=callee_node->arg_list.cend();iter++){
             visitArg(*iter,args);
         }
         return function->getRetSignature();
@@ -521,6 +521,7 @@ namespace evoBasic{
           *   ByRef      store value to tmp address,                   Error when arg
           *              allow implicit conversion      Yes             is not lvalue
           */
+        NotNull(arg_node);
         auto &param = args.function->getArgsSignature()[args.current_args_index];
         auto arg_type = arg_node->expr->type;
         if(param->isByval()){

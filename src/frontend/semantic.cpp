@@ -500,7 +500,7 @@ namespace evoBasic{
 
     std::any TypeAnalyzer::visitCallee(ast::expr::Callee *callee_node, BaseArgs args) {
         auto target_type = any_cast<ExpressionType*>(visitID(callee_node->name,args));
-
+        args.dot_expression_context = target_type->prototype;
 
         if(target_type->value_kind == ExpressionType::error){
             return target_type;
@@ -538,6 +538,8 @@ namespace evoBasic{
         auto func = args.dot_expression_context->as_shared<evoBasic::type::Function>();
         if(args.checking_args_index >= func->getArgsSignature().size())return {};
         auto param =  func->getArgsSignature()[args.checking_args_index];
+
+        args.dot_expression_context = nullptr;
         auto arg_type = any_cast<ExpressionType*>(visitExpression(arg_node->expr,args));
         if(arg_type->value_kind == ExpressionType::error)return {};
 
@@ -721,7 +723,7 @@ namespace evoBasic{
                         //TODO operator[] override
                         break;
                     case DeclarationEnum::Array:
-                        return new ExpressionType(lhs_type->prototype->as_shared<Array>()->getElementPrototype(),ExpressionType::rvalue);
+                        return new ExpressionType(lhs_type->prototype->as_shared<Array>()->getElementPrototype(),ExpressionType::lvalue);
                         break;
                     default:
                         Logger::error(logic_node->location,"invalid expression");
@@ -945,7 +947,7 @@ namespace evoBasic{
             case type::DeclarationEnum::Argument:
                 return new ExpressionType(target->as_shared<type::Variable>()->getPrototype(),ExpressionType::lvalue);
             default:
-                return new ExpressionType(target->as_shared<Prototype>(),ExpressionType::error);
+                return new ExpressionType(target->as_shared<Prototype>(),ExpressionType::path);
         }
     }
 
