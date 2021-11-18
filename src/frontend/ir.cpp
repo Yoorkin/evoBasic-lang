@@ -38,7 +38,9 @@ namespace evoBasic::ir{
                     auto &prop = get<Instruction::InvokeProp>(inst->prop);
                     prop.target = function_block.find(prop.signature)->second;
                 }
-                address += inst->getByteLength();
+                auto size = inst->getByteLength();
+                ASSERT(size<=0,"invalid size");
+                address += size;
             }
         }
 
@@ -62,7 +64,9 @@ namespace evoBasic::ir{
                     auto &prop = get<Instruction::InvokeProp>(inst->prop);
                     prop.target = function_block.find(prop.signature)->second;
                 }
-                address += inst->getByteLength();
+                auto size = inst->getByteLength();
+                ASSERT(size<=0,"invalid size");
+                address += size;
             }
         }
 
@@ -80,7 +84,9 @@ namespace evoBasic::ir{
 
 
     Mark::Mark(std::string name, bool isRef, bool isArray)
-            : name_(std::move(name)),is_ref(isRef),is_array(isArray){}
+            : name_(std::move(name)),is_ref(isRef),is_array(isArray){
+        meta_kind = mark;
+    }
 
     void Mark::toString(ostream &stream) {
         if(is_ref)stream<<"ref ";
@@ -90,7 +96,9 @@ namespace evoBasic::ir{
 
 
     Pair::Pair(std::string name, Type *type)
-            : name_(std::move(name)),type_(type) {}
+            : name_(std::move(name)),type_(type) {
+        meta_kind = pair;
+    }
 
     void Pair::toString(ostream &stream) {
         stream<<name_<<':';
@@ -99,10 +107,14 @@ namespace evoBasic::ir{
 
 
     Function::Function(std::list<Pair *> params, Type *ret, std::string library)
-            : params(std::move(params)),ret_type(ret),library_name(std::move(library)),external(true){}
+            : params(std::move(params)),ret_type(ret),library_name(std::move(library)),external(true){
+        meta_kind = function;
+    }
 
     Function::Function(std::list<Pair*> params,Type *ret,Block *block)
-            : params(std::move(params)),ret_type(ret),block(block),external(false){}
+            : params(std::move(params)),ret_type(ret),block(block),external(false){
+        meta_kind = function;
+    }
 
     data::u32 Function::getAddress() {
         ASSERT(external,"invalid operation");
@@ -116,13 +128,16 @@ namespace evoBasic::ir{
             if(&p != &params.back())stream << ',';
         }
         stream<<")->";
-        if(ret_type)ret_type->toString(stream);
+        if(ret_type)
+            ret_type->toString(stream);
         else stream<<"void";
     }
 
 
 
-    Record::Record(std::list<Pair*> members) : members_(std::move(members)){}
+    Record::Record(std::list<Pair*> members) : members_(std::move(members)){
+        meta_kind = record;
+    }
 
     void Record::toString(ostream &stream) {
         stream<<"Record{";
@@ -134,7 +149,9 @@ namespace evoBasic::ir{
     }
 
 
-    Enum::Enum(std::list<std::pair<std::string,int>> members) : members_(std::move(members)){}
+    Enum::Enum(std::list<std::pair<std::string,int>> members) : members_(std::move(members)){
+        meta_kind = enum_meta;
+    }
 
     void Enum::toString(ostream &stream) {
         stream<<"Enum{";
@@ -146,7 +163,9 @@ namespace evoBasic::ir{
     }
 
 
-    Depend::Depend(std::string file) : file_(std::move(file)){}
+    Depend::Depend(std::string file) : file_(std::move(file)){
+        meta_kind = depend;
+    }
 
     void Depend::toString(ostream &stream) {
         stream<<"Include("<<file_<<")";
@@ -179,6 +198,7 @@ namespace evoBasic::ir{
             case 5:       return 1 + vm::Data(vm::Data::u32).getSize();
             case 6:       return sizeof(data::u32);
             case 7:       return sizeof(data::u32) + get<PlmProp>(prop).size;
+            default:      ASSERT(true,"invalid");
         }
     }
 
@@ -193,6 +213,10 @@ namespace evoBasic::ir{
                 break;
             case vm::Bytecode::Invoke:
                 stream<<" "<<get<InvokeProp>(prop).signature;
+                break;
+            case vm::Bytecode::Ldm:
+            case vm::Bytecode::Stm:
+                stream <<" "<< get<MemProp>(prop).size;
                 break;
             case vm::Bytecode::EQ:
             case vm::Bytecode::NE:
@@ -242,6 +266,7 @@ namespace evoBasic::ir{
                 stream.write((const char*)&address,sizeof(address));
                 break;
             case vm::Bytecode::Invoke:
+                NotNull(get<InvokeProp>(prop).target);
                 address = get<InvokeProp>(prop).target->getAddress();
                 stream.write((const char*)&address,sizeof(address));
                 break;
@@ -270,6 +295,10 @@ namespace evoBasic::ir{
             case vm::Bytecode::Cast:
                 stream << get<CastProp>(prop).src.toHex()
                        << get<CastProp>(prop).dst.toHex();
+                break;
+            case vm::Bytecode::Ldm:
+            case vm::Bytecode::Stm:
+                //TODO
                 break;
             case vm::Bytecode::Ret:
             case vm::Bytecode::PushFrameBase:

@@ -171,7 +171,7 @@ namespace evoBasic::ir{
 
     class Meta : public IRBase{
     public:
-        enum Enum{function,pair,primitive,record};
+        enum Enum{unknown,function,pair,mark,record,enum_meta,depend}meta_kind = Enum::unknown;
         void toHex(std::ostream &stream)override;
     };
 

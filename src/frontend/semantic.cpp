@@ -589,6 +589,12 @@ namespace evoBasic{
                     }
                     arg_node->temp_address = make_shared<type::Variable>();
                     arg_node->temp_address->setPrototype(param->getPrototype());
+                    switch (param->getPrototype()->getKind()) {
+                        case DeclarationEnum::Type:
+                        case DeclarationEnum::Array:
+                            args.context->byteLengthDependencies.addDependent(args.user_function,param->getPrototype()->as_shared<Domain>());
+                            break;
+                    }
                     args.user_function->addMemoryLayout(arg_node->temp_address);
                     break;
                 case ast::expr::Callee::Argument::byref:
@@ -731,7 +737,27 @@ namespace evoBasic{
                 }
 
             case ast::expr::Binary::Dot:
-                return rhs_type;
+                switch (lhs_type->prototype->getKind()) {
+                    case DeclarationEnum::Type:
+                    case DeclarationEnum::Array:
+                        if(logic_node->lhs->expression_kind == Expression::callee_){
+                            auto tmp = make_shared<type::Variable>();
+                            tmp->setPrototype(lhs_type->prototype);
+                            args.user_function->addMemoryLayout(tmp);
+                            switch (lhs_type->prototype->getKind()) {
+                                case DeclarationEnum::Type:
+                                case DeclarationEnum::Array:
+                                    args.context->byteLengthDependencies.addDependent(args.user_function,lhs_type->prototype->as_shared<Domain>());
+                                    break;
+                            }
+                            logic_node->temp_address = tmp;
+                        }
+                        return new ExpressionType(rhs_type->prototype,lhs_type->value_kind);
+                    case DeclarationEnum::Class:
+                        return new ExpressionType(rhs_type->prototype,rhs_type->value_kind);
+                    default:
+                        return rhs_type;
+                }
         }
     }
 
@@ -903,7 +929,12 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitReturn(ast::stmt::Return *ret_node, BaseArgs args) {
-        visitExpression(ret_node->expr,args);
+        auto type = any_cast<ExpressionType*>(visitExpression(ret_node->expr,args));
+        if(!type->prototype->equal(args.user_function->getRetSignature())){
+            Logger::error(ret_node->location,format()<<"Return type '"
+                                              <<type->prototype->getName()<<"' is not equivalent to Function signature '"
+                                              <<args.user_function->getRetSignature()->getName()<<"'");
+        }
         return nullptr;
     }
 

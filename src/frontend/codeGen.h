@@ -28,6 +28,9 @@ namespace evoBasic{
     };
 
     // primitive\ptr or Array\Type or Prototype
+    struct EmptyType{};
+
+    struct ClassType{};
 
     struct MemType{
         data::u32 size;
@@ -37,21 +40,21 @@ namespace evoBasic{
         vm::Data data;
     };
 
-    struct PtrType{
-        enum ElementKind{class_,mem_,primitive_}element;
-        vm::Data data = vm::Data::void_;
-        data::u32 mem_size = -1;
-    };
+    struct AddressType;
 
-    using OperandDataType = std::variant<DataType,MemType,PtrType>;
+    using OperandTopType = std::variant<EmptyType,DataType,MemType,AddressType,ClassType>;
+
+    struct AddressType{
+        OperandTopType *element = nullptr;
+    };
 
 
     class IRGen : public Visitor<IRGenArgs>{
     public:
         std::shared_ptr<ir::IR> gen(AST *ast,std::shared_ptr<Context> context);
 
-        OperandDataType convertSymbolToDataKind(std::shared_ptr<type::Symbol> symbol);
-        OperandDataType visitAssign(ast::expr::Binary *node,IRGenArgs args);
+        OperandTopType mapSymbolToOperandTopType(std::shared_ptr<type::Symbol> symbol);
+        OperandTopType visitAssign(ast::expr::Binary *node, IRGenArgs args);
 
         std::any visitGlobal(ast::Global *global_node, IRGenArgs args) override;
         std::any visitModule(ast::Module *mod_node, IRGenArgs args) override;
@@ -93,7 +96,7 @@ namespace evoBasic{
         std::any visitAnnotation(ast::Annotation *anno_node, IRGenArgs args)override;
         std::any visitExpression(ast::expr::Expression *expr_node, IRGenArgs args) override;
 
-        OperandDataType visitVariableCall(ast::expr::Callee *callee_node,IRGenArgs args,std::shared_ptr<type::Variable> target);
+        OperandTopType visitVariableCall(ast::expr::Callee *callee_node, IRGenArgs args, std::shared_ptr<type::Variable> target);
 
         std::any visitCast(ast::expr::Cast *cast_node, IRGenArgs args);
         void dereference(std::shared_ptr<type::Symbol> symbol);

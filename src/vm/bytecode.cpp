@@ -71,7 +71,7 @@ namespace evoBasic::vm{
         0xD0,0xD1,0xD2,0xD3,0xD4,0xD5,0xD6,0xD7,0xD8,0xD9,0xDA,0xDB
     };
 
-    Data Data::ptr(vm::Data::u32);
+    Data Data::ptr(vm::Data::u64);
 
     std::string Data::toString() {
         return to_string[value_];

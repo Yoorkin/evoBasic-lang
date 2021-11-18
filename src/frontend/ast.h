@@ -295,6 +295,7 @@ namespace evoBasic::ast{
             Expression *lhs = nullptr;
             Enum op = Empty;
             Expression *rhs = nullptr;
+            std::shared_ptr<type::Variable> temp_address = nullptr;
             void debug(std::ostream &stream,std::string prefix)override;
         };
 

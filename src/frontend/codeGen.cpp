@@ -111,7 +111,7 @@ namespace evoBasic{
         auto func = args.domain->find(getID(func_node->name))->as_shared<type::Function>();
         args.function = func;
         list<Pair*> params;
-        Mark *ret_mark;
+        Mark *ret_mark = nullptr;
         for(auto &param : func->getArgsSignature()){
             auto isArray = false,isRef = !param->isByval();
             string name;
@@ -343,51 +343,88 @@ namespace evoBasic{
         return (Block*)nullptr;
     }
 
-    OperandDataType IRGen::visitAssign(ast::expr::Binary *node,IRGenArgs args) {
+    vm::Data tryLoadOperandTop(OperandTopType type,Block *block){
+        switch(type.index()){
+            case 0: ASSERT(true,"invalid"); break;
+            case 1: /* DataType */
+                return get<DataType>(type).data;
+            case 2: /* MemType */
+                return vm::Data::void_;
+            case 3: /* AddressType */{
+                auto element = get<AddressType>(type).element;
+                switch(element->index()){
+                    case 0: ASSERT(true,"invalid");
+                    case 1: /* DataType */
+                        block->Load(get<DataType>(*element).data);
+                        return get<DataType>(*element).data;
+                    case 2: /* MemType */
+                        block->Ldm(get<MemType>(*element).size);
+                        return vm::Data::void_;
+                    case 3: /* AddressType */
+                        ASSERT(true,"invalid");
+                    case 4: /* ClassType */
+                        block->Load(Data::ptr);
+                        return Data::ptr;
+                }
+            }
+            case 4: /* ClassType */
+                return vm::Data::void_;
+                break;
+        }
+    }
+
+    OperandTopType IRGen::visitAssign(ast::expr::Binary *node, IRGenArgs args) {
         bool need_return_value = args.need_return_value;
         args.need_return_value = true;
 
-        auto lhs_data_type = any_cast<OperandDataType>(visitExpression(node->lhs,args));
-        auto rhs_data_type = any_cast<OperandDataType>(visitExpression(node->rhs,args));
+        auto lhs_data_type = any_cast<OperandTopType>(visitExpression(node->lhs, args));
+        auto rhs_data_type = any_cast<OperandTopType>(visitExpression(node->rhs, args));
 
-        switch (rhs_data_type.index()) {
-            case 0: //DataType
+        switch(rhs_data_type.index()){
+            case 0: ASSERT(true,"invalid"); break;
+            case 1: /* DataType */
                 args.previous_block->Store(get<DataType>(rhs_data_type).data);
                 break;
-            case 1: //MemType
+            case 2: /* MemType */
                 args.previous_block->Stm(get<MemType>(rhs_data_type).size);
                 break;
-            case 2: {//PtrType
-                auto ptr_type = get<PtrType>(rhs_data_type);
-                switch (ptr_type.element) {
-                    case PtrType::primitive_:
-                        args.previous_block->Load(ptr_type.data);
-                        args.previous_block->Store(get<DataType>(rhs_data_type).data);
+            case 3: /* AddressType */{
+                auto element = get<AddressType>(rhs_data_type).element;
+                switch(element->index()){
+                    case 0: ASSERT(true,"invalid");
+                    case 1: /* DataType */
+                        args.previous_block->Load(get<DataType>(*element).data);
+                        args.previous_block->Store(get<DataType>(*element).data);
                         break;
-                    case PtrType::mem_:
-                        args.previous_block->Ldm(get<PtrType>(rhs_data_type).mem_size);
-                        args.previous_block->Stm(get<PtrType>(rhs_data_type).mem_size);
+                    case 2: /* MemType */
+                        args.previous_block->Ldm(get<MemType>(*element).size);
+                        args.previous_block->Stm(get<MemType>(*element).size);
                         break;
-                    case PtrType::class_:
+                    case 3: /* AddressType */
+                        ASSERT(true,"invalid");
+                    case 4: /* ClassType */
                         args.previous_block->Load(Data::ptr);
                         args.previous_block->Store(Data::ptr);
                         break;
                 }
                 break;
             }
+            case 4: /* ClassType */
+                args.previous_block->Store(Data::ptr);
+                break;
         }
 
         if(need_return_value)
-            return any_cast<OperandDataType>(visitExpression(node->lhs,args));
+            return any_cast<OperandTopType>(visitExpression(node->lhs, args));
         else
-            return OperandDataType(DataType{Data::void_});
+            return OperandTopType(EmptyType{});
     }
 
     std::any IRGen::visitBinary(ast::expr::Binary *logic_node, IRGenArgs args) {
         using Op = ast::expr::Binary::Enum;
         set<Op> logic_op = {Op::And,Op::Or,Op::Xor,Op::Not,Op::Not};
         set<Op> calculate_op = {Op::EQ,Op::NE,Op::LE,Op::GE,Op::LT,Op::GT,Op::ADD,Op::MINUS,Op::MUL,Op::DIV,Op::FDIV};
-        auto boolean = OperandDataType(DataType{Data::boolean});
+        auto boolean = OperandTopType(DataType{Data::boolean});
         if(logic_op.contains(logic_node->op)){
             switch (logic_node->op) {
                 case Op::And:
@@ -405,9 +442,12 @@ namespace evoBasic{
             }
         }
         else if(calculate_op.contains(logic_node->op)){
-            auto lhs_data_type = any_cast<OperandDataType>(visitExpression(logic_node->lhs,args));
-            auto lhs_data = get<DataType>(lhs_data_type).data;
-            visitExpression(logic_node->rhs,args);
+            auto lhs_data_type = any_cast<OperandTopType>(visitExpression(logic_node->lhs, args));
+            auto lhs_data = tryLoadOperandTop(lhs_data_type,args.previous_block);
+
+            auto rhs_data_type = any_cast<OperandTopType>(visitExpression(logic_node->rhs,args));
+            tryLoadOperandTop(lhs_data_type,args.previous_block);
+
             switch (logic_node->op) {
                 case Op::EQ:
                     args.previous_block->EQ(lhs_data);
@@ -429,19 +469,19 @@ namespace evoBasic{
                     return boolean;
                 case Op::ADD:
                     args.previous_block->Add(lhs_data);
-                    return lhs_data_type;
+                    return OperandTopType(DataType{lhs_data});
                 case Op::MINUS:
                     args.previous_block->Sub(lhs_data);
-                    return lhs_data_type;
+                    return OperandTopType(DataType{lhs_data});
                 case Op::MUL:
                     args.previous_block->Mul(lhs_data);
-                    return lhs_data_type;
+                    return OperandTopType(DataType{lhs_data});
                 case Op::DIV:
                     args.previous_block->Div(lhs_data);
-                    return lhs_data_type;
+                    return OperandTopType(DataType{lhs_data});
                 case Op::FDIV:
                     args.previous_block->FDiv(lhs_data);
-                    return lhs_data_type;//TODO FIDV support
+                    return OperandTopType(DataType{lhs_data});//TODO FIDV support
             }
         }
         else if(logic_node->op == Op::ASSIGN){
@@ -451,7 +491,7 @@ namespace evoBasic{
         else if(logic_node->op == Op::Dot){
             args.dot_expression_context = args.domain;
             auto prototype = visitDot(logic_node,args);
-            return convertSymbolToDataKind(prototype);
+            return mapSymbolToOperandTopType(prototype);
         }
     }
 
@@ -469,19 +509,21 @@ namespace evoBasic{
     std::any IRGen::visitCallee(ast::expr::Callee *callee_node, IRGenArgs args) {
         shared_ptr<type::Function> function = any_cast<shared_ptr<Symbol>>(visitID(callee_node->name,args))->as_shared<type::Function>();
         args.function = function;
-        for(auto iter=callee_node->arg_list.cbegin();iter!=callee_node->arg_list.cend();iter++){
-            visitArg(*iter,args);
+        for(int i=0;i<function->getArgsSignature().size();i++){
+            args.current_args_index = i;
+            visitArg(callee_node->arg_list[i],args);
         }
+        args.previous_block->Invoke(function->mangling());
         return function->getRetSignature();
     }
 
-    void loadFromAddress(OperandDataType operand_variant,Block *block){
-        switch(operand_variant.index()){
-            case 0: ASSERT(true,"invalid");
-            case 1: block->Ldm(get<MemType>(operand_variant).size); break;
-            case 2: block->Load(get<PtrType>(operand_variant).data); break;
-        }
-    }
+//    void loadFromAddress(OperandTopType operand_variant, Block *block){
+//        switch(operand_variant.index()){
+//            case 0: ASSERT(true,"invalid");break;
+//            case 1: block->Ldm(get<MemType>(operand_variant).size); break;
+//            case 2: block->Load(get<PtrType>(operand_variant).data); break;
+//        }
+//    }
 
     void pushVariableAddress(const std::shared_ptr<Variable> &variable, Block *block, bool need_push_base){
         if(need_push_base){
@@ -524,46 +566,72 @@ namespace evoBasic{
         NotNull(arg_node);
         auto &param = args.function->getArgsSignature()[args.current_args_index];
         auto arg_type = arg_node->expr->type;
-        if(param->isByval()){
+        if(param->isByval()){ // ByVal Parameter
             switch (arg_node->pass_kind) {
+                case ast::expr::Callee::Argument::byref:
+                    //do nothing
+                    break;
                 case ast::expr::Callee::Argument::undefined:
                 case ast::expr::Callee::Argument::byval:
-                    auto operand_variant = any_cast<OperandDataType>(visitExpression(arg_node->expr,args));
-                    loadFromAddress(operand_variant,args.previous_block);
+                    auto operand_variant = any_cast<OperandTopType>(visitExpression(arg_node->expr, args));
+                    tryLoadOperandTop(operand_variant,args.previous_block);
                     break;
             }
         }
-        else{
+        else{ // ByRef Parameter
             switch (arg_node->pass_kind) {
-                case ast::expr::Callee::Argument::byval:
-                    visitExpression(arg_node->expr,args);
-                    switch (param->getPrototype()->getKind()) {
-                        case DeclarationEnum::Type:
-                        case DeclarationEnum::Array:
-                            args.previous_block->Push(Data::ptr,new Const<data::u32>(arg_node->temp_address->getOffset()));
-                            args.previous_block->Stm(param->getRealByteLength());
+                case ast::expr::Callee::Argument::byval: {
+                    pushVariableAddress(arg_node->temp_address, args.previous_block, true);
+                    auto data_type = any_cast<OperandTopType>(visitExpression(arg_node->expr, args));
+                    switch (data_type.index()) {
+                        case 0: ASSERT(true, "invalid");
+                        case 1: /* DataType */
+                            args.previous_block->Store(get<DataType>(data_type).data);
                             break;
-                        case DeclarationEnum::Primitive:
-                            args.previous_block->Push(Data::ptr,new Const<data::u32>(arg_node->temp_address->getOffset()));
-                            args.previous_block->Store(arg_node->temp_address->as_shared<primitive::Primitive>()->getDataKind());
+                        case 2: /* MemType */
+                            args.previous_block->Stm(get<MemType>(data_type).size);
                             break;
+                        case 4: /* ClassType */
+                            args.previous_block->Store(Data::ptr);
+                            break;
+                        case 3: /* AddressType */{
+                            auto element = get<AddressType>(data_type).element;
+                            switch (element->index()) {
+                                case 0: ASSERT(true, "invalid");
+                                case 1: /* DataType */
+                                    args.previous_block->Load(get<DataType>(*element).data);
+                                    args.previous_block->Store(get<DataType>(*element).data);
+                                    break;
+                                case 2: /* MemType */
+                                    args.previous_block->Ldm(get<MemType>(*element).size);
+                                    args.previous_block->Stm(get<MemType>(*element).size);
+                                    break;
+                                case 3: /* AddressType */
+                                    ASSERT(true, "invalid");
+                                case 4: /* ClassType */
+                                    args.previous_block->Load(Data::ptr);
+                                    args.previous_block->Store(Data::ptr);
+                                    return Data::ptr;
+                            }
+                        }
                     }
+                    pushVariableAddress(arg_node->temp_address, args.previous_block, true);
                     break;
+                }
                 case ast::expr::Callee::Argument::byref:
                 case ast::expr::Callee::Argument::undefined:
-                    auto data_size_variant = any_cast<OperandDataType>(visitExpression(arg_node->expr,args));
-                    loadFromAddress(data_size_variant,args.previous_block);
+                    visitExpression(arg_node->expr,args);
                     break;
             }
         }
         return nullptr;
     }
 
-    OperandDataType IRGen::convertSymbolToDataKind(std::shared_ptr<Symbol> symbol) {
+    OperandTopType IRGen::mapSymbolToOperandTopType(shared_ptr<Symbol> symbol) {
         NotNull(symbol.get());
         switch (symbol->getKind()) {
             case DeclarationEnum::Class:
-                return PtrType{PtrType::class_,Data::ptr};
+                return AddressType{new OperandTopType(MemType{symbol->as_shared<Class>()->getByteLength()})};
             case DeclarationEnum::Enum_:
                 return DataType{Data::u32};
             case DeclarationEnum::Array:
@@ -572,20 +640,17 @@ namespace evoBasic{
             case DeclarationEnum::Argument:{
                 auto argument = symbol->as_shared<Argument>();
                 if(argument->isByval())
-                    return convertSymbolToDataKind(argument->getPrototype());
+                    return mapSymbolToOperandTopType(argument->getPrototype());
                 else{
-                    auto operand_type = convertSymbolToDataKind(argument->getPrototype());
-                    switch (operand_type.index()) {
-                        case 0: //DataType
-                            return PtrType{PtrType::primitive_,get<DataType>(operand_type).data};
-                        case 1: //MemType
-                            return PtrType{PtrType::mem_,vm::Data::ptr,get<MemType>(operand_type).size};
-                        case 2: ASSERT(true,"invalid");
-                    }
+                    auto element = mapSymbolToOperandTopType(argument->getPrototype());
+                    return AddressType{new OperandTopType(element)};
                 }
             }
-            case DeclarationEnum::Variable:
-                return convertSymbolToDataKind(symbol->as_shared<Variable>()->getPrototype());
+            case DeclarationEnum::Variable: {
+                auto variable = symbol->as_shared<Variable>();
+                auto element = mapSymbolToOperandTopType(variable->getPrototype());
+                return AddressType{new OperandTopType(element)};
+            }
             case DeclarationEnum::Primitive:
                 return DataType{symbol->as_shared<primitive::Primitive>()->getDataKind()};
             default:
@@ -599,6 +664,7 @@ namespace evoBasic{
         auto node = (Binary*)dot_node;
         shared_ptr<Symbol> lhs,rhs;
 
+
         args.need_lookup = true;
         args.dot_expression_context = args.domain;
         if(node->lhs->expression_kind == Expression::ID_){
@@ -609,7 +675,15 @@ namespace evoBasic{
             }
         }
         else if(node->lhs->expression_kind == Expression::callee_){
+            if(node->temp_address){
+                //push temp address,store returned value in chained method later.
+                pushVariableAddress(node->temp_address,args.previous_block,true);
+            }
             lhs = any_cast<shared_ptr<Prototype>>(visitCallee((Callee*)node->lhs,args));
+            if(node->temp_address){
+                args.previous_block->Stm(lhs->as_shared<Domain>()->getByteLength());
+                pushVariableAddress(node->temp_address,args.previous_block,true);
+            }
         }
         else if(node->lhs->expression_kind == Expression::binary_){
             auto bin_node = (Binary*)node->lhs;
@@ -641,7 +715,15 @@ namespace evoBasic{
         }
         else if(node->rhs->expression_kind == Expression::callee_){
             args.need_lookup = false;
+            if(node->temp_address){
+                //push temp address,store returned value in chained method later.
+                pushVariableAddress(node->temp_address,args.previous_block,true);
+            }
             rhs = any_cast<shared_ptr<Prototype>>(visitCallee((Callee*)node->lhs,args));
+            if(node->temp_address){
+                args.previous_block->Stm(rhs->as_shared<Domain>()->getByteLength());
+                pushVariableAddress(node->temp_address,args.previous_block,true);
+            }
         }
         else if(node->rhs->expression_kind == Expression::binary_){
             auto bin_node = (Binary*)node->rhs;
@@ -685,7 +767,8 @@ namespace evoBasic{
                 args.dot_expression_context = args.domain;
                 args.need_lookup = true;
                 auto prototype = any_cast<shared_ptr<Prototype>>(visitCallee((ast::expr::Callee*)expr_node,args));
-                return convertSymbolToDataKind(prototype);
+                if(!prototype)return OperandTopType(EmptyType{});
+                return mapSymbolToOperandTopType(prototype);
             }
             case ast::expr::Expression::ID_:{
                 args.dot_expression_context = args.domain;
@@ -693,14 +776,14 @@ namespace evoBasic{
                 auto symbol = any_cast<shared_ptr<Symbol>>(visitID((ast::expr::ID*)expr_node,args));
                 if(auto variable = symbol->as_shared<Variable>())
                     pushVariableAddress(variable,args.previous_block,true);
-                return convertSymbolToDataKind(symbol);
+                return mapSymbolToOperandTopType(symbol);
             }
         }
     }
 
 
     std::any IRGen::visitUnary(ast::expr::Unary *unit_node, IRGenArgs args) {
-        auto data_type = any_cast<OperandDataType>(visitExpression(unit_node->terminal,args));
+        auto data_type = any_cast<OperandTopType>(visitExpression(unit_node->terminal, args));
         args.previous_block->Neg(get<DataType>(data_type).data);
         return data_type;
     }
@@ -717,27 +800,27 @@ namespace evoBasic{
 
     std::any IRGen::visitBoolean(ast::expr::Boolean *bl_node, IRGenArgs args) {
         args.previous_block->Push(Data::boolean,new Const<data::boolean>(bl_node->value));
-        return OperandDataType(DataType{Data::boolean});
+        return OperandTopType(DataType{Data::boolean});
     }
 
     std::any IRGen::visitChar(ast::expr::Char *ch_node, IRGenArgs args) {
         args.previous_block->Push(Data::i8,new Const<data::i8>(ch_node->value));
-        return OperandDataType(DataType{Data::i8});
+        return OperandTopType(DataType{Data::i8});
     }
 
     std::any IRGen::visitDigit(ast::expr::Digit *digit_node, IRGenArgs args) {
         args.previous_block->Push(Data::i32, new Const<data::i32>(digit_node->value));
-        return OperandDataType(DataType{Data::i32});
+        return OperandTopType(DataType{Data::i32});
     }
 
     std::any IRGen::visitDecimal(ast::expr::Decimal *decimal_node, IRGenArgs args) {
         args.previous_block->Push(Data::f64, new Const<data::f64>(decimal_node->value));
-        return OperandDataType(DataType{Data::f64});
+        return OperandTopType(DataType{Data::f64});
     }
 
     std::any IRGen::visitString(ast::expr::String *str_node, IRGenArgs args) {
         args.previous_block->Psm(str_node->value.size(),str_node->value.c_str());
-        return OperandDataType(MemType{(data::u32)str_node->value.size()});
+        return OperandTopType(MemType{(data::u32)str_node->value.size()});
     }
 
     std::any IRGen::visitParentheses(ast::expr::Parentheses *parentheses_node, IRGenArgs args) {
