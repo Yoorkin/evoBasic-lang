@@ -446,7 +446,7 @@ namespace evoBasic{
             auto lhs_data = tryLoadOperandTop(lhs_data_type,args.previous_block);
 
             auto rhs_data_type = any_cast<OperandTopType>(visitExpression(logic_node->rhs,args));
-            tryLoadOperandTop(lhs_data_type,args.previous_block);
+            tryLoadOperandTop(rhs_data_type,args.previous_block);
 
             switch (logic_node->op) {
                 case Op::EQ:

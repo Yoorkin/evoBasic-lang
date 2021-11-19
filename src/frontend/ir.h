@@ -130,7 +130,7 @@ namespace evoBasic::ir{
 
         std::vector<Instruction*> getInstructions();
         std::string getLabel();
-        std::string setLabel(std::string label);
+        void setLabel(std::string label);
         Block &Jmp(Block *block);
         Block &Jif(Block *block);
         Block &EQ(vm::Data data);

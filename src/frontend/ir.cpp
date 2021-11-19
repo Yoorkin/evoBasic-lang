@@ -321,7 +321,7 @@ namespace evoBasic::ir{
         return label_;
     }
 
-    std::string Block::setLabel(std::string label) {
+    void Block::setLabel(std::string label) {
         label_ = move(label);
     }
 
