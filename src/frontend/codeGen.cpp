@@ -106,7 +106,6 @@ namespace evoBasic{
         return nullptr;
     }
 
-
     std::any IRGen::visitFunction(ast::Function *func_node, IRGenArgs args) {
         auto func = args.domain->find(getID(func_node->name))->as_shared<type::Function>();
         args.function = func;
@@ -155,7 +154,6 @@ namespace evoBasic{
         return nullptr;
     }
 
-
     Block *IRGen::visitStatementList(std::list<ast::stmt::Statement*> &stmt_list, IRGenArgs args) {
         for(auto& s:stmt_list){
             auto *after_block = any_cast<Block*>(visitStatement(s,args));
@@ -173,26 +171,41 @@ namespace evoBasic{
                                 .Push(Data::ptr,new Const<data::u32>(field->getOffset()))
                                 .Add(Data::ptr);
 
-            auto field_kind = field->getPrototype()->getKind();
-            if(field_kind == DeclarationEnum::Primitive){
-                auto primitive_type = field->getPrototype()->as_shared<primitive::Primitive>();
-                if(var->initial) {
-                    visitExpression(var->initial, args);
+            if(var->initial){
+                auto operand_type = any_cast<OperandTopType>(visitExpression(var->initial, args));
+                auto data = tryLoadOperandTop(operand_type,args.previous_block);
+                switch(operand_type.index()){
+                    case 1: /* DataType */
+                        args.previous_block->Store(data);
+                        break;
+                    case 2: /* MemType */
+                        args.previous_block->Stm(get<MemType>(operand_type).size);
+                        break;
+                    case 4: /* ClassType */
+                        args.previous_block->Store(Data::ptr);
+                        break;
+                    default:
+                        ASSERT(true,"invalid");
                 }
-                else {
-                    auto data =  primitive_type->getDataKind();
+            }
+            else switch(field->getPrototype()->getKind()){
+                case DeclarationEnum::Primitive:{
+                    auto data = field->getPrototype()->as_shared<primitive::Primitive>()->getDataKind();
                     args.previous_block->Push(data,convertNumberToConst(data,0));
+                    args.previous_block->Store(data);
+                    break;
                 }
-                args.previous_block->Store(primitive_type->getDataKind());
-            }
-            else if(field_kind == DeclarationEnum::Type){
-                //TODO
-            }
-            else if(field_kind == DeclarationEnum::Array){
-
-            }
-            else if(field_kind == DeclarationEnum::Class){
-                //TODO
+                case DeclarationEnum::Type:{
+                    break;
+                }
+                case DeclarationEnum::Array:{
+                    break;
+                }
+                case DeclarationEnum::Class:{
+                    args.previous_block->Push(Data::ptr,new Const<data::ptr>(0));
+                    args.previous_block->Store(Data::ptr);
+                    break;
+                }
             }
         }
         return (Block*)nullptr;
