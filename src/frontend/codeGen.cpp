@@ -353,7 +353,8 @@ namespace evoBasic{
 
     std::any IRGen::visitReturn(ast::stmt::Return *ret_node, IRGenArgs args) {
         args.need_return_value = true;
-        visitExpression(ret_node->expr,args);
+        auto operand_type = any_cast<OperandTopType>(visitExpression(ret_node->expr,args));
+        auto data = tryLoadOperandTop(operand_type,args.previous_block);
         args.previous_block->Ret();
         return (Block*)nullptr;
     }
@@ -388,8 +389,9 @@ namespace evoBasic{
                     case 2: /* MemType */
                         block->Ldm(get<MemType>(*element).size);
                         return vm::Data::void_;
-                    case 3: /* AddressType */
-                        ASSERT(true,"invalid");
+                    case 3: /* AddressType, for ByRef Argument */
+                        block->Load(Data::ptr);
+                        return tryLoadOperandTop(*element,block);
                     case 4: /* ClassType */
                         block->Load(Data::ptr);
                         return Data::ptr;
@@ -667,11 +669,13 @@ namespace evoBasic{
                 return MemType{symbol->as_shared<Domain>()->getByteLength()};
             case DeclarationEnum::Argument:{
                 auto argument = symbol->as_shared<Argument>();
-                if(argument->isByval())
-                    return mapSymbolToOperandTopType(argument->getPrototype());
-                else{
+                if(argument->isByval()) {
                     auto element = mapSymbolToOperandTopType(argument->getPrototype());
                     return AddressType{new OperandTopType(element)};
+                }
+                else{
+                    auto element = mapSymbolToOperandTopType(argument->getPrototype());
+                    return AddressType{new OperandTopType(AddressType{new OperandTopType(element)})};
                 }
             }
             case DeclarationEnum::Variable: {
@@ -811,9 +815,10 @@ namespace evoBasic{
 
 
     std::any IRGen::visitUnary(ast::expr::Unary *unit_node, IRGenArgs args) {
-        auto data_type = any_cast<OperandTopType>(visitExpression(unit_node->terminal, args));
-        args.previous_block->Neg(get<DataType>(data_type).data);
-        return data_type;
+        auto operand_type = any_cast<OperandTopType>(visitExpression(unit_node->terminal, args));
+        auto data = tryLoadOperandTop(operand_type,args.previous_block);
+        args.previous_block->Neg(data);
+        return OperandTopType(DataType{data});
     }
 
 

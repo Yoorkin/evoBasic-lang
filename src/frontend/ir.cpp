@@ -72,6 +72,7 @@ namespace evoBasic::ir{
 
         stream<<"meta: \n";
         for(auto &m : meta){
+            stream<<"\t";
             m->toHex(stream);
             stream<<"\n";
         }
@@ -346,7 +347,7 @@ namespace evoBasic::ir{
     }
 
     Block &Block::LT(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::NE,Instruction::TypeProp{data}));
+        instructons.push_back(new Instruction(vm::Bytecode::LT,Instruction::TypeProp{data}));
         return *this;
     }
 
