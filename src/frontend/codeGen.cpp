@@ -254,12 +254,40 @@ namespace evoBasic{
     std::any IRGen::visitSelect(ast::stmt::Select *select_node, IRGenArgs args) {
         auto after_select_block = new Block(args.domain->mangling() + "_select_after");
         args.next_block = after_select_block;
+        auto operand_type = any_cast<OperandTopType>(visitExpression(select_node->condition,args));
+        auto data = tryLoadOperandTop(operand_type,args.previous_block);
+        //duplicate condition value for each Case
+        int need_value_count = 0;
         for(auto &ca:select_node->case_list){
-            visitCase(ca,args);
+            if(ca->condition)need_value_count++;
+        }
+        for(int i=0;i<need_value_count-1;i++){
+            args.previous_block->Dup(data);
+        }
+        for(auto &ca:select_node->case_list){
+            visitCaseInSelectStmt(ca,args);
         }
         args.previous_block->Jmp(after_select_block);
         args.ir->addBlock(after_select_block);
         return after_select_block;
+    }
+
+    std::any IRGen::visitCaseInSelectStmt(ast::Case *ca_node, IRGenArgs args) {
+        if(ca_node->condition) {
+            auto operand_type = any_cast<OperandTopType>(visitExpression(ca_node->condition, args));
+            auto data = tryLoadOperandTop(operand_type,args.previous_block);
+            auto case_block = new Block(args.function->mangling() + "_case");
+            args.ir->addBlock(case_block);
+            args.previous_block->EQ(data);
+            args.previous_block->Jif(case_block);
+            args.previous_block = case_block;
+            auto after_stmts_block = visitStatementList(ca_node->statement_list, args);
+            after_stmts_block->Jmp(args.next_block);
+        }
+        else{
+            visitStatementList(ca_node->statement_list, args);
+        }
+        return (Segment*)nullptr;
     }
 
     std::any IRGen::visitFor(ast::stmt::For *forstmt_node, IRGenArgs args) {
@@ -343,7 +371,7 @@ namespace evoBasic{
         return (Block*)nullptr;
     }
 
-    vm::Data tryLoadOperandTop(OperandTopType type,Block *block){
+    vm::Data IRGen::tryLoadOperandTop(OperandTopType type,Block *block){
         switch(type.index()){
             case 0: ASSERT(true,"invalid"); break;
             case 1: /* DataType */

@@ -55,6 +55,7 @@ namespace evoBasic{
 
         OperandTopType mapSymbolToOperandTopType(std::shared_ptr<type::Symbol> symbol);
         OperandTopType visitAssign(ast::expr::Binary *node, IRGenArgs args);
+        vm::Data tryLoadOperandTop(OperandTopType type,ir::Block *block);
 
         std::any visitGlobal(ast::Global *global_node, IRGenArgs args) override;
         std::any visitModule(ast::Module *mod_node, IRGenArgs args) override;
@@ -100,6 +101,8 @@ namespace evoBasic{
 
         std::any visitCast(ast::expr::Cast *cast_node, IRGenArgs args);
         void dereference(std::shared_ptr<type::Symbol> symbol);
+
+        std::any visitCaseInSelectStmt(ast::Case *ca_node, IRGenArgs args);
     };
 
 }
