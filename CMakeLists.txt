@@ -1,15 +1,18 @@
 cmake_minimum_required(VERSION 3.13)
 project(evoBasic)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g -fno-limit-debug-info")
+
 set(CMAKE_CXX_STANDARD 20)
 
-include_directories(src/frontend src/utils src/vm)
+file(GLOB COMPILER_SOURCE ${CMAKE_SOURCE_DIR}/src/compiler/*.cpp)
+file(GLOB UTILS_SOURCE ${CMAKE_SOURCE_DIR}/src/utils/*.cpp)
+file(GLOB VM_SOURCE ${CMAKE_SOURCE_DIR}/src/vm/*.cpp)
 
-file(GLOB FRONTEND_SOURCE ${CMAKE_SOURCE_DIR}/src/frontend/*)
-file(GLOB UTILS_SOURCE ${CMAKE_SOURCE_DIR}/src/utils/*)
-file(GLOB VM_SOURCE ${CMAKE_SOURCE_DIR}/src/vm/*)
+file(GLOB COMPILER_INCLUDE ${CMAKE_SOURCE_DIR}/src/compiler)
+file(GLOB UTILS_INCLUDE ${CMAKE_SOURCE_DIR}/src/utils)
+file(GLOB VM_INCLUDE ${CMAKE_SOURCE_DIR}/src/vm)
 
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/compiler ${CMAKE_BINARY_DIR}/ecc)
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/vm ${CMAKE_BINARY_DIR}/evm)
 add_subdirectory(test ${CMAKE_BINARY_DIR}/test_dir)
 
-add_executable(evoBasic ${FRONTEND_SOURCE} ${UTILS_SOURCE} ${VM_SOURCE} src/main.cpp src/utils/utils.cpp src/utils/utils.h)
-target_compile_options(evoBasic PRIVATE -Wall)
+

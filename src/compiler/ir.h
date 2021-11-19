@@ -211,6 +211,7 @@ namespace evoBasic::ir{
         Function(std::list<Pair*> params,Type *ret,Block *block);
         void toString(std::ostream &stream)override;
         data::u32 getAddress()override;
+        Block *getBlock();
     };
 
     //sampleStruct : Record{x:i32,y:i32}

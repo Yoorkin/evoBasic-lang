@@ -12,6 +12,11 @@ namespace evoBasic::ir{
 
     void IR::addMeta(Meta *meta_) {
         this->meta.push_back(meta_);
+        if(meta_->meta_kind == Meta::pair){
+            auto pair = (Pair*)meta_;
+            if(pair->getType()->meta_kind == Meta::function)
+                function_block.insert({pair->getName(),((Function*)pair->getType())->getBlock()});
+        }
     }
 
     void IR::addBlock(Block *block) {
@@ -36,7 +41,9 @@ namespace evoBasic::ir{
                 inst->setAddress(address);
                 if(inst->op == vm::Bytecode::Invoke){
                     auto &prop = get<Instruction::InvokeProp>(inst->prop);
-                    prop.target = function_block.find(prop.signature)->second;
+                    auto target = function_block.find(prop.signature);
+                    ASSERT(target == function_block.end(),"invalid");
+                    prop.target = target->second;
                 }
                 auto size = inst->getByteLength();
                 ASSERT(size<=0,"invalid size");
@@ -134,6 +141,10 @@ namespace evoBasic::ir{
         else stream<<"void";
     }
 
+    Block *Function::getBlock() {
+        NotNull(block);
+        return block;
+    }
 
 
     Record::Record(std::list<Pair*> members) : members_(std::move(members)){
@@ -266,11 +277,13 @@ namespace evoBasic::ir{
                 address = get<JumpProp>(prop).target->getAddress();
                 stream.write((const char*)&address,sizeof(address));
                 break;
-            case vm::Bytecode::Invoke:
+            case vm::Bytecode::Invoke: {
                 NotNull(get<InvokeProp>(prop).target);
-                address = get<InvokeProp>(prop).target->getAddress();
-                stream.write((const char*)&address,sizeof(address));
+                auto tmp = get<InvokeProp>(prop);
+                address = tmp.target->getAddress();
+                stream.write((const char *) &address, sizeof(address));
                 break;
+            }
             case vm::Bytecode::EQ:
             case vm::Bytecode::NE:
             case vm::Bytecode::GT:

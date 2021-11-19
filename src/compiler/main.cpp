@@ -1,5 +1,5 @@
 #include <iostream>
-#include "utils/nullSafe.h"
+#include "nullSafe.h"
 #include "token.h"
 #include "lexer.h"
 #include "logger.h"
