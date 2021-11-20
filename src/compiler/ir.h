@@ -151,6 +151,7 @@ namespace evoBasic::ir{
         Block &Not();
         Block &Load(vm::Data data);
         Block &Store(vm::Data data);
+        Block &StoreR(vm::Data data);
         Block &Invoke(std::string signature);
         Block &Push(vm::Data data,ConstBase *const_value);
         Block &Pop(vm::Data data);
@@ -158,6 +159,7 @@ namespace evoBasic::ir{
         Block &Cast(vm::Data src,vm::Data dst);
         Block &Dup(vm::Data data);
         Block &Stm(data::u32 size);
+        Block &StmR(data::u32 size);
         Block &Ldm(data::u32 size);
         Block &Psm(data::u32 size,const char *memory);
         Block &Dpm(data::u32 size);

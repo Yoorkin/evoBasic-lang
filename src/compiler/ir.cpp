@@ -241,6 +241,7 @@ namespace evoBasic::ir{
                 break;
             case vm::Bytecode::Ldm:
             case vm::Bytecode::Stm:
+            case vm::Bytecode::StmR:
                 stream <<" "<< get<MemProp>(prop).size;
                 break;
             case vm::Bytecode::EQ:
@@ -257,6 +258,7 @@ namespace evoBasic::ir{
             case vm::Bytecode::Load:
             case vm::Bytecode::Pop:
             case vm::Bytecode::Store:
+            case vm::Bytecode::StoreR:
             case vm::Bytecode::Dup:
             case vm::Bytecode::Neg:
                 stream<<"."<<get<TypeProp>(prop).data.toString();
@@ -307,6 +309,7 @@ namespace evoBasic::ir{
             case vm::Bytecode::Sub:
             case vm::Bytecode::Load:
             case vm::Bytecode::Store:
+            case vm::Bytecode::StoreR:
             case vm::Bytecode::Pop:
             case vm::Bytecode::Mul:
             case vm::Bytecode::Div:
@@ -325,6 +328,7 @@ namespace evoBasic::ir{
                 break;
             case vm::Bytecode::Ldm:
             case vm::Bytecode::Stm:
+            case vm::Bytecode::StmR:
                 //TODO
                 break;
             case vm::Bytecode::Ret:
@@ -452,6 +456,11 @@ namespace evoBasic::ir{
         return *this;
     }
 
+    Block &Block::StoreR(vm::Data data) {
+        instructons.push_back(new Instruction(vm::Bytecode::StoreR,Instruction::TypeProp{data}));
+        return *this;
+    }
+
     Block &Block::Invoke(std::string signature) {
         instructons.push_back(new Instruction(vm::Bytecode::Invoke,Instruction::InvokeProp{nullptr,signature}));
         return *this;
@@ -486,6 +495,12 @@ namespace evoBasic::ir{
         instructons.push_back(new Instruction(vm::Bytecode::Stm,Instruction::MemProp{size}));
         return *this;
     }
+
+    Block &Block::StmR(data::u32 size) {
+        instructons.push_back(new Instruction(vm::Bytecode::StmR,Instruction::MemProp{size}));
+        return *this;
+    }
+
 
     Block &Block::Ldm(data::u32 size) {
         instructons.push_back(new Instruction(vm::Bytecode::Ldm,Instruction::MemProp{size}));

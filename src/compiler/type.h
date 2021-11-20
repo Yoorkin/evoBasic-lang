@@ -91,14 +91,14 @@ namespace evoBasic::type{
 
 
     class Prototype : public Symbol{
-        data::u32 byte_length = 0;
+        data::ptr byte_length = 0;
     public:
         Prototype(const Prototype&)=delete;
         explicit Prototype(DeclarationEnum kind): Symbol(kind){};
         virtual bool equal(std::shared_ptr<Prototype> ptr)=0;
 
-        virtual data::u32 getByteLength();
-        virtual void setByteLength(data::u32 value);
+        virtual data::ptr getByteLength();
+        virtual void setByteLength(data::ptr value);
     };
 
     class Error : public Prototype{
@@ -129,7 +129,7 @@ namespace evoBasic::type{
         std::string debug(int indent)override;
         std::size_t getOffset();
         void setOffset(std::size_t value);
-        virtual data::u32 getRealByteLength();
+        virtual data::ptr getRealByteLength();
     };
 
     //domain interface
@@ -268,19 +268,19 @@ namespace evoBasic::type{
         std::string debug(int indent)override;
         bool isByval();
         bool isOptional();
-        data::u32 getRealByteLength()override;
+        data::ptr getRealByteLength()override;
     };
 
     class Array : public Class{
         std::shared_ptr<Prototype> element_type;
-        data::u32 size_;
+        data::ptr size_;
     public:
         explicit Array(std::shared_ptr<Prototype> element,data::u32 size);
         std::shared_ptr<Prototype> getElementPrototype();
         bool equal(std::shared_ptr<Prototype> ptr)override;
         std::string debug(int indent)override;
-        data::u32 getByteLength()override;
-        data::u32 getSize(){return size_;}
+        data::ptr getByteLength()override;
+        data::ptr getSize(){return size_;}
     };
 
 

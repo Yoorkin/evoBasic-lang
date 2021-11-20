@@ -33,7 +33,7 @@ namespace evoBasic{
     struct ClassType{};
 
     struct MemType{
-        data::u32 size;
+        data::ptr size;
     };
 
     struct DataType{
@@ -56,6 +56,8 @@ namespace evoBasic{
         OperandTopType mapSymbolToOperandTopType(std::shared_ptr<type::Symbol> symbol);
         OperandTopType visitAssign(ast::expr::Binary *node, IRGenArgs args);
         vm::Data tryLoadOperandTop(OperandTopType type,ir::Block *block);
+        void pushVariableAddress(const std::shared_ptr<type::Variable> &variable, ir::Block *block, bool need_push_base);
+
 
         std::any visitGlobal(ast::Global *global_node, IRGenArgs args) override;
         std::any visitModule(ast::Module *mod_node, IRGenArgs args) override;

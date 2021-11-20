@@ -108,7 +108,7 @@ namespace evoBasic::vm{
             Stm,Ldm,Psm,
             PushFrameBase, /* push current stack frame address */
             PushGlobalBase, /* push global address */
-            Nop
+            Nop,StoreR,StmR
         };
     private:
         static std::vector<std::string> to_string;

@@ -109,6 +109,7 @@ namespace evoBasic{
     std::any IRGen::visitFunction(ast::Function *func_node, IRGenArgs args) {
         auto func = args.domain->find(getID(func_node->name))->as_shared<type::Function>();
         args.function = func;
+
         list<Pair*> params;
         Mark *ret_mark = nullptr;
         for(auto &param : func->getArgsSignature()){
@@ -149,6 +150,32 @@ namespace evoBasic{
         args.ir->addBlock(function_block);
 
         args.previous_block = function_block;
+
+        for(int i = func->getArgsSignature().size()-1;i>=0;i--){
+            auto argument = func->getArgsSignature()[i];
+            auto variable = func->find(argument->getName())->as_shared<Variable>();
+            args.previous_block->PushFrameBase()
+                    .Push(Data::ptr,new Const<data::ptr>(variable->getOffset()))
+                    .Add(Data::ptr);
+            if(argument->isByval()){
+                switch (argument->getPrototype()->getKind()) {
+                    case DeclarationEnum::Array:
+                    case DeclarationEnum::Type:
+                        args.previous_block->StmR(argument->getPrototype()->as_shared<Domain>()->getByteLength());
+                        break;
+                    case DeclarationEnum::Class:
+                        args.previous_block->StoreR(Data::ptr);
+                        break;
+                    case DeclarationEnum::Primitive:
+                        args.previous_block->StoreR(argument->getPrototype()->as_shared<primitive::Primitive>()->getDataKind());
+                        break;
+                }
+            }
+            else{
+                args.previous_block->StoreR(Data::ptr);
+            }
+        }
+
         auto after_block = visitStatementList(func_node->statement_list,args);
         after_block->Ret();
         return nullptr;
@@ -568,7 +595,7 @@ namespace evoBasic{
 //        }
 //    }
 
-    void pushVariableAddress(const std::shared_ptr<Variable> &variable, Block *block, bool need_push_base){
+    void IRGen::pushVariableAddress(const std::shared_ptr<Variable> &variable, Block *block, bool need_push_base){
         if(need_push_base){
             if(variable->isGlobal())
                 block->PushGlobalBase();

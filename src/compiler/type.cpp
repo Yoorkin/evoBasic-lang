@@ -80,7 +80,7 @@ namespace evoBasic::type{
         return str.str();
     }
 
-    data::u32 Argument::getRealByteLength() {
+    data::ptr Argument::getRealByteLength() {
         if(isByval()){
             return Variable::getRealByteLength();
         }
@@ -445,7 +445,7 @@ namespace evoBasic::type{
         is_global = true;
     }
 
-    data::u32 Variable::getRealByteLength() {
+    data::ptr Variable::getRealByteLength() {
         switch(prototype->getKind()){
             case DeclarationEnum::Primitive:
             case DeclarationEnum::Type:
@@ -510,15 +510,15 @@ namespace evoBasic::type{
         return format()<<"Ptr<"<<element_type->getName()<<">";
     }
 
-    data::u32 Array::getByteLength() {
+    data::ptr Array::getByteLength() {
         return size_ * getElementPrototype()->getByteLength();
     }
 
-    data::u32 Prototype::getByteLength() {
+    data::ptr Prototype::getByteLength() {
         return byte_length;
     }
 
-    void Prototype::setByteLength(data::u32 value) {
+    void Prototype::setByteLength(data::ptr value) {
         byte_length = value;
     }
 }
