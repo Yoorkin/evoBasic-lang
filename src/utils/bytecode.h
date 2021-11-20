@@ -103,7 +103,7 @@ namespace evoBasic::vm{
     class Bytecode{
     public:
         enum Value{
-            MetaSegment,ConstSegment,CodeSegment,
+            Entrance,MetaSegment,ConstSegment,CodeSegment,
             Define,Jmp,Jif,EQ,NE,LT,GT,LE,GE,Add,Sub,Mul,Div,FDiv,Neg,And,Or,Xor,Not,Load,Store,Invoke,Push,Pop,Ret,Cast,Dup,
             Stm,Ldm,Psm,
             PushFrameBase, /* push current stack frame address */

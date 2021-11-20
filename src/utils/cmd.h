@@ -26,7 +26,7 @@ namespace evoBasic {
         CmdDistributor &on(const std::string &cmd, CmdHandler handler);
         CmdDistributor &others(CmdHandler handler);
         CmdDistributor &unmatched(CmdHandler handler);
-        void distribute(const std::string &raw);
+        void distribute(std::string raw);
         ~CmdDistributor();
     };
 }

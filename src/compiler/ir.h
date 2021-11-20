@@ -27,9 +27,9 @@ namespace evoBasic::ir{
     public:
         virtual void toString(std::ostream &stream)=0;
         virtual void toHex(std::ostream &stream)=0;
-        virtual data::u32 getAddress(){return address_;}
-        virtual void setAddress(data::u32 address){address_ = address;}
-        virtual data::u32 getByteLength(){return 0;}
+        virtual data::ptr getAddress(){return address_;}
+        virtual void setAddress(data::ptr address){address_ = address;}
+        virtual data::ptr getByteLength(){return 0;}
     };
 
     class ConstBase : public IRBase{};
@@ -39,7 +39,7 @@ namespace evoBasic::ir{
         T t_;
     public:
         explicit Const(T t) : t_(t){}
-        data::u32 getByteLength()override{
+        data::ptr getByteLength()override{
             return sizeof(T);
         }
         void toString(std::ostream &stream)override{
@@ -101,7 +101,7 @@ namespace evoBasic::ir{
     public:
         void toHex(std::ostream &stream)override;
         void toString(std::ostream &stream)override;
-        data::u32 getByteLength()override;
+        data::ptr getByteLength()override;
     };
 
     class IR{
@@ -126,8 +126,8 @@ namespace evoBasic::ir{
         explicit Block(std::string label);
         void toString(std::ostream &stream)override;
         void toHex(std::ostream &stream)override;
-        data::u32 getByteLength()override;
-
+        data::ptr getByteLength()override;
+        data::ptr getAddress()override;
         std::vector<Instruction*> getInstructions();
         std::string getLabel();
         void setLabel(std::string label);
@@ -210,7 +210,7 @@ namespace evoBasic::ir{
         Function(std::list<Pair*> params,Type *ret,std::string library);
         Function(std::list<Pair*> params,Type *ret,Block *block);
         void toString(std::ostream &stream)override;
-        data::u32 getAddress()override;
+        data::ptr getAddress()override;
         Block *getBlock();
     };
 

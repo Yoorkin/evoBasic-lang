@@ -11,7 +11,7 @@ namespace evoBasic::vm{
 //    PushGlobalBase /* push global address */
 
     std::vector<std::string> Bytecode::to_string = {
-        "MetaSegment","ConstSegment","CodeSegment",
+        "Entrance","MetaSegment","ConstSegment","CodeSegment",
         "Define","Jmp","Jif","EQ","NE","LT","GT","LE","GE","Add","Sub","Mul","Div","FDiv",
         "Neg","And","Or","Xor","Not","Load","Store","Invoke","Push","Pop","Ret","Cast","Dup",
         "Stm","Ldm","Psm",
@@ -19,13 +19,14 @@ namespace evoBasic::vm{
     };
 
     std::vector<data::u8> Bytecode::to_hex = {
-        0xA0,0xA1,0xA2,
+        0x0F,0xA0,0xA1,0xA2,
         0xA3,0xA4,0xA5,0xA6,0xA7,0xA8,0xA9,0xAA,0xAB,0xAC,0xAD,0xAE,0xAF,
         0xB0,0xB1,0xB2,0xB3,0xB4,0xB5,0xB6,0xB7,0xB8,0xB9,0xBA,0xBB,0xBC,0xBD,0xBE,0xBF,
         0xC0,0xC1,0xC2,0xC3
     };
     
     std::map<std::string,Bytecode::Value> Bytecode::string_to_value = {
+            {"Entrance",Entrance},
         {"MetaSegment",MetaSegment},{"ConstSegment",ConstSegment},{"CodeSegment",CodeSegment},
         {"Define",Define},{"Jmp",Jmp},{"Jif",Jif},{"EQ",EQ},{"NE",NE},{"LT",LT},{"GT",GT},
         {"LE",LE},{"GE",GE},{"Add",Add},{"Sub",Sub},{"Mul",Mul},{"Div",Div},{"FDiv",FDiv},

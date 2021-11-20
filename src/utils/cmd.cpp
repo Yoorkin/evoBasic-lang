@@ -25,7 +25,7 @@ namespace evoBasic {
         return *this;
     }
 
-    void CmdDistributor::distribute(const string &raw) {
+    void CmdDistributor::distribute(string raw) {
         Node *current = root;
         for (int i = 0; i < raw.size(); i++) {
             auto x = raw[i];

@@ -8,26 +8,28 @@
 namespace evoBasic::vm{
     class Stack {
         void *mem = nullptr;
-        void *ptr = nullptr;
+        char *ptr = nullptr;
     public:
         explicit Stack(size_t size){
-            ptr = mem = (char*)malloc(size);
+            mem = ptr = (char*)malloc(size);
         }
 
         template<typename T>
         void push(T t){
             (*((T*)ptr))=t;
-            ((T*)ptr)++;
-        }
-
-        template<typename T>
-        void pop(){
-            ((T*)ptr)--;
+            ptr+=sizeof(T);
         }
 
         template<typename T>
         T top(){
             return *(((T*)ptr)-1);
+        }
+
+        template<typename T>
+        T pop(){
+            auto tmp = top<T>();
+            ptr-=sizeof(T);
+            return tmp;
         }
 
         template<typename T>

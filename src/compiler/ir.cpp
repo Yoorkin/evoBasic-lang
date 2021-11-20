@@ -31,8 +31,6 @@ namespace evoBasic::ir{
 
 
 
-
-
     void IR::toHex(ostream &stream) {
         //compute ir address
         data::u8 address = 0;
@@ -49,6 +47,13 @@ namespace evoBasic::ir{
                 ASSERT(size<=0,"invalid size");
                 address += size;
             }
+        }
+
+        auto entrance = function_block.find("main");
+        if(entrance != function_block.end()){
+            stream<<vm::Bytecode(vm::Bytecode::Entrance).toHex();
+            auto address = entrance->second->getAddress();
+            stream.write((const char *)&address,sizeof(address));
         }
 
         stream<<vm::Bytecode(vm::Bytecode::MetaSegment).toHex();
@@ -76,6 +81,14 @@ namespace evoBasic::ir{
                 address += size;
             }
         }
+
+        stream<<"entrance: ";
+        auto entrance = function_block.find("main");
+        if(entrance == function_block.end()) stream<<"?\n";
+        else{
+            stream<<entrance->second->getAddress();
+        }
+        stream<<"\n";
 
         stream<<"meta: \n";
         for(auto &m : meta){
@@ -124,7 +137,7 @@ namespace evoBasic::ir{
         meta_kind = function;
     }
 
-    data::u32 Function::getAddress() {
+    data::ptr Function::getAddress() {
         ASSERT(external,"invalid operation");
         return block->getAddress();
     }
@@ -191,7 +204,7 @@ namespace evoBasic::ir{
 
 
 
-    data::u32 Instruction::getByteLength() {
+    data::ptr Instruction::getByteLength() {
 //        return std::visit(overloaded {
 //                [](auto){return 0;},
 //                [](TypeProp){return 2;},
@@ -511,11 +524,15 @@ namespace evoBasic::ir{
             inst->toHex(stream);
     }
 
-    data::u32 Block::getByteLength() {
+    data::ptr Block::getByteLength() {
         int ans = 0;
         for(auto &inst : instructons)
             ans += inst->getByteLength();
         return ans;
+    }
+
+    data::ptr Block::getAddress() {
+        return this->instructons[0]->getAddress();
     }
 
 

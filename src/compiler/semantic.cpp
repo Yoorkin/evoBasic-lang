@@ -338,6 +338,7 @@ namespace evoBasic{
             func->setLocation(func_node->name->location);
             func->setName(name);
 
+
             args.context->byteLengthDependencies.addIsolate(func);
 
             args.domain->add(func);
@@ -350,6 +351,10 @@ namespace evoBasic{
             args.domain = func;
             for(auto& param_node:func_node->parameter_list){
                 visitParameter(param_node,args);
+            }
+
+            if(name == "main" && args.domain->equal(args.context->getGlobal())){
+                args.context->setEntrance(func);
             }
         }
         return nullptr;
