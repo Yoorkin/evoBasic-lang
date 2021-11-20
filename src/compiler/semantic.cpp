@@ -259,6 +259,7 @@ namespace evoBasic{
         NotNull(cls.get());
         args.context->byteLengthDependencies.addIsolate(cls);
         args.domain = cls;
+        args.parent_class = cls->as_shared<type::Class>();
         for(const auto& member:cls_node->member_list)
             visitMember(member,args);
         return nullptr;
@@ -338,13 +339,27 @@ namespace evoBasic{
             func->setLocation(func_node->name->location);
             func->setName(name);
 
-
             args.context->byteLengthDependencies.addIsolate(func);
 
             args.domain->add(func);
             if(func_node->return_type){
                 auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(func_node->return_type,args));
                 func->setRetSignature(prototype);
+            }
+
+            switch (func_node->method_flag) {
+                case MethodFlag::Static:
+                    break;
+                case MethodFlag::Virtual:
+                    break;
+                case MethodFlag::Override:
+                    break;
+                case MethodFlag::None:
+                    if(args.parent_class){
+                        auto self = make_shared<Argument>("self",args.parent_class,true,false);
+                        func->add(self);
+                    }
+                    break;
             }
 
             args.user_function = func;

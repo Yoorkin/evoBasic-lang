@@ -43,6 +43,7 @@ namespace evoBasic{
         std::shared_ptr<type::UserFunction> user_function;
         std::shared_ptr<type::Domain> domain;
         std::shared_ptr<type::Symbol> dot_expression_context;
+        std::shared_ptr<type::Class> parent_class;
         int checking_args_index = 0;
         bool need_lookup = false;
     };

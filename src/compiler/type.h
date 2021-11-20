@@ -202,6 +202,8 @@ namespace evoBasic::type{
 
         bool equal(std::shared_ptr<Prototype> ptr)override;
 
+        void add(std::shared_ptr<Symbol> symbol) override;
+
         void setExtend(std::shared_ptr<Class> base);
         void setConstructor(std::shared_ptr<Function> constructor);
         void addImplementation(std::shared_ptr<Interface> interface);
@@ -295,7 +297,7 @@ namespace evoBasic::type{
 
         void add(std::shared_ptr<Symbol> symbol)override;
 
-        const std::vector<std::shared_ptr<Argument>>& getArgsSignature();
+        std::vector<std::shared_ptr<Argument>>& getArgsSignature();
         std::shared_ptr<Prototype> getRetSignature();
         void setRetSignature(std::shared_ptr<Prototype> ptr);
         virtual MethodFlag getMethodFlag()=0;
@@ -303,7 +305,6 @@ namespace evoBasic::type{
 
         bool equal(std::shared_ptr<Prototype> ptr)override;
     };
-
 
     class UserFunction: public Function{
         ast::Function *function_node;
@@ -327,7 +328,7 @@ namespace evoBasic::type{
     public:
         ExternalFunction(const ExternalFunction&)=delete;
         explicit ExternalFunction(std::string library,std::string name);
-        MethodFlag getMethodFlag()override{return MethodFlag::NonMethod;}
+        MethodFlag getMethodFlag()override{return MethodFlag::None;}
     };
 
     class TemporaryDomain : public Domain {

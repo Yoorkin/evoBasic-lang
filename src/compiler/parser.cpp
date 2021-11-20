@@ -146,6 +146,9 @@ namespace evoBasic{
         auto access = parseAccessFlag();
         Member *member = nullptr;
         switch (lexer->getNextToken()->getKind()) {
+            case Token::override_:
+            case Token::virtual_:
+            case Token::static_:
             case Token::sub_:
             case Token::function_:
                 member = parseFunction(follows);
@@ -241,6 +244,24 @@ namespace evoBasic{
         auto stmt_follows = combine(follows,{Token::END_FUNCTION,Token::END_SUB});
 
         auto func = new Function;
+
+        switch(lexer->getNextToken()->getKind()){
+            case Token::static_:
+                lexer->match(Token::static_);
+                func->method_flag = MethodFlag::Static;
+                break;
+            case Token::override_:
+                lexer->match(Token::override_);
+                func->method_flag = MethodFlag::Override;
+                break;
+            case Token::virtual_:
+                lexer->match(Token::virtual_);
+                func->method_flag = MethodFlag::Virtual;
+                break;
+            default:
+                func->method_flag = MethodFlag::None;
+        }
+
         if(lexer->predict(Token::sub_)){
             lexer->match(Token::sub_);
             func->name = parseID(stmt_follows);

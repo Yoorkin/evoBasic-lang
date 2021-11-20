@@ -8,7 +8,7 @@
 
 namespace evoBasic{
     enum class AccessFlag {Public,Private,Friend,Protected};
-    enum class MethodFlag {Static,Virtual,Override,NonMethod};
+    enum class MethodFlag {Static,Virtual,Override,None};
     struct ExpressionType;
     namespace type{
         class Variable;

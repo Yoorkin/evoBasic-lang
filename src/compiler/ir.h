@@ -23,7 +23,7 @@ namespace evoBasic::ir{
     class Pair;
 
     class IRBase{
-        data::u8 address_ = 0;
+        data::ptr address_ = 0;
     public:
         virtual void toString(std::ostream &stream)=0;
         virtual void toHex(std::ostream &stream)=0;
@@ -67,6 +67,14 @@ namespace evoBasic::ir{
             std::string signature;
         };
 
+        struct IntrinsicProp{
+            data::ptr id;
+        };
+
+        struct ExternalProp{
+            std::string signature;
+        };
+
         struct PushProp{
             vm::Data data = vm::Data::void_;
             ConstBase *const_value = nullptr;
@@ -77,15 +85,15 @@ namespace evoBasic::ir{
         };
 
         struct MemProp{
-            data::u32 size;
+            data::ptr size;
         };
 
-        struct PlmProp{
-            data::u32 size;
+        struct PsmProp{
+            data::ptr size;
             const char *memory = nullptr;
         };
 
-        using Prop = std::variant<bool,TypeProp,CastProp,InvokeProp,PushProp,JumpProp,MemProp,PlmProp>;
+        using Prop = std::variant<bool,TypeProp,CastProp,InvokeProp,PushProp,JumpProp,MemProp,PsmProp,IntrinsicProp,ExternalProp>;
 
         Instruction(vm::Bytecode bytecode,Prop prop){
             this->prop = prop;
@@ -153,6 +161,8 @@ namespace evoBasic::ir{
         Block &Store(vm::Data data);
         Block &StoreR(vm::Data data);
         Block &Invoke(std::string signature);
+        Block &Intrinsic(data::ptr id);
+        Block &External(std::string signature);
         Block &Push(vm::Data data,ConstBase *const_value);
         Block &Pop(vm::Data data);
         Block &Ret();

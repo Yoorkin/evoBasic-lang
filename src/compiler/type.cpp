@@ -76,6 +76,7 @@ namespace evoBasic::type{
     std::string Argument::debug(int indent) {
         stringstream str;
         for(int i=0;i<indent;i++)str<<indent_unit;
+        str << (isByval() ? "ByVal":"ByRef") << ' ';
         str << getName() << " As " << getPrototype()->getName();
         return str.str();
     }
@@ -139,7 +140,7 @@ namespace evoBasic::type{
         Domain::add(symbol);
     }
 
-    const std::vector<std::shared_ptr<Argument>> &Function::getArgsSignature() {
+    std::vector<std::shared_ptr<Argument>> &Function::getArgsSignature() {
         return argsSignature;
     }
 
@@ -320,6 +321,13 @@ namespace evoBasic::type{
 
     Class::Class() : Record(DeclarationEnum::Class){
         setByteLength(4);
+    }
+
+    void Class::add(std::shared_ptr<Symbol> symbol) {
+        if(symbol->getKind() == DeclarationEnum::Variable)
+            Record::add(symbol);
+        else
+            Domain::add(symbol);
     }
 
 

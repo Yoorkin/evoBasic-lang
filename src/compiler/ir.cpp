@@ -33,7 +33,7 @@ namespace evoBasic::ir{
 
     void IR::toHex(ostream &stream) {
         //compute ir address
-        data::u8 address = 0;
+        data::ptr address = 0;
         for(auto &block : blocks){
             for(auto &inst : block->getInstructions()){
                 inst->setAddress(address);
@@ -68,7 +68,7 @@ namespace evoBasic::ir{
     }
 
     void IR::toString(ostream &stream) {
-        data::u8 address = 0;
+        data::ptr address = 0;
         for(auto &block : blocks){
             for(auto &inst : block->getInstructions()){
                 inst->setAddress(address);
@@ -205,25 +205,18 @@ namespace evoBasic::ir{
 
 
     data::ptr Instruction::getByteLength() {
-//        return std::visit(overloaded {
-//                [](auto){return 0;},
-//                [](TypeProp){return 2;},
-//                [](CastProp){return 3;},
-//                [](InvokeProp){return 1 + vm::Data(vm::Data::u32).getSize();},
-//                //[](PushProp &p){return 2 + p.const_value->getByteLength();},
-//                [](JumpProp){return 1 + vm::Data(vm::Data::u32).getSize();},
-//                [](MemProp){return sizeof(data::u32);},
-//        }, prop);
         switch (prop.index()) {
-            case 0:       return 1;
-            case 1:       return 2;
-            case 4:       return 2 + get<PushProp>(prop).const_value->getByteLength();
-            case 2:       return 3;
-            case 3:
-            case 5:       return 1 + vm::Data(vm::Data::u32).getSize();
-            case 6:       return sizeof(data::u32);
-            case 7:       return sizeof(data::u32) + get<PlmProp>(prop).size;
-            default:      ASSERT(true,"invalid");
+            case 0:/* empty */          return 1;
+            case 1:/* TypeProp */       return 2;
+            case 2:/* CastProp */       return 3;
+            case 3:/* InvokeProp */     return 1 + sizeof(data::ptr);
+            case 4:/* PushProp */       return 2 + get<PushProp>(prop).const_value->getByteLength();
+            case 5:/* JumpProp */       return 1 + sizeof(data::ptr);
+            case 6:/* MemProp */        return 1 + sizeof(data::ptr);
+            case 7:/* PsmProp */        return 1 + sizeof(data::ptr) + get<PsmProp>(prop).size;
+            case 8:/* IntrinsicProp */  return 1 + sizeof(data::ptr);
+            case 9:/* ExternalProp */   return 1 + get<ExternalProp>(prop).signature.size();
+            default: ASSERT(true,"invalid");
         }
     }
 
@@ -243,6 +236,9 @@ namespace evoBasic::ir{
             case vm::Bytecode::Stm:
             case vm::Bytecode::StmR:
                 stream <<" "<< get<MemProp>(prop).size;
+                break;
+            case vm::Bytecode::Psm:
+                stream <<" "<< get<PsmProp>(prop).size << get<PsmProp>(prop).memory;
                 break;
             case vm::Bytecode::EQ:
             case vm::Bytecode::NE:
@@ -329,7 +325,11 @@ namespace evoBasic::ir{
             case vm::Bytecode::Ldm:
             case vm::Bytecode::Stm:
             case vm::Bytecode::StmR:
-                //TODO
+                stream.write((const char*)&get<MemProp>(prop).size,sizeof(data::ptr));
+                break;
+            case vm::Bytecode::Psm:
+                stream.write((const char*)&get<PsmProp>(prop).size,sizeof(data::ptr));
+                stream.write(get<PsmProp>(prop).memory,get<PsmProp>(prop).size);
                 break;
             case vm::Bytecode::Ret:
             case vm::Bytecode::PushFrameBase:
@@ -466,6 +466,16 @@ namespace evoBasic::ir{
         return *this;
     }
 
+    Block &Block::Intrinsic(data::ptr id) {
+        instructons.push_back(new Instruction(vm::Bytecode::Intrinsic,Instruction::IntrinsicProp{id}));
+        return *this;
+    }
+
+    Block &Block::External(std::string signature) {
+        instructons.push_back(new Instruction(vm::Bytecode::External,Instruction::ExternalProp{signature}));
+        return *this;
+    }
+
     Block &Block::Push(vm::Data data, ConstBase *const_value) {
         instructons.push_back(new Instruction(vm::Bytecode::Push,Instruction::PushProp{data,const_value}));
         return *this;
@@ -508,7 +518,7 @@ namespace evoBasic::ir{
     }
 
     Block &Block::Psm(data::u32 size,const char *memory) {
-        instructons.push_back(new Instruction(vm::Bytecode::Psm,Instruction::PlmProp{size,memory}));
+        instructons.push_back(new Instruction(vm::Bytecode::Psm,Instruction::PsmProp{size, memory}));
         return *this;
     }
 
@@ -549,6 +559,7 @@ namespace evoBasic::ir{
     data::ptr Block::getAddress() {
         return this->instructons[0]->getAddress();
     }
+
 
 
 }
