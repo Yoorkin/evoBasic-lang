@@ -209,6 +209,8 @@ namespace evoBasic{
                         args.previous_block->Stm(get<MemType>(operand_type).size);
                         break;
                     case 4: /* ClassType */
+                        args.previous_block->Dup(Data::ptr);
+                        args.previous_block->RcInc();
                         args.previous_block->Store(Data::ptr);
                         break;
                     default:
@@ -448,6 +450,45 @@ namespace evoBasic{
         args.need_return_value = true;
 
         auto lhs_data_type = any_cast<OperandTopType>(visitExpression(node->lhs, args));
+
+        switch(lhs_data_type.index()){
+            case 0:
+                ASSERT(true,"invalid");
+                break;
+            case 1: /* DataType */
+                ASSERT(true,"invalid");
+                break;
+            case 2: /* MemType */
+                ASSERT(true,"invalid");
+                break;
+            case 4: /* ClassType */
+                ASSERT(true,"invalid");
+                break;
+            case 3: /* AddressType */{
+                auto element = get<AddressType>(lhs_data_type).element;
+                switch(element->index()){
+                    case 0: ASSERT(true,"invalid");
+                    case 1: /* DataType */
+                    case 2: /* MemType */
+                        // do nothing
+                        break;
+                    case 3: /* AddressType,must be ByRef Class Argument */
+                        args.previous_block->Load(Data::ptr)
+                                            .Load(Data::ptr)
+                                            .RcInc()
+                                            .Store(Data::ptr);
+                        break;
+                    case 4: /* ClassType */
+                        args.previous_block->Load(Data::ptr)
+                                            .Dup(Data::ptr)
+                                            .RcInc()
+                                            .Store(Data::ptr);
+                        break;
+                }
+                break;
+            }
+        }
+
         auto rhs_data_type = any_cast<OperandTopType>(visitExpression(node->rhs, args));
 
         switch(rhs_data_type.index()){
@@ -458,30 +499,38 @@ namespace evoBasic{
             case 2: /* MemType */
                 args.previous_block->Stm(get<MemType>(rhs_data_type).size);
                 break;
+            case 4: /* ClassType */
+                args.previous_block->Store(Data::ptr);
+                break;
             case 3: /* AddressType */{
                 auto element = get<AddressType>(rhs_data_type).element;
                 switch(element->index()){
                     case 0: ASSERT(true,"invalid");
                     case 1: /* DataType */
-                        args.previous_block->Load(get<DataType>(*element).data);
-                        args.previous_block->Store(get<DataType>(*element).data);
+                        args.previous_block->Load(get<DataType>(*element).data)
+                                            .Store(get<DataType>(*element).data);
                         break;
                     case 2: /* MemType */
-                        args.previous_block->Ldm(get<MemType>(*element).size);
-                        args.previous_block->Stm(get<MemType>(*element).size);
+                        args.previous_block->Ldm(get<MemType>(*element).size)
+                                            .Stm(get<MemType>(*element).size);
                         break;
-                    case 3: /* AddressType */
-                        ASSERT(true,"invalid");
+                    case 3: /* AddressType,must be ByRef Class Argument */
+                        args.previous_block->Load(Data::ptr)
+                                            .Load(Data::ptr)
+                                            .Load(Data::ptr)
+                                            .RcInc()
+                                            .Store(Data::ptr);
+                        break;
                     case 4: /* ClassType */
-                        args.previous_block->Load(Data::ptr);
-                        args.previous_block->Store(Data::ptr);
+                        args.previous_block->Load(Data::ptr)
+                                            .Load(Data::ptr)
+                                            .Dup(Data::ptr)
+                                            .RcInc()
+                                            .Store(Data::ptr);
                         break;
                 }
                 break;
             }
-            case 4: /* ClassType */
-                args.previous_block->Store(Data::ptr);
-                break;
         }
 
         if(need_return_value)
@@ -701,7 +750,7 @@ namespace evoBasic{
         NotNull(symbol.get());
         switch (symbol->getKind()) {
             case DeclarationEnum::Class:
-                return AddressType{new OperandTopType(MemType{symbol->as_shared<Class>()->getByteLength()})};
+                return ClassType{};
             case DeclarationEnum::Enum_:
                 return DataType{Data::u32};
             case DeclarationEnum::Array:

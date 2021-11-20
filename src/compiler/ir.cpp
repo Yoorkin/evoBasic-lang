@@ -532,6 +532,16 @@ namespace evoBasic::ir{
         return *this;
     }
 
+    Block &Block::RcInc() {
+        instructons.push_back(new Instruction(vm::Bytecode::RcInc));
+        return *this;
+    }
+
+    Block &Block::RcDec() {
+        instructons.push_back(new Instruction(vm::Bytecode::RcDec));
+        return *this;
+    }
+
     Block::Block(std::string label){
         label_ = std::move(label);
     }

@@ -175,6 +175,8 @@ namespace evoBasic::ir{
         Block &Dpm(data::u32 size);
         Block &PushFrameBase();
         Block &PushGlobalBase();
+        Block &RcInc();
+        Block &RcDec();
     };
 
 
