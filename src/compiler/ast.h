@@ -272,7 +272,7 @@ namespace evoBasic::ast{
         struct Expression : Node{
             enum ExpressionKind{
                 error_ = 0,binary_,unary_,parentheses_,ID_,cast_,
-                digit_,decimal_,string_,char_,boolean_,callee_,annotation_
+                digit_,decimal_,string_,char_,boolean_,callee_
             }expression_kind = error_;
             void debug(std::ostream &stream,std::string prefix)override;
             ExpressionType *type = nullptr;

@@ -20,7 +20,9 @@ public:
         return msg.c_str();
     }
 };
-#define ASSERT(Exp,Msg) if(Exp) throw AssertionException(__FILE__,__func__,__LINE__,Msg)
+#define PANIC throw AssertionException(__FILE__,__func__,__LINE__,"");
+#define PANICMSG(Msg) throw AssertionException(__FILE__,__func__,__LINE__,Msg)
+#define ASSERT(Exp,Msg) if(Exp) PANICMSG(Msg)
 #define NotNull(ptr) ASSERT(ptr==nullptr, #ptr " is null")
 
 #else

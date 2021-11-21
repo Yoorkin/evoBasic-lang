@@ -30,34 +30,52 @@ namespace evoBasic{
     // primitive\ptr or Array\Type or Prototype
     struct EmptyType{};
 
-    struct ClassType{};
-
-    struct MemType{
+    struct ClassType{
         data::ptr size;
+        std::shared_ptr<type::Class> cls;
+    };
+
+    struct ArrayType{
+        data::ptr size;
+        std::shared_ptr<type::Array> array;
+    };
+
+    struct RecordType{
+        data::ptr size;
+        std::shared_ptr<type::Record> record;
     };
 
     struct DataType{
         vm::Data data;
+        std::shared_ptr<type::primitive::Primitive> primitive;
     };
 
     struct AddressType;
 
-    using OperandTopType = std::variant<EmptyType,DataType,MemType,AddressType,ClassType>;
+    using OperandType = std::variant<EmptyType,DataType,ArrayType,RecordType,AddressType,ClassType,std::shared_ptr<type::Symbol>>;
+    enum class OperandEnum{EmptyType,DataType,ArrayType,RecordType,AddressType,ClassType,SymbolPtr};
+
 
     struct AddressType{
-        OperandTopType *element = nullptr;
+        OperandType *element = nullptr;
     };
+
+    OperandType addressOf(OperandType type);
 
 
     class IRGen : public Visitor<IRGenArgs>{
+        //std::stack<OperandType> operand;
     public:
         std::shared_ptr<ir::IR> gen(AST *ast,std::shared_ptr<Context> context);
 
-        OperandTopType mapSymbolToOperandTopType(std::shared_ptr<type::Symbol> symbol);
-        OperandTopType visitAssign(ast::expr::Binary *node, IRGenArgs args);
-        vm::Data tryLoadOperandTop(OperandTopType type,ir::Block *block);
-        void pushVariableAddress(const std::shared_ptr<type::Variable> &variable, ir::Block *block, bool need_push_base);
-
+        OperandType mapSymbolToOperandType(std::shared_ptr<type::Symbol> symbol);
+        OperandType visitAssign(ast::expr::Binary *node, IRGenArgs args);
+        OperandType pushVariableAddress(const std::shared_ptr<type::Variable> &variable, ir::Block *block, bool need_push_base);
+        OperandType loadOperandAddress(OperandType top,ir::Block *block);
+        OperandType visitArithmeticOp(OperandType lhs_operand,ast::expr::Binary *logic_node, IRGenArgs args);
+        OperandType visitIndex(ast::expr::Binary *index,IRGenArgs args,bool need_push_base);
+        OperandType visitDot(ast::expr::Expression *dot_node,IRGenArgs args,bool is_left = true);
+        OperandType visitLogicOp(ast::expr::Binary *logic_node, IRGenArgs args);
 
         std::any visitGlobal(ast::Global *global_node, IRGenArgs args) override;
         std::any visitModule(ast::Module *mod_node, IRGenArgs args) override;
@@ -81,8 +99,6 @@ namespace evoBasic{
         std::any visitExit(ast::stmt::Exit *exit_node, IRGenArgs args) override;
 
         std::any visitBinary(ast::expr::Binary *logic_node, IRGenArgs args) override;
-        std::shared_ptr<type::Prototype> visitIndex(ast::expr::Binary *index,IRGenArgs args,bool need_push_base);
-        std::shared_ptr<type::Prototype> visitDot(ast::expr::Expression *dot_node,IRGenArgs args);
         std::any visitUnary(ast::expr::Unary *unit_node, IRGenArgs args) override;
         std::any visitCallee(ast::expr::Callee *callee_node, IRGenArgs args) override;
         std::any visitArg(ast::expr::Callee::Argument *arg_node, IRGenArgs args) override;
@@ -99,7 +115,7 @@ namespace evoBasic{
         std::any visitAnnotation(ast::Annotation *anno_node, IRGenArgs args)override;
         std::any visitExpression(ast::expr::Expression *expr_node, IRGenArgs args) override;
 
-        OperandTopType visitVariableCall(ast::expr::Callee *callee_node, IRGenArgs args, std::shared_ptr<type::Variable> target);
+        OperandType visitVariableCall(ast::expr::Callee *callee_node, IRGenArgs args, std::shared_ptr<type::Variable> target);
 
         std::any visitCast(ast::expr::Cast *cast_node, IRGenArgs args);
         void dereference(std::shared_ptr<type::Symbol> symbol);
