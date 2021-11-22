@@ -565,7 +565,7 @@ namespace evoBasic{
                         return loadOperandAddress(*element,block);
                     }
                     case OperandEnum::DataType: {
-                        block->Load(Data::ptr);
+                        block->Load(get<DataType>(*element).data);
                         return loadOperandAddress(*element,block);
                     }
                     default: PANIC;
@@ -635,19 +635,19 @@ namespace evoBasic{
                 return boolean;
             case Op::ADD:
                 args.previous_block->Add(data);
-                return boolean;
+                return rhs_operand;
             case Op::MINUS:
                 args.previous_block->Sub(data);
-                return boolean;
+                return rhs_operand;
             case Op::MUL:
                 args.previous_block->Mul(data);
-                return boolean;
+                return rhs_operand;
             case Op::DIV:
                 args.previous_block->Div(data);
-                return boolean;
+                return rhs_operand;
             case Op::FDIV:
                 args.previous_block->FDiv(data);
-                return boolean;//TODO FIDV support
+                return rhs_operand;//TODO FIDV support
         }
     }
 
@@ -661,7 +661,6 @@ namespace evoBasic{
         using Op = ast::expr::Binary::Enum;
         set<Op> logic_op = {Op::And,Op::Or,Op::Xor,Op::Not};
         set<Op> calculate_op = {Op::EQ,Op::NE,Op::LE,Op::GE,Op::LT,Op::GT,Op::ADD,Op::MINUS,Op::MUL,Op::DIV,Op::FDIV};
-
 
         if(logic_op.contains(logic_node->op)){
             return visitLogicOp(logic_node,args);
@@ -684,7 +683,7 @@ namespace evoBasic{
             args.need_return_value = false;
             return visitAssign(logic_node,args);
         }
-        else if(logic_node->op == Op::Dot){
+        else if(logic_node->op == Op::Dot || logic_node->op == Op::Index ){
             return visitDot(logic_node,args);
         }
     }
@@ -891,100 +890,6 @@ namespace evoBasic{
             default: PANIC;
         }
     }
-//
-//    shared_ptr<Prototype> IRGen::visitDot(ast::expr::Expression *dot_node,IRGenArgs args){
-//        using namespace ast::expr;
-//        using Op = Binary::Enum;
-//        auto node = (Binary*)dot_node;
-//        shared_ptr<Symbol> lhs,rhs;
-//
-//
-//        args.need_lookup = true;
-//        args.dot_expression_context = args.domain;
-//        if(node->lhs->expression_kind == Expression::ID_){
-//            lhs = any_cast<shared_ptr<Symbol>>(visitID((ID*)node->lhs,args));
-//            if(auto variable = lhs->as_shared<Variable>()){
-//                pushVariableAddress(variable, args.previous_block,true);
-//                operand.push(addressOf(mapSymbolToOperandType(variable->getPrototype())));
-//                lhs = variable->getPrototype();
-//            }
-//        }
-//        else if(node->lhs->expression_kind == Expression::callee_){
-//            lhs = any_cast<shared_ptr<Prototype>>(visitCallee((Callee*)node->lhs,args));
-//            if(node->temp_address){
-//                // store returned value in temp address
-//                pushVariableAddress(node->temp_address,args.previous_block,true);
-//                args.previous_block->StmR(lhs->as_shared<Domain>()->getByteLength());
-//                pushVariableAddress(node->temp_address,args.previous_block,true);
-//                operand.push(mapSymbolToOperandType(node->temp_address)); // ptr to temp address
-//            }
-//            else{
-//                operand.push(mapSymbolToOperandType(lhs));
-//            }
-//        }
-//        else if(node->lhs->expression_kind == Expression::binary_){
-//            auto bin_node = (Binary*)node->lhs;
-//            if(bin_node->op == Op::Dot)
-//                lhs = visitDot(node->lhs,args);
-//            else if(bin_node->op == Op::Index)
-//                lhs = visitIndex((Binary*)node->lhs,args,true);
-//        }
-//
-//        NotNull(lhs.get());
-//
-//        args.need_lookup = false;
-//        args.dot_expression_context = lhs;
-//        if(node->rhs->expression_kind == Expression::ID_){
-//            rhs = any_cast<shared_ptr<Symbol>>(visitID((ID*)node->rhs,args));
-//            if(auto variable = rhs->as_shared<Variable>()){
-//                switch(lhs->getKind()){
-//                    case DeclarationEnum::Array:
-//                    case DeclarationEnum::Type:
-//                        operand.pop();
-//                        args.previous_block->Push(Data::ptr,new Const<data::u32>(variable->getOffset()))
-//                                            .Add(Data::ptr);
-//                        operand.push(mapSymbolToOperandType(variable));
-//                        break;
-//                    default:
-//                        pushVariableAddress(variable, args.previous_block,true);
-//                        break;
-//                }
-//                rhs = variable->getPrototype();
-//            }
-//        }
-//        else if(node->rhs->expression_kind == Expression::callee_){
-//            args.need_lookup = false;
-//            rhs = any_cast<shared_ptr<Prototype>>(visitCallee((Callee*)node->rhs,args));
-//            if(node->temp_address){
-//                // store returned value in temp address
-//                pushVariableAddress(node->temp_address,args.previous_block,true);
-//                args.previous_block->StmR(lhs->as_shared<Domain>()->getByteLength());
-//                pushVariableAddress(node->temp_address,args.previous_block,true);
-//                operand.push(mapSymbolToOperandType(node->temp_address)); // ptr to temp address
-//            }
-//            else{
-//                operand.push(mapSymbolToOperandType(lhs));
-//            }
-//        }
-//        else if(node->rhs->expression_kind == Expression::binary_){
-//            auto bin_node = (Binary*)node->rhs;
-//            if(bin_node->op == Op::Index){
-//                switch(lhs->getKind()){
-//                    case DeclarationEnum::Array:
-//                    case DeclarationEnum::Type:
-//                        rhs = visitIndex(bin_node,args,false);
-//                        break;
-//                    default:
-//                        rhs = visitIndex(bin_node,args,true);
-//                        break;
-//                }
-//            }
-//        }
-//
-//        NotNull(rhs.get());
-//        return rhs->as_shared<Prototype>();
-//    }
-
 
     std::any IRGen::visitExpression(ast::expr::Expression *expr_node, IRGenArgs args) {
         switch (expr_node->expression_kind) {
@@ -1015,6 +920,7 @@ namespace evoBasic{
             case OperandEnum::ArrayType: return get<ArrayType>(type).array;
             case OperandEnum::RecordType: return get<RecordType>(type).record;
             case OperandEnum::AddressType: return stripOperandType(*get<AddressType>(type).element);
+            case OperandEnum::SymbolPtr: return get<std::shared_ptr<type::Symbol>>(type);
         }
     }
 
@@ -1031,10 +937,16 @@ namespace evoBasic{
         switch(node->expression_kind){
             case ast::expr::Expression::binary_: {
                 auto bin_node = (Binary*)node;
-                ASSERT(bin_node->op!=Binary::Dot,"invalid");
-                auto operand = any_cast<OperandType>(visitDot(bin_node->lhs,args,true));
-                args.dot_expression_context = stripOperandType(operand);
-                return visitDot(bin_node->rhs,args,false);
+                switch(bin_node->op){
+                    case Binary::Dot:{
+                        auto operand = any_cast<OperandType>(visitDot(bin_node->lhs,args,true));
+                        args.dot_expression_context = stripOperandType(operand);
+                        return visitDot(bin_node->rhs,args,false);
+                    }
+                    case Binary::Index:{
+                        return visitIndex(bin_node,args,is_left);
+                    }
+                }
             }
             case ast::expr::Expression::ID_: {
                 auto symbol = any_cast<shared_ptr<Symbol>>(visitID((ID*)node,args));

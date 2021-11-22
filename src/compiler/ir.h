@@ -120,6 +120,12 @@ namespace evoBasic::ir{
         std::vector<Block*> blocks;
     public:
 
+        Block* findFunctionBlock(std::string name){
+            auto target = function_block.find(name);
+            if(target == function_block.end())return nullptr;
+            return target->second;
+        }
+
         void addMeta(Meta *meta);
         void addBlock(Block *block);
 

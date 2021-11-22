@@ -16,12 +16,29 @@ FetchContent_MakeAvailable(googletest)
 enable_testing()
 
 add_executable(
-        cbTest
-        semantic_test.cc
-        ${FRONTEND_SOURCE}
-        ${UTILS_SOURCE}
-        ${VM_SOURCE}
+    cbTest
+    semantic_test.cc
+    codegen.cc
+    ${UTILS_SOURCE}
+    ${CMAKE_SOURCE_DIR}/src/compiler/ast.cpp
+    ${CMAKE_SOURCE_DIR}/src/compiler/codeGen.cpp
+    ${CMAKE_SOURCE_DIR}/src/compiler/context.cpp
+    ${CMAKE_SOURCE_DIR}/src/compiler/ir.cpp
+    ${CMAKE_SOURCE_DIR}/src/compiler/lexer.cpp
+    ${CMAKE_SOURCE_DIR}/src/compiler/parser.cpp
+    ${CMAKE_SOURCE_DIR}/src/compiler/semantic.cpp
+    ${CMAKE_SOURCE_DIR}/src/compiler/token.cpp
+    ${CMAKE_SOURCE_DIR}/src/compiler/type.cpp
+    ${CMAKE_SOURCE_DIR}/src/compiler/visitor.cpp
+        compileHelper.h)
+
+target_include_directories(
+    cbTest PRIVATE
+    ${COMPILER_INCLUDE}
+    ${VM_INCLUDE}
+    ${UTILS_INCLUDE}
 )
+
 target_link_libraries(
         cbTest
         gtest_main
