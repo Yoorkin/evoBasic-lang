@@ -158,7 +158,7 @@ namespace evoBasic{
                 args.domain->add(symbol);
             }
         }
-        return symbol;
+        return {};
     }
 
     std::any SymbolCollector::visitVariable(ast::Variable *var, SymbolCollectorArgs args) {
@@ -322,13 +322,25 @@ namespace evoBasic{
         NotNull(var.get());
         auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(var_node->annotation,args));
         auto parent_kind = args.domain->getKind();
-        if(args.user_function){
-            switch (prototype->getKind()) {
-                case type::DeclarationEnum::Type:
-                case type::DeclarationEnum::Array:
-                    args.context->byteLengthDependencies.addDependent(args.user_function,prototype->as_shared<Domain>());
-            }
+
+        switch(args.domain->getKind()){
+            case DeclarationEnum::Function:
+                switch (prototype->getKind()) {
+                    case type::DeclarationEnum::Type:
+                    case type::DeclarationEnum::Array:
+                        args.context->byteLengthDependencies.addDependent(args.user_function,prototype->as_shared<Domain>());
+                }
+                break;
+            case DeclarationEnum::Module:
+                args.context->getGlobal()->addMemoryLayout(var);
+                switch (prototype->getKind()) {
+                    case type::DeclarationEnum::Type:
+                    case type::DeclarationEnum::Array:
+                        args.context->byteLengthDependencies.addDependent(args.context->getGlobal(),prototype->as_shared<Domain>());
+                }
+                break;
         }
+
         var->setPrototype(prototype);
         return nullptr;
     }
