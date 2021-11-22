@@ -39,7 +39,7 @@ namespace evoBasic::type{
 
 
     Enumeration::Enumeration() : Class(DeclarationEnum::Enum_) {
-        setByteLength(4);
+        setByteLength(vm::Data(vm::Data::ptr).getSize());
     }
 
     std::string Enumeration::debug(int indent) {
@@ -319,15 +319,21 @@ namespace evoBasic::type{
         this->impl_interface.push_back(interface);
     }
 
-    Class::Class() : Record(DeclarationEnum::Class){
-        setByteLength(4);
-    }
+    Class::Class() : Record(DeclarationEnum::Class){}
 
     void Class::add(std::shared_ptr<Symbol> symbol) {
         if(symbol->getKind() == DeclarationEnum::Variable)
             Record::add(symbol);
         else
             Domain::add(symbol);
+    }
+
+    data::ptr Class::getByteLength() {
+        return vm::Data::ptr.getSize();
+    }
+
+    data::ptr Class::getClassMemoryByteLength() {
+        return Prototype::getByteLength();
     }
 
 

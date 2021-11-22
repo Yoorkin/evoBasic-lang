@@ -827,11 +827,13 @@ namespace evoBasic{
         vector<Callee::Argument*> args;
         lexer->match(Token::LP);
 
-        args.push_back(parseArg(addition_follows));
-
-        while(lexer->predict(Token::COMMA)){
-            lexer->match(Token::COMMA);
+        if(!lexer->predict(Token::RP)){
             args.push_back(parseArg(addition_follows));
+
+            while(lexer->predict(Token::COMMA)){
+                lexer->match(Token::COMMA);
+                args.push_back(parseArg(addition_follows));
+            }
         }
 
         lexer->match(Token::RP);

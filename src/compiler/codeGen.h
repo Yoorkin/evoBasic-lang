@@ -74,7 +74,7 @@ namespace evoBasic{
         OperandType loadOperandAddress(OperandType top,ir::Block *block);
         OperandType visitArithmeticOp(OperandType lhs_operand,ast::expr::Binary *logic_node, IRGenArgs args);
         OperandType visitIndex(ast::expr::Binary *index,IRGenArgs args,bool need_push_base);
-        OperandType visitDot(ast::expr::Expression *dot_node,IRGenArgs args,bool is_left = true);
+        OperandType visitDot(ast::expr::Expression *dot_node,IRGenArgs args,OperandType lhs = EmptyType{});
         OperandType visitLogicOp(ast::expr::Binary *logic_node, IRGenArgs args);
 
         std::any visitGlobal(ast::Global *global_node, IRGenArgs args) override;

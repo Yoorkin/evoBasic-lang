@@ -760,8 +760,8 @@ namespace evoBasic{
     OperandType IRGen::visitIndex(ast::expr::Binary *index,IRGenArgs args,bool need_push_base){
         auto symbol = any_cast<shared_ptr<Symbol>>(visitID((ast::expr::ID*)index->lhs,args));
         auto variable = symbol->as_shared<Variable>();
-        ASSERT(variable.get(),"invalid");
-        auto lhs_operand = pushVariableAddress(variable,args.previous_block,false);
+        NotNull(variable.get());
+        auto lhs_operand = pushVariableAddress(variable,args.previous_block,need_push_base);
 
         switch ((OperandEnum)lhs_operand.index()) {
             case OperandEnum::AddressType: {
@@ -770,7 +770,7 @@ namespace evoBasic{
                     case OperandEnum::ArrayType: {
                         visitExpression(index->rhs, args);
                         auto array_type = get<ArrayType>(*element);
-                        args.previous_block->Push(Data::ptr,new Const<data::ptr>(array_type.size))
+                        args.previous_block->Push(Data::ptr,new Const<data::ptr>(array_type.array->getElementPrototype()->getByteLength()))
                                             .Mul(Data::ptr)
                                             .Add(Data::ptr);
                         return addressOf(mapSymbolToOperandType(array_type.array->getElementPrototype()));
@@ -924,14 +924,41 @@ namespace evoBasic{
         }
     }
 
-    OperandType IRGen::visitDot(ast::expr::Expression *node,IRGenArgs args,bool is_left){
+    OperandType IRGen::visitDot(ast::expr::Expression *node,IRGenArgs args,OperandType lhs){
         using namespace ast;
         using namespace ast::expr;
         using sharedPrototype = shared_ptr<Prototype>;
 
-        if(is_left){
-            args.need_lookup = true;
-            args.dot_expression_context = args.domain;
+        bool push_base_address = true;
+        switch ((OperandEnum)lhs.index()) {
+            case OperandEnum::EmptyType:
+                args.need_lookup = true;
+                args.dot_expression_context = args.domain;
+                break;
+            case OperandEnum::AddressType:{
+                auto element = get<AddressType>(lhs).element;
+                switch ((OperandEnum)element->index()) {
+                    case OperandEnum::RecordType:
+                    case OperandEnum::ArrayType:
+                        push_base_address = false;
+                        break;
+                    case OperandEnum::AddressType:{
+                        push_base_address = false;
+                        args.previous_block->Load(Data::ptr);
+                        break;
+                    }
+                    default: PANIC;
+                }
+                break;
+            }
+            case OperandEnum::SymbolPtr:
+                // do nothing
+                break;
+            default: PANICMSG(to_string(lhs.index()));
+        }
+
+        if((OperandEnum)lhs.index()!=OperandEnum::EmptyType){
+            args.dot_expression_context = stripOperandType(lhs);
         }
 
         switch(node->expression_kind){
@@ -939,23 +966,21 @@ namespace evoBasic{
                 auto bin_node = (Binary*)node;
                 switch(bin_node->op){
                     case Binary::Dot:{
-                        auto operand = any_cast<OperandType>(visitDot(bin_node->lhs,args,true));
-                        args.dot_expression_context = stripOperandType(operand);
-                        return visitDot(bin_node->rhs,args,false);
+                        //lhs
+                        auto operand = visitDot(bin_node->lhs,args);
+                        //rhs
+                        return visitDot(bin_node->rhs,args,operand);
                     }
                     case Binary::Index:{
-                        return visitIndex(bin_node,args,is_left);
+                        return visitIndex(bin_node,args,push_base_address);
                     }
                 }
             }
             case ast::expr::Expression::ID_: {
                 auto symbol = any_cast<shared_ptr<Symbol>>(visitID((ID*)node,args));
-                if(auto variable = symbol->as_shared<type::Variable>()){
-                    return pushVariableAddress(variable,args.previous_block,is_left);
-                }
-                else {
-                    return symbol;
-                }
+                if(auto variable = symbol->as_shared<type::Variable>())
+                    return pushVariableAddress(variable,args.previous_block,push_base_address);
+                return symbol;
             }
             case ast::expr::Expression::cast_:
                 return any_cast<OperandType>(visitCast((Cast*)node,args));

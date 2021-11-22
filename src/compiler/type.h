@@ -209,6 +209,9 @@ namespace evoBasic::type{
         void addImplementation(std::shared_ptr<Interface> interface);
         void addInitializeRule(ast::Variable* variable_node);
 
+        data::ptr getByteLength()override;
+        data::ptr getClassMemoryByteLength();
+
         std::string debug(int indent)override;
     };
 

@@ -30,7 +30,8 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/src/compiler/token.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/type.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/visitor.cpp
-        compileHelper.h)
+    compileHelper.h
+)
 
 target_include_directories(
     cbTest PRIVATE
@@ -40,8 +41,8 @@ target_include_directories(
 )
 
 target_link_libraries(
-        cbTest
-        gtest_main
+    cbTest
+    gtest_main
 )
 
 include(GoogleTest)
