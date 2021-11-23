@@ -121,8 +121,6 @@ namespace evoBasic::type{
         Variable();
         explicit Variable(DeclarationEnum kind);
         bool isConstant();
-        bool isGlobal();
-        void setGlobal();
         void setConstant(bool value);
         std::shared_ptr<Prototype> getPrototype();
         void setPrototype(std::shared_ptr<Prototype> ptr);
@@ -209,9 +207,6 @@ namespace evoBasic::type{
         void addImplementation(std::shared_ptr<Interface> interface);
         void addInitializeRule(ast::Variable* variable_node);
 
-        data::ptr getByteLength()override;
-        data::ptr getClassMemoryByteLength();
-
         std::string debug(int indent)override;
     };
 
@@ -290,6 +285,8 @@ namespace evoBasic::type{
 
 
     class Function: public Domain{
+    public:
+        enum Flag{Method,Static,Virtual};
     private:
         std::vector<std::shared_ptr<Argument>> argsSignature;
         std::shared_ptr<Prototype> retSignature;
@@ -303,7 +300,7 @@ namespace evoBasic::type{
         std::vector<std::shared_ptr<Argument>>& getArgsSignature();
         std::shared_ptr<Prototype> getRetSignature();
         void setRetSignature(std::shared_ptr<Prototype> ptr);
-        virtual MethodFlag getMethodFlag()=0;
+        virtual Flag getFunctionFlag()=0;
         std::string debug(int indent)override;
 
         bool equal(std::shared_ptr<Prototype> ptr)override;
@@ -311,12 +308,12 @@ namespace evoBasic::type{
 
     class UserFunction: public Function{
         ast::Function *function_node;
-        MethodFlag flag;
+        Function::Flag flag;
     public:
         UserFunction(const UserFunction&)=delete;
-        explicit UserFunction(MethodFlag flag,ast::Function *function_node);
+        explicit UserFunction(Function::Flag flag,ast::Function *function_node);
         ast::Function *getFunctionNode();
-        MethodFlag getMethodFlag()override{return flag;}
+        Function::Flag getFunctionFlag()override{return flag;}
     };
 
 //    class InitFunction: public UserFunction{
@@ -331,7 +328,7 @@ namespace evoBasic::type{
     public:
         ExternalFunction(const ExternalFunction&)=delete;
         explicit ExternalFunction(std::string library,std::string name);
-        MethodFlag getMethodFlag()override{return MethodFlag::None;}
+        Function::Flag getFunctionFlag()override{return Function::Flag::Static;}
     };
 
     class TemporaryDomain : public Domain {

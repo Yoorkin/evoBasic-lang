@@ -42,10 +42,10 @@ namespace evoBasic{
 
     bool Semantic::solveByteLengthDependencies(std::shared_ptr<Context> context) {
         if(context->byteLengthDependencies.solve()){
-            Logger::dev("update memory layout topo order:  ");
+            Logger::dev("update memory layout topo order: ");
             for(auto &domain : context->byteLengthDependencies.getTopologicalOrder()){
                 domain->updateMemoryLayout();
-                Logger::dev(format()<<"->"<<domain->getName()<<"("<<domain->getByteLength()<<")");
+                Logger::dev(format()<<" -> "<<domain->mangling()<<"{"<<domain->getByteLength()<<"}");
             }
             Logger::dev("\n");
         }
@@ -140,7 +140,7 @@ namespace evoBasic{
         for(auto &var_node:ty_node->member_list){
             auto symbol = any_cast<shared_ptr<type::Symbol>>(visitVariable(var_node,args));
             symbol->setAccessFlag(AccessFlag::Public);
-            if(is_name_valid(symbol->getName(), var_node->location, args.domain)){
+            if(is_name_valid(symbol->getName(), var_node->location,ty)){
                 ty->add(symbol);
             }
         }
@@ -152,7 +152,6 @@ namespace evoBasic{
         shared_ptr<type::Symbol> symbol;
         for(const auto& var:dim->variable_list){
             symbol = any_cast<shared_ptr<type::Symbol>>(visitVariable(var,args));
-            symbol->as_shared<type::Variable>()->setGlobal();
             symbol->setAccessFlag(dim->access);
             if(is_name_valid(symbol->getName(), var->location, args.domain)){
                 args.domain->add(symbol);
@@ -212,8 +211,8 @@ namespace evoBasic{
 
         auto prototype = ptr->as_shared<type::Prototype>();
         if(!prototype){
-            Logger::error(anno_node->location,"Type expression invalid");
-            return make_shared<type::Error>();
+            Logger::error(anno_node->location,"Cannot find Object");
+            return ExpressionType::Error->prototype;
         }
         if(anno_node->array_size){
             auto element_prototype = prototype;
@@ -260,6 +259,7 @@ namespace evoBasic{
         args.context->byteLengthDependencies.addIsolate(cls);
         args.domain = cls;
         args.parent_class = cls->as_shared<type::Class>();
+        args.context->byteLengthDependencies.addIsolate(cls);
         for(const auto& member:cls_node->member_list)
             visitMember(member,args);
         return nullptr;
@@ -349,7 +349,30 @@ namespace evoBasic{
     std::any DetailCollector::visitFunction(ast::Function *func_node, BaseArgs args) {
         auto name = getID(func_node->name);
         if(is_name_valid(name,func_node->name->location,args.domain)){
-            auto func = make_shared<type::UserFunction>(func_node->method_flag,func_node);
+            type::Function::Flag flag;
+            switch(func_node->method_flag){
+                case MethodFlag::Static:
+                    flag = type::Function::Flag::Static;
+                    if(args.domain->getKind() == type::DeclarationEnum::Class){
+                        Logger::error(func_node->location,"Function in Module cannot be marked by 'Static'");
+                    }
+                    break;
+                case MethodFlag::Virtual:
+                case MethodFlag::Override:
+                    if(args.domain->getKind() == type::DeclarationEnum::Class){
+                        flag = type::Function::Flag::Virtual;
+                    }
+                    else{
+                        Logger::error(func_node->location,"Function in Module cannot be marked by 'Virtual' or 'Override'");
+                    }
+                    break;
+                case MethodFlag::None:
+                    if(args.domain->getKind() == type::DeclarationEnum::Class){
+                        flag = type::Function::Flag::Method;
+                    }
+                    break;
+            }
+            auto func = make_shared<type::UserFunction>(flag,func_node);
             func->setLocation(func_node->name->location);
             func->setName(name);
 
@@ -361,14 +384,9 @@ namespace evoBasic{
                 func->setRetSignature(prototype);
             }
 
-            switch (func_node->method_flag) {
-                case MethodFlag::Static:
-                    break;
-                case MethodFlag::Virtual:
-                    break;
-                case MethodFlag::Override:
-                    break;
-                case MethodFlag::None:
+            switch (func->getFunctionFlag()) {
+                case type::Function::Flag::Virtual:
+                case type::Function::Flag::Method:
                     if(args.parent_class){
                         auto self = make_shared<Argument>("self",args.parent_class,true,false);
                         func->add(self);
@@ -548,13 +566,21 @@ namespace evoBasic{
         }
 
         int i=0;
+
+        auto args_count = callee_node->arg_list.size();
+        auto params_count = func->getArgsSignature().size();
+
+        if(func->getFunctionFlag() != type::Function::Flag::Static){
+            params_count--;
+            i++;
+        }
+
         for(auto &arg : callee_node->arg_list){
             args.checking_args_index = i;
             visitArg(arg,args);
             i++;
         }
-        auto args_count = callee_node->arg_list.size();
-        auto params_count = func->getArgsSignature().size();
+
         if(args_count > params_count){
             Logger::error(callee_node->location,format()<<"too many arguments to function call, expected "
                                                            <<params_count<<", have "<<args_count);

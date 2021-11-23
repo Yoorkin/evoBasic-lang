@@ -64,6 +64,18 @@ namespace evoBasic{
         }
         auto record_ir = new ir::Record(members);
         args.ir->addMeta(new Pair(ty->mangling(), record_ir));
+
+        args.domain = ty;
+        for(auto& m:cls_node->member_list){
+            switch (m->member_kind) {
+                case ast::Member::function_:
+                case ast::Member::enum_:
+                case ast::Member::operator_:
+                case ast::Member::init_:
+                    visitMember(m,args);
+                    break;
+            }
+        }
         return nullptr;
     }
 
@@ -425,36 +437,6 @@ namespace evoBasic{
         return (Block*)nullptr;
     }
 
-//    vm::Data IRGen::tryLoadOperandTop(Block *block){
-//        switch(type.index()){
-//            case 0: ASSERT(true,"invalid"); break;
-//            case 1: /* DataType */
-//                return get<DataType>(type).data;
-//            case 2: /* MemType */
-//                return vm::Data::void_;
-//            case 3: /* AddressType */{
-//                auto element = get<AddressType>(type).element;
-//                switch(element->index()){
-//                    case 0: ASSERT(true,"invalid");
-//                    case 1: /* DataType */
-//                        block->Load(get<DataType>(*element).data);
-//                        return get<DataType>(*element).data;
-//                    case 2: /* MemType */
-//                        block->Ldm(get<MemType>(*element).size);
-//                        return vm::Data::void_;
-//                    case 3: /* AddressType, for ByRef Argument */
-//                        block->Load(Data::ptr);
-//                        return tryLoadOperandTop(*element,block);
-//                    case 4: /* ClassType */
-//                        block->Load(Data::ptr);
-//                        return Data::ptr;
-//                }
-//            }
-//            case 4: /* ClassType */
-//                return vm::Data::void_;
-//                break;
-//        }
-//    }
 
     OperandType IRGen::visitAssign(ast::expr::Binary *node, IRGenArgs args) {
         bool need_return_value = args.need_return_value;
@@ -738,10 +720,14 @@ namespace evoBasic{
 
     OperandType IRGen::pushVariableAddress(const std::shared_ptr<Variable> &variable, Block *block, bool need_push_base){
         if(need_push_base){
-            if(variable->isGlobal())
-                block->PushGlobalBase();
-            else
-                block->PushFrameBase();
+            switch(variable->getParent().lock()->getKind()){
+                case DeclarationEnum::Function:
+                    block->PushFrameBase();
+                    break;
+                case DeclarationEnum::Module:
+                    block->PushGlobalBase();
+                    break;
+            }
         }
         block->Push(Data::ptr,new Const<data::ptr>(variable->getOffset()))
               .Add(Data::ptr);
@@ -795,7 +781,7 @@ namespace evoBasic{
           *              allow implicit conversion      Yes             is not lvalue
           */
         NotNull(arg_node);
-        int param_index = (args.function->getMethodFlag() == MethodFlag::None) ? args.current_args_index : args.current_args_index+1;
+        int param_index = (args.function->getFunctionFlag() != type::Function::Flag::Static) ? args.current_args_index : args.current_args_index+1;
         auto &param =  args.function->getArgsSignature()[param_index];
         auto arg_type = arg_node->expr->type;
         if(param->isByval()){ // ByVal Parameter
@@ -947,6 +933,9 @@ namespace evoBasic{
                         args.previous_block->Load(Data::ptr);
                         break;
                     }
+                    case OperandEnum::ClassType:
+                        push_base_address = false;
+                        break;
                     default: PANIC;
                 }
                 break;

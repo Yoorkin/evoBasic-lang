@@ -147,7 +147,7 @@ namespace evoBasic::type{
     Function::Function() : Domain(DeclarationEnum::Function){}
 
 
-    UserFunction::UserFunction(MethodFlag flag,ast::Function *function_node)
+    UserFunction::UserFunction(Function::Flag flag,ast::Function *function_node)
         :function_node(function_node),flag(flag){}
 
     ast::Function* UserFunction::getFunctionNode() {
@@ -328,15 +328,6 @@ namespace evoBasic::type{
             Domain::add(symbol);
     }
 
-    data::ptr Class::getByteLength() {
-        return vm::Data::ptr.getSize();
-    }
-
-    data::ptr Class::getClassMemoryByteLength() {
-        return Prototype::getByteLength();
-    }
-
-
     void Record::add(std::shared_ptr<Symbol> symbol) {
         auto field = symbol->as_shared<Variable>();
         NotNull(field.get());
@@ -451,14 +442,6 @@ namespace evoBasic::type{
         this->prototype = ptr;
     }
 
-    bool Variable::isGlobal() {
-        return is_global;
-    }
-
-    void Variable::setGlobal() {
-        is_global = true;
-    }
-
     data::ptr Variable::getRealByteLength() {
         switch(prototype->getKind()){
             case DeclarationEnum::Primitive:
@@ -467,9 +450,9 @@ namespace evoBasic::type{
                 return prototype->getByteLength();
             case DeclarationEnum::Class:
             case DeclarationEnum::Function:
-                return vm::Data(vm::Data::u32).getSize();
+                return vm::Data::ptr.getSize();
         }
-        return 0;
+        PANIC;
     }
 
 
