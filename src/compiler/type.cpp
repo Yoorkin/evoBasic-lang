@@ -4,7 +4,7 @@
 
 #include "type.h"
 #include "nullSafe.h"
-#include "semantic.h"
+#include "semantic/semantic.h"
 #include <utility>
 #include <vector>
 #include <map>

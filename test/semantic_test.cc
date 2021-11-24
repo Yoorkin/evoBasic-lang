@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <memory>
-#include "semantic.h"
+#include "semantic/semantic.h"
 #include "type.h"
 
 using namespace evoBasic;

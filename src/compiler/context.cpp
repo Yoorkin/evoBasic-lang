@@ -6,7 +6,7 @@
 #include "parser.h"
 #include "nullSafe.h"
 #include "bytecode.h"
-#include "semantic.h"
+#include "semantic/semantic.h"
 using namespace std;
 using namespace evoBasic::type;
 using namespace evoBasic::type::primitive;

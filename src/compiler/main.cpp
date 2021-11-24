@@ -4,7 +4,7 @@
 #include "lexer.h"
 #include "logger.h"
 #include "parser.h"
-#include "semantic.h"
+#include "semantic/semantic.h"
 #include "context.h"
 #include "codeGen.h"
 using namespace evoBasic;

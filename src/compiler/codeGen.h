@@ -7,7 +7,7 @@
 #include "visitor.h"
 #include "ir.h"
 #include "context.h"
-#include "semantic.h"
+#include "semantic/semantic.h"
 #include <variant>
 
 namespace evoBasic{
