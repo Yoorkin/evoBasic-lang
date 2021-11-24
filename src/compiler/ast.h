@@ -64,17 +64,26 @@ namespace evoBasic::ast{
     }
 
 
+    std::string debugAST(Node *ast);
 
     using Expr = expr::Expression;
 
+    struct DebugInfo{
+        std::string text;
+        std::list<DebugInfo*> childs;
+        ~DebugInfo(){
+            for(auto child:childs)delete child;
+        }
+    };
+
     struct Node{
         Location *location = nullptr;
-        virtual void debug(std::ostream &stream,std::string prefix)=0;
+        virtual DebugInfo *debug()=0;
     };
 
     struct Global : Node{
         std::list<Member*> member_list{};
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
 
@@ -92,35 +101,35 @@ namespace evoBasic::ast{
         Annotation *extend = nullptr;
         std::list<Annotation*> impl_list{};
         std::list<Member*> member_list{};
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
     struct Module : Member{
         Module(){member_kind = MemberKind::module_;}
         expr::ID *name = nullptr;
         std::list<Member*> member_list;
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
 
     struct Import : Member{
         Import(){member_kind = MemberKind::import_;}
         Annotation *annotation = nullptr;
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
     struct Dim : Member{
         Dim(){member_kind = MemberKind::dim_;}
         bool is_const = false;
         std::list<Variable*> variable_list{};
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
     struct Variable : Node{
         expr::ID *name = nullptr;
         Annotation *annotation = nullptr;
         expr::Expression *initial = nullptr;
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
     struct Function : Member{
@@ -130,23 +139,23 @@ namespace evoBasic::ast{
         std::list<Parameter*> parameter_list{};
         Annotation *return_type = nullptr;
         std::list<stmt::Statement*> statement_list{};
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
     struct External : Member{
         External(){member_kind = MemberKind::external_;}
         expr::ID *name = nullptr;
         expr::String *lib = nullptr,*alias = nullptr;
-        std::list<Parameter*> parameter_list{};
+        std::list<Parameter*> parameter_list;
         Annotation *return_annotation = nullptr;
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
     struct Init : Member{
         Init(){member_kind = MemberKind::init_;}
         std::list<Parameter*> parameter_list;
         std::list<stmt::Statement*> statement_list{};
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
     struct Operator : Member{
@@ -155,7 +164,7 @@ namespace evoBasic::ast{
         std::list<Parameter*> parameter_list{};
         Annotation *return_annotation;
         std::list<stmt::Statement*> statement_list{};
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
     using EnumMember = std::pair<expr::ID*,expr::Digit*>;
@@ -163,14 +172,14 @@ namespace evoBasic::ast{
         Enum(){member_kind = MemberKind::enum_;}
         expr::ID *name;
         std::list<EnumMember> member_list{};
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
     struct Type : Member{
         Type(){member_kind = MemberKind::type_;}
         expr::ID *name;
         std::list<Variable*> member_list;
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
 
@@ -179,7 +188,7 @@ namespace evoBasic::ast{
         bool is_optional = false;
         expr::ID *name = nullptr;
         Annotation *annotation = nullptr;
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
     namespace stmt{
@@ -194,27 +203,27 @@ namespace evoBasic::ast{
             Let(){stmt_flag = let_;}
             bool is_const = false;
             std::list<Variable*> variable_list{};
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct Select : Statement{
             Select(){stmt_flag = select_;}
             Expr *condition = nullptr;
             std::list<Case*> case_list{};
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct Loop : Statement{
             Loop(){stmt_flag = loop_;}
             Expr *condition = nullptr;
             std::list<Statement*> statement_list{};
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct If : Statement{
             If(){stmt_flag = if_;}
-            std::list<Case*> case_list{};
-            void debug(std::ostream &stream,std::string prefix)override;
+            std::list<Case*> case_list;
+            DebugInfo *debug()override;
         };
 
         struct For : Statement{
@@ -222,49 +231,49 @@ namespace evoBasic::ast{
             expr::Expression *iterator = nullptr;
             bool iterator_has_let = false;
             Expr *begin = nullptr,*end = nullptr,*step = nullptr;
-            std::list<Statement*> statement_list{};
-            void debug(std::ostream &stream,std::string prefix)override;
+            std::list<Statement*> statement_list;
+            DebugInfo *debug()override;
         };
 
         struct Return : Statement{
             Return(){stmt_flag = return_;}
             Expr *expr = nullptr;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct Exit : Statement{
             Exit(){stmt_flag = exit_;}
             enum {For,While,Sub}exit_flag;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct Continue : Statement{
             Continue(){stmt_flag = continue_;}
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct ExprStmt : Statement{
             ExprStmt(){stmt_flag = expr_;}
             Expr *expr;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
     }
 
     struct Case : Node{
         Expr *condition = nullptr;
-        std::list<stmt::Statement*> statement_list{};
-        void debug(std::ostream &stream,std::string prefix)override;
+        std::list<stmt::Statement*> statement_list;
+        DebugInfo *debug()override;
     };
 
     struct AnnotationUnit : Node{
         expr::ID *name = nullptr;
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
     struct Annotation : Node{
         std::list<AnnotationUnit*> unit_list;
         expr::Digit *array_size = nullptr;
-        void debug(std::ostream &stream,std::string prefix)override;
+        DebugInfo *debug()override;
     };
 
     namespace expr{
@@ -274,7 +283,7 @@ namespace evoBasic::ast{
                 error_ = 0,binary_,unary_,parentheses_,ID_,cast_,
                 digit_,decimal_,string_,char_,boolean_,callee_
             }expression_kind = error_;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
             ExpressionType *type = nullptr;
         };
 
@@ -282,7 +291,7 @@ namespace evoBasic::ast{
             Binary(){expression_kind = ExpressionKind::binary_;}
             enum Enum{
                 Empty,And,Or,Xor,Not,EQ,NE,GE,LE,GT,LT,
-                ADD,MINUS,MUL,DIV,FDIV,ASSIGN,Cast,Dot,Index
+                ADD,MINUS,MUL,DIV,FDIV,ASSIGN,Dot,Index
             };
             Binary(Expression *lhs,Enum op,Expression *rhs):Binary(){
                 NotNull(lhs);
@@ -296,7 +305,7 @@ namespace evoBasic::ast{
             Enum op = Empty;
             Expression *rhs = nullptr;
             std::shared_ptr<type::Variable> temp_address = nullptr;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct Cast : Expression{
@@ -307,7 +316,7 @@ namespace evoBasic::ast{
             }
             Expression *expr = nullptr;
             Annotation *annotation = nullptr;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct Unary : Expression{
@@ -319,7 +328,7 @@ namespace evoBasic::ast{
                 this->terminal = terminal;
                 this->location = terminal->location;
             }
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct Parentheses : Expression{
@@ -327,7 +336,7 @@ namespace evoBasic::ast{
                 expression_kind = ExpressionKind::parentheses_;
             }
             Expression *expr = nullptr;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct ID : Expression{
@@ -335,7 +344,7 @@ namespace evoBasic::ast{
                 expression_kind = ExpressionKind::ID_;
             }
             std::string lexeme;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct Callee : Expression{
@@ -343,7 +352,7 @@ namespace evoBasic::ast{
                 enum PassKind{undefined,byref,byval}pass_kind = undefined;
                 std::shared_ptr<type::Variable> temp_address = nullptr;
                 expr::Expression *expr = nullptr;
-                void debug(std::ostream &stream,std::string prefix)override;
+                DebugInfo *debug()override;
             };
 
             Callee(){
@@ -351,7 +360,7 @@ namespace evoBasic::ast{
             }
             ID *name = nullptr;
             std::vector<Argument*> arg_list;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct Digit : Expression{
@@ -359,7 +368,7 @@ namespace evoBasic::ast{
                 expression_kind = ExpressionKind::digit_;
             }
             data::i32 value = 0;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct Decimal : Expression{
@@ -367,7 +376,7 @@ namespace evoBasic::ast{
                 expression_kind = ExpressionKind::decimal_;
             }
             data::f64 value = 0;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct String : Expression{
@@ -375,7 +384,7 @@ namespace evoBasic::ast{
                 expression_kind = ExpressionKind::string_;
             }
             std::string value;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct Char : Expression{
@@ -383,7 +392,7 @@ namespace evoBasic::ast{
                 expression_kind = ExpressionKind::char_;
             }
             data::i8 value = 0;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
 
         struct Boolean : Expression{
@@ -391,7 +400,7 @@ namespace evoBasic::ast{
                 expression_kind = ExpressionKind::boolean_;
             }
             data::boolean value = false;
-            void debug(std::ostream &stream,std::string prefix)override;
+            DebugInfo *debug()override;
         };
     }
 

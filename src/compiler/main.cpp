@@ -14,6 +14,7 @@ using namespace evoBasic;
 using namespace std;
 list<Source*> sources;
 bool enable_compile = true;
+string output_name = "out.evo";
 
 void enableDevInfo(string str){
     Logger::debugMode = true;
@@ -30,7 +31,7 @@ void addSources(string path){
 }
 
 void setOutputName(string name){
-
+    output_name = name + ".evo";
 }
 
 void printHelpInfo(string){
@@ -90,9 +91,7 @@ int main(int argc,char *argv[]) {
         auto ast = parser.parseGlobal();
         asts.push_back(ast);
 
-        stringstream stream;
-        ast->debug(stream,"");
-        Logger::dev(stream.str());
+        Logger::dev(debugAST(ast));
 
         Semantic::collectSymbol(ast,context);
         Semantic::collectDetail(ast,context);

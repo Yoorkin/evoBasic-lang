@@ -256,18 +256,18 @@ namespace evoBasic{
                 }
                 return logic_node->type = new ExpressionType(lhs_type->prototype,ExpressionType::lvalue);
 
-            case ast::expr::Binary::Cast:
-                if(rhs_type->value_kind == ExpressionType::path){
-                    Logger::error(logic_node->rhs->location,format()<<"Conversion target expression must be a path");
-                    return ExpressionType::Error;
-                }
-
-                if(!args.context->getConversionRules().isExplicitCastRuleExist(lhs_type->prototype, rhs_type->prototype)){
-                    Logger::error(logic_node->rhs->location,format()<<"no known conversion from '"
-                                                                    <<lhs_type->prototype->getName()<<"' to '"<<rhs_type->prototype->getName()<<"'");
-                    return ExpressionType::Error;
-                }
-                return logic_node->type = new ExpressionType(rhs_type->prototype,ExpressionType::rvalue);
+//            case ast::expr::Binary::Cast:
+//                if(rhs_type->value_kind == ExpressionType::path){
+//                    Logger::error(logic_node->rhs->location,format()<<"Conversion target expression must be a path");
+//                    return ExpressionType::Error;
+//                }
+//
+//                if(!args.context->getConversionRules().isExplicitCastRuleExist(lhs_type->prototype, rhs_type->prototype)){
+//                    Logger::error(logic_node->rhs->location,format()<<"no known conversion from '"
+//                                                                    <<lhs_type->prototype->getName()<<"' to '"<<rhs_type->prototype->getName()<<"'");
+//                    return ExpressionType::Error;
+//                }
+//                return logic_node->type = new ExpressionType(rhs_type->prototype,ExpressionType::rvalue);
 
             case ast::expr::Binary::Index:
                 switch(lhs_type->prototype->getKind()) {
