@@ -152,10 +152,10 @@ namespace evoBasic{
             case DeclarationEnum::Variant:
                 break;
             case DeclarationEnum::Primitive:
-//                *expression = new ast::expr::Binary(
-//                        *expression,
-//                        constructAnnotationAST(format()<<"global."<<dst->getName())
-//                        );
+                *expression = new ast::expr::Cast(
+                        *expression,
+                        constructAnnotationAST(format()<<"global."<<dst->getName())
+                        );
                 break;
             case DeclarationEnum::TmpDomain:
                 break;

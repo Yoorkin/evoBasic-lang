@@ -274,4 +274,56 @@ namespace evoBasic{
         return new ExpressionType(target,ExpressionType::path);
     }
 
+
+
+    std::any DetailCollector::visitGlobal(ast::Global **global_node, BaseArgs args) {
+        NotNull(*global_node);
+        for(auto* member:(*global_node)->member_list)
+            visitMember(&member,args);
+        return {};
+    }
+
+    std::any DetailCollector::visitModule(ast::Module **module_node, BaseArgs args) {
+        return ModifyVisitor::visitModule(module_node, args);
+    }
+
+    std::any DetailCollector::visitEnum(ast::Enum **enum_node, BaseArgs args) {
+        return ModifyVisitor::visitEnum(enum_node, args);
+    }
+
+    std::any DetailCollector::visitType(ast::Type **type_node, BaseArgs args) {
+        return ModifyVisitor::visitType(type_node, args);
+    }
+
+    std::any DetailCollector::visitDim(ast::Dim **dim_node, BaseArgs args) {
+        return ModifyVisitor::visitDim(dim_node, args);
+    }
+
+    std::any DetailCollector::visitVariable(ast::Variable **variable_node, BaseArgs args) {
+        return ModifyVisitor::visitVariable(variable_node, args);
+    }
+
+    std::any DetailCollector::visitFunction(ast::Function **function_node, BaseArgs args) {
+        return ModifyVisitor::visitFunction(function_node, args);
+    }
+
+    std::any DetailCollector::visitExternal(ast::External **external_node, BaseArgs args) {
+        return ModifyVisitor::visitExternal(external_node, args);
+    }
+
+    std::any DetailCollector::visitParameter(ast::Parameter **parameter_node, BaseArgs args) {
+        return ModifyVisitor::visitParameter(parameter_node, args);
+    }
+
+    std::any DetailCollector::visitMember(ast::Member **member_node, BaseArgs args) {
+        return ModifyVisitor::visitMember(member_node, args);
+    }
+
+    std::any DetailCollector::visitBinary(ast::expr::Binary **binary_node, BaseArgs args) {
+        return ModifyVisitor::visitBinary(binary_node, args);
+    }
+
+    std::any DetailCollector::visitID(ast::expr::ID **id_node, BaseArgs args) {
+        return ModifyVisitor::visitID(id_node, args);
+    }
 }

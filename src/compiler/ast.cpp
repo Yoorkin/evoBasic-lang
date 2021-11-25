@@ -121,7 +121,7 @@ namespace evoBasic::ast{
         if(is_byval)text += " ByVal";
         else text += " ByRef";
 
-        text += " Optional";
+        if(is_optional)text += " Optional";
 
         return new DebugInfo{text,{name->debug(),annotation->debug()}};
     }
@@ -201,7 +201,7 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *expr::Expression::debug() {
-        PANIC;
+        return new DebugInfo{"< Expression Error >"};
     }
 
     DebugInfo *expr::Binary::debug() {

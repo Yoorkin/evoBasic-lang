@@ -29,15 +29,17 @@ namespace evoBasic{
         };
 
         auto global = new Global;
+        Member *tail = nullptr;
         while(!lexer->predict(Token::EOF_)){
-            auto member = parseMember(member_follows);
-            if(member->member_kind == Member::init_ || member->member_kind == Member::operator_){
-                Logger::error(member->location,"Init or Operator cannot be declared in Global");
+            Member *member = parseMember(member_follows);
+            if(tail){
+                tail->next_sibling = member;
+                member->prv_sibling = tail;
             }
-            else global->member_list.push_back(member);
+            else global->member = tail = member;
         }
 
-        global->location = global->member_list.front()->location;
+        global->location = global->member->location;
         lexer->match(Token::EOF_);
         return global;
     }
@@ -59,19 +61,27 @@ namespace evoBasic{
 
         if(lexer->predict(Token::impl)){
             auto impl_follows = combine(follows,{Token::COMMA});
-            cls->impl_list.push_back(parseAnnotation(impl_follows));
+
+            cls->impl = parseImplement(impl_follows);
+            Implement *tail = cls->impl;
             while(lexer->predict(Token::COMMA)){
                 lexer->match(Token::COMMA);
-                cls->impl_list.push_back(parseAnnotation(impl_follows));
+                auto impl = parseImplement(impl_follows);
+                tail->next_sibling = impl;
+                impl->prv_sibling = tail;
+                tail = tail->next_sibling;
             }
         }
 
+        Member *tail = nullptr;
         while(!lexer->predict(Token::END_CLASS)){
             auto member = parseMember(member_follows);
-            if(member->member_kind == Member::module_ || member->member_kind == Member::class_){
-                Logger::error(member->location,"Module or Class can not be nested in Class");
+            if(tail){
+                tail->next_sibling = member;
+                member->prv_sibling = tail;
+                tail = tail->next_sibling;
             }
-            else cls->member_list.push_back(member);
+            else cls->member = tail = member;
         }
         lexer->match(Token::END_CLASS,follows,"expected 'End Class'");
         return cls;
@@ -89,13 +99,15 @@ namespace evoBasic{
         mod->name = parseID(member_follows);
         mod->location = mod->name->location;
 
+        Member *tail = nullptr;
         while(!lexer->predict(Token::END_MODULE)){
             auto member = parseMember(member_follows);
-            if(!member)continue;
-            if(member->member_kind == Member::init_ || member->member_kind == Member::operator_){
-                Logger::error(member->location,"Init or Operator cannot be a member of the Module");
+            if(tail){
+                tail->next_sibling = member;
+                member->prv_sibling = tail;
+                tail = tail->next_sibling;
             }
-            else mod->member_list.push_back(member);
+            else mod->member = tail = member;
         }
 
         lexer->match(Token::END_MODULE,follows,"expected 'End Module'");
@@ -110,8 +122,15 @@ namespace evoBasic{
         type->name = parseID(member_follows);
         type->location = type->name->location;
 
+        Variable *tail = nullptr;
         while(lexer->predict(Token::ID)){
-            type->member_list.push_back(parseVariable(member_follows));
+            auto variable = parseVariable(member_follows);
+            if(tail){
+                tail->next_sibling = variable;
+                variable->prv_sibling = tail;
+                tail = tail->next_sibling;
+            }
+            else type->member = tail = variable;
         }
 
         lexer->match(Token::END_TYPE,follows,"expected 'End Type'");
@@ -126,15 +145,15 @@ namespace evoBasic{
         enum_->name = parseID(member_follows);
         enum_->location = enum_->name->location;
 
+        EnumMember *tail = nullptr;
         while(!lexer->predict(Token::END_ENUM)){
-            EnumMember enum_member;
-            enum_member.first = parseID(follows);
-            if(lexer->predict(Token::ASSIGN)){
-                lexer->match(Token::ASSIGN);
-                enum_member.second = parseDigit(member_follows);
+            auto member = parseEnumMember(follows);
+            if(tail){
+                tail->next_sibling = member;
+                member->prv_sibling = tail;
+                tail = tail->next_sibling;
             }
-            else enum_member.second = nullptr;
-            enum_->member_list.push_back(enum_member);
+            else enum_->member = tail = member;
         }
         lexer->match(Token::END_ENUM);
         return enum_;
@@ -150,17 +169,13 @@ namespace evoBasic{
             case Token::virtual_:
             case Token::static_:
             case Token::sub_:
+            case Token::init_:
+            case Token::operator_:
             case Token::function_:
                 member = parseFunction(follows);
                 break;
             case Token::declare_:
                 member = parseExternal(follows);
-                break;
-            case Token::init_:
-                member = parseInit(follows);
-                break;
-            case Token::operator_:
-                member = parseOperator(follows);
                 break;
             case Token::type_:
                 member = parseType(follows);
@@ -216,10 +231,15 @@ namespace evoBasic{
         auto dim = new Dim;
         lexer->match(Token::dim_);
         dim->location = lexer->getToken()->getLocation();
-        dim->variable_list.push_back(parseVariable(member_follows));
+
+        dim->variable = parseVariable(member_follows);
+        Variable *tail = dim->variable;
         while(lexer->predict(Token::COMMA)){
             lexer->match(Token::COMMA);
-            dim->variable_list.push_back(parseVariable(member_follows));
+            auto member = parseVariable(member_follows);
+            tail->next_sibling = member;
+            member->prv_sibling = tail;
+            tail = tail->next_sibling;
         }
         return dim;
     }
@@ -266,19 +286,19 @@ namespace evoBasic{
             lexer->match(Token::sub_);
             func->name = parseID(stmt_follows);
             func->location = func->name->location;
-            func->parameter_list = parseParameterList(stmt_follows);
-            func->return_type = nullptr;
-            func->statement_list = parseStmtList(stmt_follows);
+            func->parameter = parseParameterList(stmt_follows);
+            func->return_annotation = nullptr;
+            func->statement = parseStmtList(stmt_follows);
             lexer->match(Token::END_SUB,follows,"expected 'End Sub'");
         }
         else if(lexer->predict(Token::function_)){
             lexer->match(Token::function_);
             func->name = parseID(stmt_follows);
             func->location = func->name->location;
-            func->parameter_list = parseParameterList(combine(stmt_follows,{Token::as_}));
+            func->parameter = parseParameterList(combine(stmt_follows,{Token::as_}));
             lexer->match(Token::as_);
-            func->return_type = parseAnnotation(stmt_follows);
-            func->statement_list = parseStmtList(stmt_follows);
+            func->return_annotation = parseAnnotation(stmt_follows);
+            func->statement = parseStmtList(stmt_follows);
             lexer->match(Token::END_FUNCTION,follows,"expected 'End Function'");
         }
         return func;
@@ -309,73 +329,52 @@ namespace evoBasic{
         }
 
         if(hasReturn){
-            ext->parameter_list = parseParameterList(combine(follows,{Token::as_}));
+            ext->parameter = parseParameterList(combine(follows,{Token::as_}));
             lexer->match(Token::as_);
             ext->return_annotation = parseAnnotation(follows);
         }
         else{
-            ext->parameter_list = parseParameterList(follows);
+            ext->parameter = parseParameterList(follows);
             ext->return_annotation = nullptr;
         }
         return ext;
     }
-    ast::Init *Parser::parseInit(const set<Token::Enum>& follows){
-        auto init = new Init;
-        lexer->match(Token::init_);
-        init->location = lexer->getToken()->getLocation();
-        init->parameter_list = parseParameterList(follows);
-        init->statement_list = parseStmtList(follows);
-        lexer->match(Token::END_INIT);
-        return init;
-    }
 
-    ast::Operator *Parser::parseOperator(const set<Token::Enum>& follows){
-        auto operator_ = new Operator;
-        lexer->match(Token::operator_);
-        operator_->location = lexer->getToken()->getLocation();
-        operator_->parameter_list = parseParameterList(combine(follows,{Token::as_,Token::END_OPERATOR,statement_follows}));
-        if(lexer->predict(Token::as_)){
-            lexer->match(Token::as_);
-            operator_->return_annotation = parseAnnotation(combine(follows,{Token::END_OPERATOR,statement_follows}));
-        }
-        else {
-            operator_->return_annotation = nullptr;
-            Logger::error(lexer->getNextToken()->getLocation(),"overloaded operator must have a return type");
-        }
-        operator_->statement_list = parseStmtList(combine(follows,{Token::END_OPERATOR}));
-    }
-
-    ast::EnumMember Parser::parseEnumMember(const set<Token::Enum>& follows){
-        EnumMember member;
-        member.first = parseID(combine(follows,{Token::ASSIGN}));
+    ast::EnumMember *Parser::parseEnumMember(const set<Token::Enum>& follows){
+        auto member = new EnumMember;
+        member->name = parseID(combine(follows,{Token::ASSIGN}));
         if(lexer->predict(Token::ASSIGN)){
             lexer->match(Token::ASSIGN);
-            member.second = parseDigit(combine(follows,{Token::ID}));
+            member->value = parseDigit(combine(follows,{Token::ID}));
         }
-        else member.second = nullptr;
+        else member->value = nullptr;
         return member;
     }
 
-    std::list<ast::Parameter*> Parser::parseParameterList(const set<Token::Enum>& follows){
+    ast::Parameter* Parser::parseParameterList(const set<Token::Enum>& follows){
         auto member_follows = combine(follows,{Token::RP, Token::COMMA});
-        list<ast::Parameter*> ls;
+
         lexer->match(Token::LP);
+        Parameter *head = nullptr,*tail = nullptr;
         if(!lexer->predict(Token::RP)){
-            ls.push_back(parseParameter(member_follows));
+            head = tail = parseParameter(member_follows);
             while(lexer->predict(Token::COMMA)){
                 lexer->match(Token::COMMA);
-                ls.push_back(parseParameter(member_follows));
+                auto param = parseParameter(member_follows);
+                tail->next_sibling = param;
+                param->prv_sibling = tail;
+                tail = tail->next_sibling;
             }
         }
         lexer->match(Token::RP, member_follows, "expected ')' after parameter list");
-        return ls;
+        return head;
     }
 
-    std::list<ast::stmt::Statement*> Parser::parseStmtList(const set<Token::Enum>& follows){
+    ast::stmt::Statement* Parser::parseStmtList(const set<Token::Enum>& follows){
         set<Token::Enum> stmt_follows = {statement_follows};
         auto member_follows = combine(follows,stmt_follows);
 
-        list<Statement*> ls;
+        Statement *head = nullptr,*tail = nullptr;
         while(stmt_follows.contains(lexer->getNextToken()->getKind())){
             Statement *statement;
             switch (lexer->getNextToken()->getKind()) {
@@ -417,9 +416,15 @@ namespace evoBasic{
                     Logger::error(lexer->getNextToken()->getLocation(),"unexpected token");
                     lexer->skipUntil(member_follows);
             }
-            ls.push_back(statement);
+
+            if(tail){
+                tail->next_sibling = statement;
+                statement->prv_sibling = tail;
+                tail = tail->next_sibling;
+            }
+            else head = tail = statement;
         }
-        return ls;
+        return head;
     }
 
     ast::Parameter *Parser::parseParameter(const set<Token::Enum>& follows){
@@ -462,10 +467,15 @@ namespace evoBasic{
         auto let = new Let;
         lexer->match(Token::let_);
         let->location = lexer->getToken()->getLocation();
-        let->variable_list.push_back(parseVariable(member_follows));
+
+        let->variable = parseVariable(member_follows);
+        Variable *tail = let->variable;
         while(lexer->predict(Token::COMMA)){
             lexer->match(Token::COMMA);
-            let->variable_list.push_back(parseVariable(member_follows));
+            auto variable = parseVariable(member_follows);
+            tail->next_sibling = variable;
+            variable->prv_sibling = tail;
+            tail = tail->next_sibling;
         }
         return let;
     }
@@ -477,6 +487,8 @@ namespace evoBasic{
         lexer->match(Token::select_);
         if(lexer->predict(Token::case_))lexer->match(Token::case_);
         select->condition = parseLogic(member_follows);
+
+        Case *tail = nullptr;
         while(lexer->predict(Token::case_)){
             auto case_ = new Case;
             lexer->match(Token::case_);
@@ -490,8 +502,14 @@ namespace evoBasic{
                 case_->condition = parseLogic(member_follows);
             }
 
-            case_->statement_list = parseStmtList(member_follows);
-            select->case_list.push_back(case_);
+            case_->statement = parseStmtList(member_follows);
+
+            if(tail){
+                tail->next_sibling = case_;
+                case_->prv_sibling = tail;
+                tail = tail->next_sibling;
+            }
+            else select->case_ = tail = case_;
         }
         lexer->match(Token::END_SELECT,follows,"expected 'End Select'");
         return select;
@@ -504,7 +522,7 @@ namespace evoBasic{
         lexer->match(Token::while_);
         loop->location = lexer->getToken()->getLocation();
         loop->condition = parseLogic(member_follows);
-        loop->statement_list = parseStmtList(member_follows);
+        loop->statement = parseStmtList(member_follows);
         lexer->match(Token::wend_,follows,"expected 'Wend'");
         return loop;
     }
@@ -514,6 +532,8 @@ namespace evoBasic{
 
         auto if_ = new If;
         bool looping = true;
+
+        Case *tail = nullptr;
         while(looping){
             auto case_ = new Case;
             switch (lexer->getNextToken()->getKind()) {
@@ -522,25 +542,32 @@ namespace evoBasic{
                     if_->location = case_->location = lexer->getToken()->getLocation();
                     case_->condition = parseLogic(member_follows);
                     lexer->match(Token::then_);
-                    case_->statement_list = parseStmtList(member_follows);
+                    case_->statement = parseStmtList(member_follows);
                     break;
                 case Token::elseif_:
                     lexer->match(Token::elseif_);
                     case_->location = lexer->getToken()->getLocation();
                     case_->condition = parseLogic(member_follows);
                     lexer->match(Token::then_);
-                    case_->statement_list = parseStmtList(member_follows);
+                    case_->statement = parseStmtList(member_follows);
                     break;
                 case Token::else_:
                     lexer->match(Token::else_);
                     case_->location = lexer->getToken()->getLocation();
                     case_->condition = nullptr;
-                    case_->statement_list = parseStmtList(member_follows);
+                    case_->statement = parseStmtList(member_follows);
                     break;
                 default:
                     looping = false;
             }
-            if(looping)if_->case_list.push_back(case_);
+            if(looping){
+                if(tail){
+                    tail->next_sibling = case_;
+                    case_->prv_sibling = tail;
+                    tail = tail->next_sibling;
+                }
+                else if_->case_ = tail = case_;
+            }
         }
         lexer->match(Token::END_IF,follows,"expected 'End If'");
         return if_;
@@ -568,7 +595,7 @@ namespace evoBasic{
             for_->step = parseLogic(addition_follows);
         }
 
-        for_->statement_list = parseStmtList(combine(follows,{Token::next_}));
+        for_->statement = parseStmtList(combine(follows,{Token::next_}));
         lexer->match(Token::next_,follows,"Expected 'Next'");
         return for_;
     }
@@ -773,7 +800,7 @@ namespace evoBasic{
 
     ast::expr::Expression *Parser::parseTerminal(const set<Token::Enum>& follows){
         auto addition_follows = combine(follows,{Token::DOT});
-
+        bool panic = false;
         while(true){
             switch (lexer->getNextToken()->getKind()) {
                 case Token::DIGIT:
@@ -792,7 +819,13 @@ namespace evoBasic{
                 case Token::LP:
                     return parseParentheses(addition_follows);
                 default:
-                    Logger::error(lexer->getNextToken()->getLocation(),"Unexpected token");
+                    if(panic){
+                        auto err = new ast::expr::Expression;
+                        err->location = lexer->getToken()->getLocation();
+                        return err;
+                    }
+                    panic = true;
+                    Logger::error(lexer->getNextToken()->getLocation(),"Unexpected token. Missing expression here");
                     lexer->skipUntil(addition_follows);
             }
         }
@@ -805,7 +838,7 @@ namespace evoBasic{
         if(lexer->predict(Token::LP)){
             auto callee = new Callee;
             callee->name = (ID*)ret;
-            callee->arg_list = parseArgsList(follows);
+            callee->argument = parseArgsList(follows);
             ret = callee;
         }
 
@@ -821,23 +854,26 @@ namespace evoBasic{
     }
 
 
-    std::vector<ast::expr::Callee::Argument*> Parser::parseArgsList(const set<Token::Enum>& follows){
+    ast::expr::Callee::Argument* Parser::parseArgsList(const set<Token::Enum>& follows){
         auto addition_follows = combine(follows,{Token::COMMA});
 
-        vector<Callee::Argument*> args;
         lexer->match(Token::LP);
+        Callee::Argument *tail = nullptr,*head = nullptr;
 
         if(!lexer->predict(Token::RP)){
-            args.push_back(parseArg(addition_follows));
+            tail = head = parseArg(addition_follows);
 
             while(lexer->predict(Token::COMMA)){
                 lexer->match(Token::COMMA);
-                args.push_back(parseArg(addition_follows));
+                auto arg = parseArg(addition_follows);
+                tail->next_sibling = arg;
+                arg->prv_sibling = tail;
+                tail = tail->next_sibling;
             }
         }
 
         lexer->match(Token::RP);
-        return args;
+        return head;
     }
 
 
@@ -893,7 +929,7 @@ namespace evoBasic{
         auto ch = new expr::Char;
         ch->location = lexer->getToken()->getLocation();
         auto &lexeme = lexer->getToken()->getLemexe();
-        ch->value = lexer->getToken()->getLemexe().front();
+        ch->value = lexer->getToken()->getLemexe()[1];
         return ch;
     }
 
@@ -930,11 +966,18 @@ namespace evoBasic{
 
     ast::Annotation *Parser::parseAnnotation(const set<Token::Enum> &follows) {
         auto annotation = new Annotation;
-        auto begin_location = lexer->getToken()->getLocation();
-        annotation->unit_list.push_back(parseAnnotationUnit(follows));
+        auto begin_location = lexer->getNextToken()->getLocation();
+
+        annotation->unit = parseAnnotationUnit(follows);
+        AnnotationUnit *tail = annotation->unit;
+
         while(lexer->predict(Token::DOT)){
             lexer->match(Token::DOT);
-            annotation->unit_list.push_back(parseAnnotationUnit(follows));
+            auto unit = parseAnnotationUnit(follows);
+
+            tail->next_sibling = unit;
+            unit->prv_sibling = tail;
+            tail = tail->next_sibling;
         }
         if(lexer->predict(Token::LB)){
             lexer->match(Token::LB);
@@ -953,12 +996,33 @@ namespace evoBasic{
         return unit;
     }
 
+    ast::Member *Parser::parseMemberList(const set<Token::Enum> &follows) {
+
+    }
+
+    ast::AnnotationUnit *Parser::parseAnnotationUnitList(const set<Token::Enum> &follows) {
+        return nullptr;
+    }
+
+    ast::Variable *Parser::parseVariableList(const set<Token::Enum> &follows) {
+        return nullptr;
+    }
+
+    ast::Implement *Parser::parseImplement(const std::set<Token::Enum> &follows) {
+        auto impl = new Implement;
+        impl->annotation = parseAnnotation(follows);
+        impl->location = impl->annotation->location;
+        return impl;
+    }
+
 
     ast::Annotation *constructAnnotationAST(std::string code) {
+        Logger::debugMode = false;
         auto source = new StringSource(std::move(code));
         Lexer lexer(source);
         Parser parser(&lexer);
         auto ast = parser.parseAnnotation({Token::EOF_});
+        Logger::debugMode = true;
         return ast;
     }
 }

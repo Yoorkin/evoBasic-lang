@@ -3,7 +3,6 @@
 #include "token.h"
 #include "data.h"
 #include "nullSafe.h"
-#include <list>
 #include <memory>
 
 namespace evoBasic{
@@ -34,6 +33,7 @@ namespace evoBasic::ast{
     struct Parameter;
     struct Annotation;
     struct Generic;
+    struct Implement;
 
     namespace stmt{
         struct Statement;
@@ -51,7 +51,6 @@ namespace evoBasic::ast{
 
     namespace expr{
         struct Expression;
-        struct Link;
         struct Binary;
         struct Unary;
         struct Terminal;
@@ -64,15 +63,22 @@ namespace evoBasic::ast{
     }
 
 
+
     std::string debugAST(Node *ast);
 
     using Expr = expr::Expression;
 
     struct DebugInfo{
         std::string text;
-        std::list<DebugInfo*> childs;
+        DebugInfo *child = nullptr,*sibling = nullptr;
+
         ~DebugInfo(){
-            for(auto child:childs)delete child;
+            while(sibling!=nullptr){
+                auto head = sibling;
+                sibling = head->sibling;
+                delete head;
+            }
+            delete child;
         }
     };
 
@@ -82,10 +88,9 @@ namespace evoBasic::ast{
     };
 
     struct Global : Node{
-        std::list<Member*> member_list{};
+        Member *member = nullptr;
         DebugInfo *debug()override;
     };
-
 
     struct Member : Node{
         AccessFlag access;
@@ -93,24 +98,33 @@ namespace evoBasic::ast{
             error,function_,class_,module_,type_,enum_,dim_,operator_,init_,
             import_,external_
         }member_kind = error;
+
+        Member *next_sibling = nullptr,*prv_sibling = nullptr;
     };
 
     struct Class : Member{
         Class(){member_kind = MemberKind::class_;}
         expr::ID *name = nullptr;
         Annotation *extend = nullptr;
-        std::list<Annotation*> impl_list{};
-        std::list<Member*> member_list{};
+        Implement *impl = nullptr;
+
+        Member *member = nullptr;
         DebugInfo *debug()override;
     };
 
     struct Module : Member{
         Module(){member_kind = MemberKind::module_;}
         expr::ID *name = nullptr;
-        std::list<Member*> member_list;
+        Member *member = nullptr;
         DebugInfo *debug()override;
     };
 
+    struct Implement : Node {
+        Annotation* annotation = nullptr;
+        Implement *next_sibling = nullptr,
+                  *prv_sibling = nullptr;
+        DebugInfo *debug()override;
+    };
 
     struct Import : Member{
         Import(){member_kind = MemberKind::import_;}
@@ -121,7 +135,7 @@ namespace evoBasic::ast{
     struct Dim : Member{
         Dim(){member_kind = MemberKind::dim_;}
         bool is_const = false;
-        std::list<Variable*> variable_list{};
+        Variable* variable;
         DebugInfo *debug()override;
     };
 
@@ -130,15 +144,16 @@ namespace evoBasic::ast{
         Annotation *annotation = nullptr;
         expr::Expression *initial = nullptr;
         DebugInfo *debug()override;
+        Variable *next_sibling = nullptr,*prv_sibling = nullptr;
     };
 
     struct Function : Member{
         Function(){member_kind = MemberKind::function_;}
         MethodFlag method_flag;
         expr::ID *name = nullptr;
-        std::list<Parameter*> parameter_list{};
-        Annotation *return_type = nullptr;
-        std::list<stmt::Statement*> statement_list{};
+        Parameter *parameter = nullptr;
+        Annotation *return_annotation = nullptr;
+        stmt::Statement* statement = nullptr;
         DebugInfo *debug()override;
     };
 
@@ -146,39 +161,30 @@ namespace evoBasic::ast{
         External(){member_kind = MemberKind::external_;}
         expr::ID *name = nullptr;
         expr::String *lib = nullptr,*alias = nullptr;
-        std::list<Parameter*> parameter_list;
+        Parameter* parameter = nullptr;
         Annotation *return_annotation = nullptr;
         DebugInfo *debug()override;
     };
 
-    struct Init : Member{
-        Init(){member_kind = MemberKind::init_;}
-        std::list<Parameter*> parameter_list;
-        std::list<stmt::Statement*> statement_list{};
-        DebugInfo *debug()override;
-    };
-
-    struct Operator : Member{
-        Operator(){member_kind = MemberKind::operator_;}
+    struct EnumMember : Node {
         expr::ID *name = nullptr;
-        std::list<Parameter*> parameter_list{};
-        Annotation *return_annotation;
-        std::list<stmt::Statement*> statement_list{};
+        expr::Digit *value = nullptr;
+        EnumMember *next_sibling = nullptr,*prv_sibling = nullptr;
         DebugInfo *debug()override;
     };
 
-    using EnumMember = std::pair<expr::ID*,expr::Digit*>;
     struct Enum : Member{
         Enum(){member_kind = MemberKind::enum_;}
-        expr::ID *name;
-        std::list<EnumMember> member_list{};
+        expr::ID *name = nullptr;
+        EnumMember *member = nullptr;
         DebugInfo *debug()override;
     };
+
 
     struct Type : Member{
         Type(){member_kind = MemberKind::type_;}
-        expr::ID *name;
-        std::list<Variable*> member_list;
+        expr::ID *name = nullptr;
+        Variable *member = nullptr;
         DebugInfo *debug()override;
     };
 
@@ -189,6 +195,7 @@ namespace evoBasic::ast{
         expr::ID *name = nullptr;
         Annotation *annotation = nullptr;
         DebugInfo *debug()override;
+        Parameter *next_sibling = nullptr,*prv_sibling = nullptr;
     };
 
     namespace stmt{
@@ -197,32 +204,33 @@ namespace evoBasic::ast{
             enum Enum{
                 error,let_,loop_,if_,for_,select_,return_,continue_,exit_,expr_
             } stmt_flag=error;
+            Statement *next_sibling = nullptr,*prv_sibling = nullptr;
         };
 
         struct Let : Statement{
             Let(){stmt_flag = let_;}
             bool is_const = false;
-            std::list<Variable*> variable_list{};
+            Variable* variable = nullptr;
             DebugInfo *debug()override;
         };
 
         struct Select : Statement{
             Select(){stmt_flag = select_;}
             Expr *condition = nullptr;
-            std::list<Case*> case_list{};
+            Case *case_ = nullptr;
             DebugInfo *debug()override;
         };
 
         struct Loop : Statement{
             Loop(){stmt_flag = loop_;}
             Expr *condition = nullptr;
-            std::list<Statement*> statement_list{};
+            Statement* statement = nullptr;
             DebugInfo *debug()override;
         };
 
         struct If : Statement{
             If(){stmt_flag = if_;}
-            std::list<Case*> case_list;
+            Case *case_ = nullptr;
             DebugInfo *debug()override;
         };
 
@@ -231,7 +239,7 @@ namespace evoBasic::ast{
             expr::Expression *iterator = nullptr;
             bool iterator_has_let = false;
             Expr *begin = nullptr,*end = nullptr,*step = nullptr;
-            std::list<Statement*> statement_list;
+            Statement* statement = nullptr;
             DebugInfo *debug()override;
         };
 
@@ -261,17 +269,19 @@ namespace evoBasic::ast{
 
     struct Case : Node{
         Expr *condition = nullptr;
-        std::list<stmt::Statement*> statement_list;
+        stmt::Statement *statement = nullptr;
+        Case *next_sibling = nullptr,*prv_sibling = nullptr;
         DebugInfo *debug()override;
     };
 
     struct AnnotationUnit : Node{
         expr::ID *name = nullptr;
         DebugInfo *debug()override;
+        AnnotationUnit *next_sibling = nullptr,*prv_sibling = nullptr;
     };
 
     struct Annotation : Node{
-        std::list<AnnotationUnit*> unit_list;
+        AnnotationUnit* unit = nullptr;
         expr::Digit *array_size = nullptr;
         DebugInfo *debug()override;
     };
@@ -352,6 +362,7 @@ namespace evoBasic::ast{
                 enum PassKind{undefined,byref,byval}pass_kind = undefined;
                 std::shared_ptr<type::Variable> temp_address = nullptr;
                 expr::Expression *expr = nullptr;
+                Argument *next_sibling = nullptr,*prv_sibling = nullptr;
                 DebugInfo *debug()override;
             };
 
@@ -359,7 +370,7 @@ namespace evoBasic::ast{
                 expression_kind = ExpressionKind::callee_;
             }
             ID *name = nullptr;
-            std::vector<Argument*> arg_list;
+            Argument* argument = nullptr;
             DebugInfo *debug()override;
         };
 

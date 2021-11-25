@@ -20,6 +20,7 @@ namespace evoBasic{
         ast::Enum *parseEnum(const std::set<Token::Enum>& follows);
         ast::Member *parseMember(const std::set<Token::Enum>& follows);
         AccessFlag parseAccessFlag();
+        ast::Implement *parseImplement(const std::set<Token::Enum>& follows);
 
         ast::Import *parseImport(const std::set<Token::Enum>& follows);
         ast::Dim *parseDim(const std::set<Token::Enum>& follows);
@@ -28,10 +29,8 @@ namespace evoBasic{
         ast::External *parseExternal(const std::set<Token::Enum>& follows);
         ast::Init *parseInit(const std::set<Token::Enum>& follows);
         ast::Operator *parseOperator(const std::set<Token::Enum>& follows);
-        ast::EnumMember parseEnumMember(const std::set<Token::Enum>& follows);
+        ast::EnumMember *parseEnumMember(const std::set<Token::Enum>& follows);
 
-        std::list<ast::Parameter*> parseParameterList(const std::set<Token::Enum>& follows);
-        std::list<ast::stmt::Statement*> parseStmtList(const std::set<Token::Enum>& follows);
         ast::Parameter *parseParameter(const std::set<Token::Enum>& follows);
         ast::expr::ID *parseID(const std::set<Token::Enum>& follows);
 
@@ -59,7 +58,6 @@ namespace evoBasic{
 
         //callee\id\index
         ast::expr::Expression *parseUnit(const std::set<Token::Enum>& follows);
-        std::vector<ast::expr::Callee::Argument*> parseArgsList(const std::set<Token::Enum>& follows);
         ast::expr::Callee::Argument *parseArg(const std::set<Token::Enum>& follows);
 
         ast::expr::Digit *parseDigit(const std::set<Token::Enum>& follows);
@@ -68,6 +66,14 @@ namespace evoBasic{
         ast::expr::Char *parseChar(const std::set<Token::Enum>& follows);
         ast::expr::Boolean *parseBoolean(const std::set<Token::Enum>& follows);
         ast::expr::Expression *parseParentheses(const std::set<Token::Enum>& follows);
+
+        ast::Member *parseMemberList(const std::set<Token::Enum>& follows);
+        ast::Parameter *parseParameterList(const std::set<Token::Enum>& follows);
+        ast::stmt::Statement *parseStmtList(const std::set<Token::Enum>& follows);
+        ast::AnnotationUnit *parseAnnotationUnitList(const std::set<Token::Enum>& follows);
+        ast::Variable *parseVariableList(const std::set<Token::Enum>& follows);
+        ast::expr::Callee::Argument* parseArgsList(const std::set<Token::Enum>& follows);
+
     };
 
     ast::Annotation *constructAnnotationAST (std::string code);

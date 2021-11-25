@@ -74,6 +74,7 @@ namespace evoBasic{
     }
 
     Token *Lexer::getToken() {
+        ASSERT(next_token==0,"invalid");
         return tokens[next_token-1];
     }
 

@@ -35,16 +35,22 @@ void setOutputName(string name){
 }
 
 void printHelpInfo(string){
-    cout<<"Usage:"<<endl
-        <<"     ecc <Options> <Sources> -o=<Output File Name>"<<endl
-        <<endl
-        <<"Options:"<<endl
-        <<"     --help-info "<<endl
-        <<"     -h                          print help information"<<endl
-        <<"     --output-name=<File Name>"<<endl
-        <<"     --o=<File name>             set output file name"<<endl
-        <<"     --library-import"<<endl
-        <<"     -lib                        import dependencies"<<endl;
+    cout<<
+R"HELPTEXT(
+Usage:
+     ecc <Options> <Sources> -o=<Output File Name>
+
+Options:
+     --help-info
+     -h                          print help information
+     --output-name=<File Name>
+     --o=<File name>             set output file name
+     --library-import
+     -lib                        import dependencies
+     --dev-info                  print information about lexeme,abstract tree,symbol table and IR
+
+)HELPTEXT"
+    <<endl;
     enable_compile = false;
 }
 
@@ -97,6 +103,7 @@ int main(int argc,char *argv[]) {
         Semantic::collectDetail(ast,context);
         Semantic::typeCheck(ast,context);
 
+        Logger::dev(debugAST(ast));
         Logger::dev(context->getGlobal()->debug(0));
     }
 
