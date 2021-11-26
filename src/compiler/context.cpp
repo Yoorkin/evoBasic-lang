@@ -13,46 +13,60 @@ using namespace evoBasic::type::primitive;
 namespace evoBasic{
 
     BuiltIn::BuiltIn() {
-        error_symbol = make_shared<Error>();
+        error_symbol = new Error;
         error_symbol->setName("< Error >");
 
         //void,boolean,i8,i16,i32,i64,f32,f64,u8,u16,u32,u64
         primitive_vector = {
             nullptr,
-            make_shared<Primivite>("boolean",vm::Data(vm::Data::i8)),
-            make_shared<Primivite>("byte",vm::Data(vm::Data::i8)),
-            make_shared<Primivite>("short",vm::Data(vm::Data::i16)),
-            make_shared<Primivite>("integer",vm::Data(vm::Data::i32)),
-            make_shared<Primivite>("long",vm::Data(vm::Data::i64)),
-            make_shared<Primivite>("single",vm::Data(vm::Data::f32)),
-            make_shared<Primivite>("double",vm::Data(vm::Data::f64)),
-            make_shared<Primivite>("u8",vm::Data(vm::Data::u8)),
-            make_shared<Primivite>("u16",vm::Data(vm::Data::u16)),
-            make_shared<Primivite>("u32",vm::Data(vm::Data::u32)),
-            make_shared<Primivite>("u64",vm::Data(vm::Data::u64)),
+            new Primitive("boolean", vm::Data(vm::Data::i8)),
+            new Primitive("byte", vm::Data(vm::Data::i8)),
+            new Primitive("short", vm::Data(vm::Data::i16)),
+            new Primitive("integer", vm::Data(vm::Data::i32)),
+            new Primitive("long", vm::Data(vm::Data::i64)),
+            new Primitive("single", vm::Data(vm::Data::f32)),
+            new Primitive("double", vm::Data(vm::Data::f64)),
+            new Primitive("u8", vm::Data(vm::Data::u8)),
+            new Primitive("u16", vm::Data(vm::Data::u16)),
+            new Primitive("u32", vm::Data(vm::Data::u32)),
+            new Primitive("u64", vm::Data(vm::Data::u64)),
         };
 
 //        variant_class = make_shared<VariantClass>();
 //        variant_class->setName("variant");
+        object_class = new type::Class;
+        object_class->setName("Object");
+
+        string_class = new type::Class;
+        string_class->setName("String");
+        string_class->setExtend(object_class);
     }
 
-    std::shared_ptr<VariantClass> BuiltIn::getVariantClass() const {
+    VariantClass *BuiltIn::getVariantClass() const {
         return variant_class;
     }
 
-    std::shared_ptr<Error> BuiltIn::getErrorPrototype() const {
+    Error *BuiltIn::getErrorPrototype() const {
         return error_symbol;
     }
 
-    shared_ptr<BuiltIn::Primivite> BuiltIn::getPrimitive(vm::Data data) const {
+    BuiltIn::Primitive *BuiltIn::getPrimitive(vm::Data data) const {
         return primitive_vector[(int)data.getValue()];
+    }
+
+    type::Class *BuiltIn::getObjectClass() const {
+        return object_class;
+    }
+
+    type::Class *BuiltIn::getStringClass() const {
+        return string_class;
     }
 
 
     ConversionRules::ConversionRules(BuiltIn* builtIn) {
         enum Types {bin=0,i08,i16,i32,i64,f32,f64,_n_};
         auto& in = *builtIn;
-        vector<shared_ptr<Prototype>> enumToPrototype = {
+        vector<Prototype*> enumToPrototype = {
                 in.getPrimitive(vm::Data::boolean),
                 in.getPrimitive(vm::Data::i8),
                 in.getPrimitive(vm::Data::i16),
@@ -119,17 +133,17 @@ namespace evoBasic{
     }
 
     bool
-    ConversionRules::isExplicitCastRuleExist(ConversionRules::sharedPtr src, ConversionRules::sharedPtr dst) const {
+    ConversionRules::isExplicitCastRuleExist(ConversionRules::Ptr src, ConversionRules::Ptr dst) const {
         return explicit_cast_rules.contains({src,dst});
     }
 
     bool
-    ConversionRules::isImplicitCastRuleExist(ConversionRules::sharedPtr src, ConversionRules::sharedPtr dst) const {
+    ConversionRules::isImplicitCastRuleExist(ConversionRules::Ptr src, ConversionRules::Ptr dst) const {
         return implicit_cast_rules.contains({src,dst});
     }
 
     optional<ConversionRules::Rule>
-    ConversionRules::getImplicitPromotionRule(ConversionRules::sharedPtr src, ConversionRules::sharedPtr dst) const {
+    ConversionRules::getImplicitPromotionRule(ConversionRules::Ptr src, ConversionRules::Ptr dst) const {
         auto target = promotion_rules.find({src,dst});
         if(target == promotion_rules.end())return {};
         else return *target;
@@ -137,63 +151,62 @@ namespace evoBasic{
 
     void ConversionRules::insertCastAST(ConversionRules::Value dst, ast::expr::Expression **expression) {
         switch (dst->getKind()) {
-            case DeclarationEnum::Class:
+            case SymbolKind::Class:
                 break;
-            case DeclarationEnum::Enum_:
+            case SymbolKind::Enum:
                 break;
-            case DeclarationEnum::EnumMember:
+            case SymbolKind::EnumMember:
                 break;
-            case DeclarationEnum::Type:
+            case SymbolKind::Record:
                 break;
-            case DeclarationEnum::Function:
+            case SymbolKind::Function:
                 break;
-            case DeclarationEnum::Module:
+            case SymbolKind::Module:
                 break;
-            case DeclarationEnum::Variant:
-                break;
-            case DeclarationEnum::Primitive:
+            case SymbolKind::Primitive:
                 *expression = new ast::expr::Cast(
                         *expression,
                         constructAnnotationAST(format()<<"global."<<dst->getName())
                         );
                 break;
-            case DeclarationEnum::TmpDomain:
+            case SymbolKind::TmpDomain:
                 break;
-            case DeclarationEnum::Variable:
+            case SymbolKind::Variable:
                 break;
-            case DeclarationEnum::Error:
+            case SymbolKind::Error:
                 break;
-            case DeclarationEnum::Interface:
+            case SymbolKind::Interface:
                 break;
-            case DeclarationEnum::Argument:
+            case SymbolKind::Argument:
                 break;
-            case DeclarationEnum::Array:
+            case SymbolKind::Array:
                 break;
         }
-        (*expression)->type = new ExpressionType(dst,ExpressionType::rvalue);
+        (**expression).type = new ExpressionType(dst,ExpressionType::rvalue);
     }
 
 
-    std::shared_ptr<UserFunction> Context::getEntrance() {
-        NotNull(entrance.get());
+    UserFunction *Context::getEntrance() {
+        NotNull(entrance);
         return entrance;
     }
 
-    void Context::setEntrance(std::shared_ptr<UserFunction> function) {
-        NotNull(function.get());
-        entrance = move(function);
+    void Context::setEntrance(UserFunction *function) {
+        NotNull(function);
+        entrance = function;
     }
 
-    std::shared_ptr<Module> Context::getGlobal() {
-        NotNull(global.get());
+    Module *Context::getGlobal() {
+        NotNull(global);
         return global;
     }
 
     Context::Context() : conversion_rules(&builtin) {
-        global = make_shared<type::Module>();
+        global = new type::Module;
         global->setName("global");
         auto& in = getBuiltIn();
-       // global->add(in.getVariantClass());
+        global->add(in.getObjectClass());
+        global->add(in.getStringClass());
         global->add(in.getPrimitive(vm::Data::boolean));
         global->add(in.getPrimitive(vm::Data::i8));
         global->add(in.getPrimitive(vm::Data::i16));

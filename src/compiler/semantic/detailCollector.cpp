@@ -13,317 +13,315 @@ using namespace evoBasic::ast;
 using namespace evoBasic::ast::expr;
 namespace evoBasic{
 
-    std::any DetailCollector::visitGlobal(ast::Global *global, BaseArgs args) {
-        NotNull(global);
-        for(const auto& member:global->member_list)
-            visitMember(member,args);
-        return nullptr;
+    std::any DetailCollector::visitGlobal(ast::Global **global_node, DetailArgs args) {
+        NotNull(*global_node);
+        args.domain = args.context->getGlobal();
+        for(auto iter = (**global_node).member;iter!=nullptr;iter=iter->next_sibling){
+            visitMember(&iter,args);
+        }
+        return {};
     }
 
-    std::any DetailCollector::visitModule(ast::Module *mod_node, BaseArgs args) {
-        NotNull(mod_node);
-        auto name = getID(mod_node->name);
-        auto mod = args.domain->find(name);
-        NotNull(mod.get());
-        args.domain = mod->as_shared<type::Domain>();
-        for(const auto& member:mod_node->member_list)
-            visitMember(member,args);
-        return nullptr;
+    std::any DetailCollector::visitModule(ast::Module **module_node, DetailArgs args) {
+        NotNull(*module_node);
+        args.domain = (**module_node).module_symbol;
+        for(auto iter = (**module_node).member;iter!=nullptr;iter=iter->next_sibling){
+            visitMember(&iter,args);
+        }
+        return {};
     }
 
-    std::any DetailCollector::visitClass(ast::Class *cls_node, BaseArgs args) {
-        NotNull(cls_node);
-        auto name = getID(cls_node->name);
-        auto cls = args.domain->find(name)->as_shared<type::Domain>();
-        NotNull(cls.get());
-        args.context->byteLengthDependencies.addIsolate(cls);
-        args.domain = cls;
-        args.parent_class = cls->as_shared<type::Class>();
-        args.context->byteLengthDependencies.addIsolate(cls);
-        for(const auto& member:cls_node->member_list)
-            visitMember(member,args);
-        return nullptr;
+    std::any DetailCollector::visitClass(ast::Class **class_node, DetailArgs args) {
+        NotNull(*class_node);
+        auto class_symbol =  (**class_node).class_symbol;
+        args.domain = class_symbol;
+
+        type::Class *base_class = nullptr,*object_class = args.context->getBuiltIn().getObjectClass();
+        if((**class_node).extend){
+            auto symbol = visitAnnotation(&(**class_node).extend,args);
+            if(symbol.has_value())
+                base_class = any_cast<Symbol*>(symbol)->as<type::Class*>();
+            else
+                base_class = object_class;
+        }
+        else{
+            base_class = object_class;
+        }
+
+        class_symbol->setExtend(base_class);
+        args.context->byteLengthDependencies.addDependent(class_symbol,base_class);
+
+        for(auto iter = (**class_node).member;iter!=nullptr;iter=iter->next_sibling){
+            visitMember(&iter,args);
+        }
+
+        return {};
     }
 
-    std::any DetailCollector::visitEnum(ast::Enum *em_node, BaseArgs args) {
-        NotNull(em_node);
-        auto name = getID(em_node->name);
-        auto em = args.domain->find(name)->as_shared<type::Enumeration>();
-        NotNull(em.get());
+    std::any DetailCollector::visitEnum(ast::Enum **enum_node, DetailArgs args) {
+        NotNull(*enum_node);
+        args.domain = (**enum_node).enum_symbol;
         int index = 0;
-        for(auto& child:em_node->member_list){
-            NotNull(child.first);
-            if(child.second != nullptr){
-                index = getDigit(child.second);
+        for(auto iter = (**enum_node).member;iter != nullptr;iter=iter->next_sibling){
+            if(iter->value != nullptr){
+                index = getDigit(iter->value);
             }
-            auto member_name = getID(child.first);
-            if(is_name_valid(member_name,child.first->location,args.domain)){
-                auto member = make_shared<type::EnumMember>(index);
+            auto member_name = getID(iter->name);
+            if(is_name_valid(member_name,iter->location,args.domain)){
+                auto member = new type::EnumMember(index);
                 member->setName(member_name);
-                member->setLocation(child.first->location);
-                em->add(member);
+                member->setLocation(iter->location);
+                args.domain->add(member);
                 index++;
             }
         }
-        return nullptr;
+        return {};
     }
 
-    std::any DetailCollector::visitType(ast::Type *ty_node, BaseArgs args) {
-        NotNull(ty_node);
-        auto name = getID(ty_node->name);
-        auto ty = args.domain->find(name)->as_shared<type::Record>();
-        NotNull(ty.get());
-        for(auto& var_node:ty_node->member_list){
-            auto var_name = getID(var_node->name);
-            auto variable = ty->find(var_name)->as_shared<type::Variable>();
-            NotNull(variable.get());
-            auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(var_node->annotation,args));
-            switch (prototype->getKind()) {
-                case type::DeclarationEnum::Type:
-                case type::DeclarationEnum::Array:
-                    args.context->byteLengthDependencies.addDependent(ty,prototype->as_shared<Domain>());
+    std::any DetailCollector::visitType(ast::Type **type_node, DetailArgs args) {
+        NotNull(*type_node);
+        auto name = getID((**type_node).name);
+        auto type = (**type_node).type_symbol;
+        NotNull(type);
+        for(ast::Variable *iter = (**type_node).member;iter!=nullptr;iter=iter->next_sibling){
+            auto var_name = getID(iter->name);
+            auto variable = iter->variable_symbol;
+            NotNull(variable);
+            auto variable_prototype = any_cast<type::Prototype*>(visitAnnotation(&iter->annotation, args));
+            switch (variable_prototype->getKind()) {
+                case type::SymbolKind::Record:
+                case type::SymbolKind::Array:
+                    args.context->byteLengthDependencies.addDependent(type, variable_prototype->as<Domain*>());
             }
-            args.context->byteLengthDependencies.addIsolate(ty);
-            variable->setPrototype(prototype);
+            variable->setPrototype(variable_prototype);
         }
-        return nullptr;
+        args.context->byteLengthDependencies.addIsolate(type);
+
+        return {};
     }
 
-    std::any DetailCollector::visitDim(ast::Dim *dim_node, BaseArgs args) {
-        for(auto& variable_node:dim_node->variable_list){
-            visitVariable(variable_node,args);
+    std::any DetailCollector::visitDim(ast::Dim **dim_node, DetailArgs args) {
+        for(ast::Variable *iter=(**dim_node).variable;iter!=nullptr;iter=iter->next_sibling){
+            auto variable = any_cast<Symbol*>(visitVariable(&iter,args))->as<type::Variable*>();
+
+            switch(args.domain->getKind()){
+                case type::SymbolKind::Module:
+                    args.context->getGlobal()->addMemoryLayout(variable);
+                    switch (variable->getPrototype()->getKind()) {
+                        case type::SymbolKind::Record:
+                        case type::SymbolKind::Array:
+                            args.context->byteLengthDependencies.addDependent(args.context->getGlobal(),
+                                                                              variable->getPrototype()->as<Domain*>());
+                    }
+                    break;
+                case type::SymbolKind::Class:
+                    args.domain->addMemoryLayout(variable);
+                    switch (variable->getPrototype()->getKind()) {
+                        case type::SymbolKind::Record:
+                        case type::SymbolKind::Array:
+                            args.context->byteLengthDependencies.addDependent(args.domain,
+                                                                              variable->getPrototype()->as<Domain*>());
+                    }
+                    break;
+            }
         }
-        return nullptr;
+        return {};
     }
 
-    std::any DetailCollector::visitVariable(ast::Variable *var_node, BaseArgs args) {
-        auto name = getID(var_node->name);
-        auto var = args.domain->find(name)->as_shared<type::Variable>();
-        NotNull(var.get());
-        auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(var_node->annotation,args));
-        auto parent_kind = args.domain->getKind();
-
-        switch(args.domain->getKind()){
-            case DeclarationEnum::Function:
-                switch (prototype->getKind()) {
-                    case type::DeclarationEnum::Type:
-                    case type::DeclarationEnum::Array:
-                        args.context->byteLengthDependencies.addDependent(args.user_function,prototype->as_shared<Domain>());
-                }
-                break;
-            case DeclarationEnum::Module:
-                args.context->getGlobal()->addMemoryLayout(var);
-                switch (prototype->getKind()) {
-                    case type::DeclarationEnum::Type:
-                    case type::DeclarationEnum::Array:
-                        args.context->byteLengthDependencies.addDependent(args.context->getGlobal(),prototype->as_shared<Domain>());
-                }
-                break;
-        }
-
-        var->setPrototype(prototype);
-        return nullptr;
+    std::any DetailCollector::visitVariable(ast::Variable **variable_node, DetailArgs args) {
+        auto name = getID((**variable_node).name);
+        auto variable = (**variable_node).variable_symbol;
+        NotNull(variable);
+        auto prototype = any_cast<Prototype*>(visitAnnotation(&(**variable_node).annotation,args));
+        variable->setPrototype(prototype);
+        return variable->as<Symbol*>();
     }
 
-
-    std::any DetailCollector::visitFunction(ast::Function *func_node, BaseArgs args) {
-        auto name = getID(func_node->name);
-        if(is_name_valid(name,func_node->name->location,args.domain)){
+    std::any DetailCollector::visitFunction(ast::Function **function_node, DetailArgs args) {
+        auto name = getID((**function_node).name);
+        if(is_name_valid(name,(**function_node).name->location,args.domain)){
             type::Function::Flag flag;
-            switch(func_node->method_flag){
+            switch((**function_node).method_flag){
                 case MethodFlag::Static:
                     flag = type::Function::Flag::Static;
-                    if(args.domain->getKind() == type::DeclarationEnum::Class){
-                        Logger::error(func_node->location,"Function in Module cannot be marked by 'Static'");
+                    if(args.domain->getKind() == type::SymbolKind::Class){
+                        Logger::error((**function_node).location,"Function in Module cannot be marked by 'Static'");
                     }
                     break;
                 case MethodFlag::Virtual:
                 case MethodFlag::Override:
-                    if(args.domain->getKind() == type::DeclarationEnum::Class){
+                    if(args.domain->getKind() == type::SymbolKind::Class){
                         flag = type::Function::Flag::Virtual;
                     }
                     else{
-                        Logger::error(func_node->location,"Function in Module cannot be marked by 'Virtual' or 'Override'");
+                        Logger::error((**function_node).location,"Function in Module cannot be marked by 'Virtual' or 'Override'");
                     }
                     break;
                 case MethodFlag::None:
-                    if(args.domain->getKind() == type::DeclarationEnum::Class){
+                    if(args.domain->getKind() == type::SymbolKind::Class){
                         flag = type::Function::Flag::Method;
                     }
                     break;
             }
-            auto func = make_shared<type::UserFunction>(flag,func_node);
-            func->setLocation(func_node->name->location);
-            func->setName(name);
+            auto function = new type::UserFunction(flag, *function_node);
+            function->setLocation((**function_node).name->location);
+            function->setName(name);
 
-            args.context->byteLengthDependencies.addIsolate(func);
-
-            args.domain->add(func);
-            if(func_node->return_type){
-                auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(func_node->return_type,args));
-                func->setRetSignature(prototype);
+            args.context->byteLengthDependencies.addIsolate(function);
+            
+            if((**function_node).return_annotation){
+                auto prototype = any_cast<Prototype*>(visitAnnotation(&(**function_node).return_annotation,args));
+                function->setRetSignature(prototype);
             }
 
-            switch (func->getFunctionFlag()) {
+            switch (function->getFunctionFlag()) {
                 case type::Function::Flag::Virtual:
                 case type::Function::Flag::Method:
                     if(args.parent_class){
-                        auto self = make_shared<Argument>("self",args.parent_class,true,false);
-                        func->add(self);
+                        auto self = new type::Parameter("self", args.parent_class, true, false);
+                        function->add(self);
                     }
                     break;
             }
-
-            args.user_function = func;
-            args.domain = func;
-            for(auto& param_node:func_node->parameter_list){
-                visitParameter(param_node,args);
+            
+            args.domain->add(function);
+            (**function_node).function_symbol = function;
+            
+            args.user_function = function;
+            args.domain = function;
+            for(ast::Parameter *parameter=(**function_node).parameter;parameter!=nullptr;parameter=parameter->next_sibling){
+                visitParameter(&parameter,args);
             }
 
             if(name == "main" && args.domain->equal(args.context->getGlobal())){
-                args.context->setEntrance(func);
+                args.context->setEntrance(function);
             }
         }
-        return nullptr;
+        return {};
     }
 
-    std::any DetailCollector::visitExternal(ast::External *ext_node, BaseArgs args) {
-        auto name = getID(ext_node->name);
-        if(is_name_valid(name,ext_node->name->location,args.domain)){
-            auto lib = getString(ext_node->lib);
+    std::any DetailCollector::visitExternal(ast::External **external_node, DetailArgs args) {
+        auto name = getID((**external_node).name);
+        
+        if(is_name_valid(name,(**external_node).name->location,args.domain)){
+            auto lib = getString((**external_node).lib);
             //auto alias = getString(ext_node->alias); TODO alias
-            auto func = make_shared<type::ExternalFunction>(lib,name);
-            func->setLocation(ext_node->name->location);
-            func->setName(name);
-            args.domain->add(func);
-            if(ext_node->return_annotation){
-                auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(ext_node->return_annotation,args));
-                func->setRetSignature(prototype);
+            auto function = new type::ExternalFunction(lib, name);
+            function->setLocation((**external_node).name->location);
+            function->setName(name);
+            args.domain->add(function);
+            if((**external_node).return_annotation){
+                auto prototype = any_cast<Prototype*>(visitAnnotation(&(**external_node).return_annotation,args));
+                function->setRetSignature(prototype);
             }
-            args.domain = func;
-            for(auto& param_node:ext_node->parameter_list){
-                visitParameter(param_node,args);
+            args.domain = function;
+            for(auto parameter=(**external_node).parameter;parameter!=nullptr;parameter=parameter->next_sibling){
+                visitParameter(&parameter,args);
             }
         }
         return nullptr;
     }
 
-    std::any DetailCollector::visitParameter(ast::Parameter *param_node, BaseArgs args) {
-        auto name = getID(param_node->name);
-        auto prototype = any_cast<shared_ptr<Prototype>>(visitAnnotation(param_node->annotation,args));
-        NotNull(prototype.get());
-        auto arg = make_shared<type::Argument>(name,prototype,param_node->is_byval,param_node->is_optional);
-        if(param_node->is_byval){
+    std::any DetailCollector::visitParameter(ast::Parameter **parameter_node, DetailArgs args) {
+        auto name = getID((**parameter_node).name);
+        auto prototype = any_cast<Prototype*>(visitAnnotation(&(**parameter_node).annotation,args));
+        NotNull(prototype);
+        auto arg = new type::Parameter(name, prototype, (**parameter_node).is_byval, (**parameter_node).is_optional);
+        if((**parameter_node).is_byval){
             switch (prototype->getKind()) {
-                case type::DeclarationEnum::Type:
-                case type::DeclarationEnum::Array:
-                    args.context->byteLengthDependencies.addDependent(args.user_function,prototype->as_shared<Domain>());
+                case type::SymbolKind::Record:
+                case type::SymbolKind::Array:
+                    args.context->byteLengthDependencies.addDependent(args.user_function,prototype->as<Domain*>());
             }
         }
-        if(is_name_valid(name,param_node->name->location,args.domain)){
+        if(is_name_valid(name,(**parameter_node).name->location,args.domain)){
             args.domain->add(arg);
         }
         return nullptr;
     }
 
-    std::any DetailCollector::visitMember(ast::Member *member_node, BaseArgs args) {
-        switch (member_node->member_kind) {
-            case ast::Member::function_: return visitFunction((ast::Function*)member_node,args);
-            case ast::Member::class_:    return visitClass((ast::Class*)member_node,args);
-            case ast::Member::module_:   return visitModule((ast::Module*)member_node,args);
-            case ast::Member::type_:     return visitType((ast::Type*)member_node,args);
-            case ast::Member::enum_:     return visitEnum((ast::Enum*)member_node,args);
-            case ast::Member::dim_:      return visitDim((ast::Dim*)member_node,args);
-            case ast::Member::external_: return visitExternal((ast::External*)member_node,args);
-                //case ast::Member::operator_: return visitOperator((ast::Operator*)member_node,args);
-                //case ast::Member::init_:     return visitInit((ast::Init*)member_node,args);
+    std::any DetailCollector::visitMember(ast::Member **member_node, DetailArgs args) {
+        switch ((**member_node).member_kind) {
+            case ast::Member::function_: return visitFunction((ast::Function**)member_node,args);
+            case ast::Member::class_:    return visitClass((ast::Class**)member_node,args);
+            case ast::Member::module_:   return visitModule((ast::Module**)member_node,args);
+            case ast::Member::type_:     return visitType((ast::Type**)member_node,args);
+            case ast::Member::enum_:     return visitEnum((ast::Enum**)member_node,args);
+            case ast::Member::dim_:      return visitDim((ast::Dim**)member_node,args);
+            case ast::Member::external_: return visitExternal((ast::External**)member_node,args);
         }
         return {};
     }
 
-    std::any DetailCollector::visitBinary(ast::expr::Binary *logic_node, BaseArgs args) {
-        switch (logic_node->op) {
+    std::any DetailCollector::visitBinary(ast::expr::Binary **binary_node, DetailArgs args) {
+        switch ((**binary_node).op) {
             case ast::expr::Binary::Dot:{
-                auto lhs_type = any_cast<ExpressionType*>(visitExpression(logic_node->lhs,args));
+                auto lhs_type = any_cast<ExpressionType*>(visitExpression(&(**binary_node).lhs,args));
                 if(lhs_type->value_kind == ExpressionType::error)return lhs_type;
-                auto rhs_name = getID((ID*)logic_node->rhs);
-                auto domain = lhs_type->prototype->as_shared<Domain>();
-                shared_ptr<Prototype> target;
-                if(domain && (target = domain->find(rhs_name)->as_shared<Prototype>())){
+                auto rhs_name = getID((ID*)(**binary_node).rhs);
+                auto domain = lhs_type->prototype->as<Domain*>();
+                Prototype *target;
+                if(domain && (target = domain->find(rhs_name)->as<Prototype*>())){
                     return new ExpressionType(target,ExpressionType::path);
                 }
                 else{
-                    Logger::error(logic_node->location,"object not find");
+                    Logger::error((**binary_node).location,"object not find");
                     return ExpressionType::Error;
                 }
-            }
                 break;
+            }
             default:
-                Logger::error(logic_node->location,"invalid expression");
+                Logger::error((**binary_node).location,"invalid expression");
                 return ExpressionType::Error;
         }
     }
 
-    std::any DetailCollector::visitID(ast::expr::ID *id_node, BaseArgs args) {
-        auto name = getID(id_node);
-        auto target = args.domain->lookUp(name)->as_shared<Prototype>();
+    std::any DetailCollector::visitID(ast::expr::ID **id_node, DetailArgs args) {
+        auto name = getID(*id_node);
+        auto target = args.domain->lookUp(name)->as<Prototype*>();
         if(!target){
-            Logger::error(id_node->location,"object not find");
+            Logger::error((**id_node).location,"object not find");
             return ExpressionType::Error;
         }
         return new ExpressionType(target,ExpressionType::path);
     }
 
+    std::any DetailCollector::visitAnnotation(ast::Annotation **annotation_node, DetailArgs args) {
+        auto iter = (**annotation_node).unit;
+        args.need_lookup = true;
+        args.dot_expression_context = args.domain;
+        auto symbol = visitAnnotationUnit(&iter,args);
+        if(symbol.has_value()) args.dot_expression_context = any_cast<Symbol*>(symbol);
+        else return {};
 
-
-    std::any DetailCollector::visitGlobal(ast::Global **global_node, BaseArgs args) {
-        NotNull(*global_node);
-        for(auto* member:(*global_node)->member_list)
-            visitMember(&member,args);
-        return {};
+        args.need_lookup = false;
+        while(iter!=nullptr){
+            iter=iter->next_sibling;
+            symbol = visitAnnotationUnit(&iter,args);
+            args.dot_expression_context = any_cast<Symbol*>(symbol);
+            if(symbol.has_value()) args.dot_expression_context = any_cast<Symbol*>(symbol);
+            else return {};
+        }
+        return args.dot_expression_context;
     }
 
-    std::any DetailCollector::visitModule(ast::Module **module_node, BaseArgs args) {
-        return ModifyVisitor::visitModule(module_node, args);
+    std::any DetailCollector::visitAnnotationUnit(ast::AnnotationUnit **unit_node, DetailArgs args) {
+        auto name = getID((**unit_node).name);
+        Symbol *symbol = nullptr;
+        if(args.need_lookup){
+            symbol = args.dot_expression_context->as<Domain*>()->lookUp(name);
+        }
+        else{
+            symbol = args.dot_expression_context->as<Domain*>()->find(name);
+        }
+
+        if(!symbol){
+            Logger::error((**unit_node).name->location,format()<<"cannot find object '"
+                                                                <<args.dot_expression_context->mangling('.')
+                                                                <<'.'<<name<<"'");
+            return {};
+        }
+        return symbol;
     }
 
-    std::any DetailCollector::visitEnum(ast::Enum **enum_node, BaseArgs args) {
-        return ModifyVisitor::visitEnum(enum_node, args);
-    }
-
-    std::any DetailCollector::visitType(ast::Type **type_node, BaseArgs args) {
-        return ModifyVisitor::visitType(type_node, args);
-    }
-
-    std::any DetailCollector::visitDim(ast::Dim **dim_node, BaseArgs args) {
-        return ModifyVisitor::visitDim(dim_node, args);
-    }
-
-    std::any DetailCollector::visitVariable(ast::Variable **variable_node, BaseArgs args) {
-        return ModifyVisitor::visitVariable(variable_node, args);
-    }
-
-    std::any DetailCollector::visitFunction(ast::Function **function_node, BaseArgs args) {
-        return ModifyVisitor::visitFunction(function_node, args);
-    }
-
-    std::any DetailCollector::visitExternal(ast::External **external_node, BaseArgs args) {
-        return ModifyVisitor::visitExternal(external_node, args);
-    }
-
-    std::any DetailCollector::visitParameter(ast::Parameter **parameter_node, BaseArgs args) {
-        return ModifyVisitor::visitParameter(parameter_node, args);
-    }
-
-    std::any DetailCollector::visitMember(ast::Member **member_node, BaseArgs args) {
-        return ModifyVisitor::visitMember(member_node, args);
-    }
-
-    std::any DetailCollector::visitBinary(ast::expr::Binary **binary_node, BaseArgs args) {
-        return ModifyVisitor::visitBinary(binary_node, args);
-    }
-
-    std::any DetailCollector::visitID(ast::expr::ID **id_node, BaseArgs args) {
-        return ModifyVisitor::visitID(id_node, args);
-    }
 }

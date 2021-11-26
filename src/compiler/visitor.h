@@ -64,8 +64,6 @@ namespace evoBasic{
                 case ast::Member::type_:     return visitType((ast::Type*)member_node,args);
                 case ast::Member::enum_:     return visitEnum((ast::Enum*)member_node,args);
                 case ast::Member::dim_:      return visitDim((ast::Dim*)member_node,args);
-                case ast::Member::operator_: return visitOperator((ast::Operator*)member_node,args);
-                case ast::Member::init_:     return visitInit((ast::Init*)member_node,args);
                 case ast::Member::external_: return visitExternal((ast::External*)member_node,args);
             }
             return nullptr;
@@ -109,6 +107,7 @@ namespace evoBasic{
                 case ast::expr::Expression::error_:
                     return {};
             }
+            return {};
         }
     };
 

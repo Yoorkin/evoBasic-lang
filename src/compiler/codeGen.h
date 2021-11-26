@@ -12,18 +12,18 @@
 
 namespace evoBasic{
     struct IRGenArgs{
-        std::shared_ptr<type::Function> function;
-        std::shared_ptr<type::Domain> domain;
-        std::shared_ptr<type::Symbol> dot_expression_context;
+        type::Function *function = nullptr;
+        type::Domain *domain = nullptr;
+        type::Symbol *dot_expression_context = nullptr;
         bool need_lookup = false;
         bool reserve_address = false;
         bool is_last_terminal = false;
         bool need_return_value = false;
-        std::shared_ptr<Context> context;
+        Context *context = nullptr;
         ir::Block *previous_block = nullptr;
         ir::Block *next_block = nullptr;
         ir::Block *continue_block = nullptr;
-        std::shared_ptr<ir::IR> ir;
+        ir::IR *ir = nullptr;
         int current_args_index = 0;
     };
 
@@ -32,27 +32,27 @@ namespace evoBasic{
 
     struct ClassType{
         data::ptr size;
-        std::shared_ptr<type::Class> cls;
+        type::Class *cls;
     };
 
     struct ArrayType{
         data::ptr size;
-        std::shared_ptr<type::Array> array;
+        type::Array *array;
     };
 
     struct RecordType{
         data::ptr size;
-        std::shared_ptr<type::Record> record;
+        type::Record *record;
     };
 
     struct DataType{
         vm::Data data;
-        std::shared_ptr<type::primitive::Primitive> primitive;
+        type::Primitive *primitive;
     };
 
     struct AddressType;
 
-    using OperandType = std::variant<EmptyType,DataType,ArrayType,RecordType,AddressType,ClassType,std::shared_ptr<type::Symbol>>;
+    using OperandType = std::variant<EmptyType,DataType,ArrayType,RecordType,AddressType,ClassType,type::Symbol*>;
     enum class OperandEnum{EmptyType,DataType,ArrayType,RecordType,AddressType,ClassType,SymbolPtr};
 
 
@@ -66,11 +66,11 @@ namespace evoBasic{
     class IRGen : public Visitor<IRGenArgs>{
         //std::stack<OperandType> operand;
     public:
-        std::shared_ptr<ir::IR> gen(AST *ast,std::shared_ptr<Context> context);
+        ir::IR *gen(AST *ast,Context *context);
 
-        OperandType mapSymbolToOperandType(std::shared_ptr<type::Symbol> symbol);
+        OperandType mapSymbolToOperandType(type::Symbol *symbol);
         OperandType visitAssign(ast::expr::Binary *node, IRGenArgs args);
-        OperandType pushVariableAddress(const std::shared_ptr<type::Variable> &variable, ir::Block *block, bool need_push_base);
+        OperandType pushVariableAddress(type::Variable *variable, ir::Block *block, bool need_push_base);
         OperandType loadOperandAddress(OperandType top,ir::Block *block);
         OperandType visitArithmeticOp(OperandType lhs_operand,ast::expr::Binary *logic_node, IRGenArgs args);
         OperandType visitIndex(ast::expr::Binary *index,IRGenArgs args,bool need_push_base);
@@ -87,7 +87,7 @@ namespace evoBasic{
 
         std::any visitFunction(ast::Function *func_node, IRGenArgs args) override;
 
-        ir::Block *visitStatementList(std::list<ast::stmt::Statement*> &stmt_list, IRGenArgs args);
+        ir::Block *visitStatementList(ast::stmt::Statement *statement, IRGenArgs args);
         std::any visitLet(ast::stmt::Let *let_node, IRGenArgs args) override;
         std::any visitIf(ast::stmt::If *ifstmt_node, IRGenArgs args) override;
         std::any visitCase(ast::Case *ca_node, IRGenArgs args) override;
@@ -115,7 +115,7 @@ namespace evoBasic{
         std::any visitAnnotation(ast::Annotation *anno_node, IRGenArgs args)override;
         std::any visitExpression(ast::expr::Expression *expr_node, IRGenArgs args) override;
 
-        OperandType visitVariableCall(ast::expr::Callee *callee_node, IRGenArgs args, std::shared_ptr<type::Variable> target);
+        OperandType visitVariableCall(ast::expr::Callee *callee_node, IRGenArgs args, type::Variable *target);
 
         std::any visitCast(ast::expr::Cast *cast_node, IRGenArgs args);
         void dereference(std::shared_ptr<type::Symbol> symbol);

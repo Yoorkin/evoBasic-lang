@@ -17,36 +17,37 @@ using namespace evoBasic::ast::expr;
 namespace evoBasic{
 
 
-    ExpressionType *ExpressionType::Error = new ExpressionType(make_shared<type::Error>(),error);
+    ExpressionType *ExpressionType::Error = new ExpressionType(new type::Error,error);
 
-    void Semantic::collectSymbol(AST *ast, std::shared_ptr<Context> context) {
+    void Semantic::collectSymbol(AST *ast, Context *context) {
         SymbolCollector collector;
         SymbolCollectorArgs args;
+        args.context = context;
         args.domain = context->getGlobal();
         collector.visitGlobal(ast,args);
     }
 
-    void Semantic::collectDetail(AST *ast, std::shared_ptr<Context> context) {
+    void Semantic::collectDetail(AST *ast, Context *context) {
         DetailCollector collector;
-        BaseArgs args;
+        DetailArgs args;
         args.domain = context->getGlobal();
         args.context = context;
-        collector.visitGlobal(ast,args);
+        collector.visitGlobal(&ast,args);
     }
 
-    void Semantic::typeCheck(AST *ast, std::shared_ptr<Context> context) {
+    void Semantic::typeCheck(AST *ast, Context *context) {
         TypeAnalyzer analyzer;
-        BaseArgs args;
+        TypeAnalyzerArgs args;
         args.domain = context->getGlobal();
         args.context = context;
-        analyzer.visitGlobal(ast,args);
+        analyzer.visitGlobal(&ast,args);
     }
 
-    bool Semantic::solveTypeInferenceDependencies(std::shared_ptr<Context> context) {
+    bool Semantic::solveTypeInferenceDependencies(Context *context) {
         return false;
     }
 
-    bool Semantic::solveByteLengthDependencies(std::shared_ptr<Context> context) {
+    bool Semantic::solveByteLengthDependencies(Context *context) {
         if(context->byteLengthDependencies.solve()){
             Logger::dev("update memory layout topo order: ");
             for(auto &domain : context->byteLengthDependencies.getTopologicalOrder()){

@@ -15,19 +15,19 @@ namespace evoBasic{
 
     class Semantic {
     public:
-        static void collectSymbol(AST *ast,std::shared_ptr<Context> context);
-        static void collectDetail(AST *ast,std::shared_ptr<Context> context);
-        static void typeCheck(AST *ast,std::shared_ptr<Context> context);
-        static bool solveTypeInferenceDependencies(std::shared_ptr<Context> context);
-        static bool solveByteLengthDependencies(std::shared_ptr<Context> context);
+        static void collectSymbol(AST *ast,Context *context);
+        static void collectDetail(AST *ast,Context *context);
+        static void typeCheck(AST *ast,Context *context);
+        static bool solveTypeInferenceDependencies(Context *context);
+        static bool solveByteLengthDependencies(Context *context);
     };
 
 
     struct ExpressionType{
-        std::shared_ptr<type::Prototype> prototype;
+        type::Prototype *prototype;
         enum ValueKind {lvalue,rvalue,path,error} value_kind;
         ExpressionType()=default;
-        ExpressionType(std::shared_ptr<type::Prototype> prototype_,ValueKind kind){
+        ExpressionType(type::Prototype *prototype_,ValueKind kind){
             this->prototype = prototype_;
             this->value_kind = kind;
         }

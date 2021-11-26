@@ -24,8 +24,9 @@ namespace evoBasic::ast{
         stream<<info->text<<endl;
         prefix += is_last ? " " : "│";
         for(int i=0;i<info->text.size()/2+1;i++)prefix+=' ';
-        for(auto child:info->childs){
-            debugAST(stream,child,prefix,(child == info->childs.back()));
+
+        for(auto iter:info->childs){
+            debugAST(stream,iter,prefix,(iter == info->childs.back()));
         }
     }
 
@@ -40,19 +41,31 @@ namespace evoBasic::ast{
 
     DebugInfo *Global::debug() {
         auto ret = new DebugInfo{"Global"};
-        for(auto m:member_list)ret->childs.push_back(m->debug());
+        auto iter = member;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         return ret;
     }
 
     DebugInfo *Class::debug() {
         auto ret = new DebugInfo{"Class",{name->debug()}};
-        for(auto m:member_list)ret->childs.push_back(m->debug());
+        auto iter = member;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         return ret;
     }
 
     DebugInfo *Module::debug() {
         auto ret = new DebugInfo{"Module",{name->debug()}};
-        for(auto m:member_list)ret->childs.push_back(m->debug());
+        auto iter = member;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         return ret;
     }
 
@@ -62,7 +75,11 @@ namespace evoBasic::ast{
 
     DebugInfo *Dim::debug() {
         auto ret = new DebugInfo{format()<<"Dim "<<(is_const?"const":"")};
-        for(auto var:variable_list)ret->childs.push_back(var->debug());
+        auto iter = variable;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         return ret;
     }
 
@@ -76,9 +93,17 @@ namespace evoBasic::ast{
     DebugInfo *Function::debug() {
         vector flag = {"Static","Virtual","Override","None"};
         auto ret = new DebugInfo{format()<<"Function "<<flag[(int)method_flag],{name->debug()}};
-        for(auto p:parameter_list)ret->childs.push_back(p->debug());
-        ret->childs.push_back(return_type->debug());
-        for(auto stmt:statement_list)ret->childs.push_back(stmt->debug());
+        auto iter = parameter;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
+        ret->childs.push_back(return_annotation->debug());
+        auto stmt = statement;
+        while(stmt){
+            ret->childs.push_back(stmt->debug());
+            stmt = stmt->next_sibling;
+        }
         return ret;
     }
 
@@ -86,32 +111,32 @@ namespace evoBasic::ast{
         auto ret = new DebugInfo{"External",{name->debug()}};
         if(lib)ret->childs.push_back(lib->debug());
         if(alias)ret->childs.push_back(alias->debug());
-        for(auto p:parameter_list)ret->childs.push_back(p->debug());
+        auto iter = parameter;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         ret->childs.push_back(return_annotation->debug());
         return ret;
     }
 
-    DebugInfo *Init::debug() {
-        return nullptr;
-    }
-
-    DebugInfo *Operator::debug() {
-        return nullptr;
-    }
-
     DebugInfo *Enum::debug() {
         auto ret = new DebugInfo{"Enum",{name->debug()}};
-        for(auto em:this->member_list){
-            ret->childs.push_back(em.first->debug());
-            ret->childs.push_back(em.second->debug());
+        auto iter = member;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
         }
         return ret;
     }
 
     DebugInfo *Type::debug() {
         auto ret = new DebugInfo{"Type",{name->debug()}};
-        for(auto var:member_list)
-            ret->childs.push_back(var->debug());
+        auto iter = member;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         return ret;
     }
 
@@ -128,37 +153,52 @@ namespace evoBasic::ast{
 
     DebugInfo *stmt::Let::debug() {
         auto ret = new DebugInfo{"Let"};
-        for(auto var:variable_list)
-            ret->childs.push_back(var->debug());
+        auto iter = variable;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         return ret;
     }
 
     DebugInfo *stmt::Select::debug() {
         auto ret = new DebugInfo{"Select",{condition->debug()}};
-        for(auto case_:case_list)
-            ret->childs.push_back(case_->debug());
+        auto iter = case_;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         return ret;
     }
 
     DebugInfo *stmt::Loop::debug() {
         auto ret = new DebugInfo{"While",{condition->debug()}};
-        for(auto stmt : statement_list)
-            ret->childs.push_back(stmt->debug());
+        auto iter = statement;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         return ret;
     }
 
     DebugInfo *stmt::If::debug() {
         auto ret = new DebugInfo{"If"};
-        for(auto case_:case_list)
-            ret->childs.push_back(case_->debug());
+        auto iter = case_;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         return ret;
     }
 
     DebugInfo *stmt::For::debug() {
         auto ret = new DebugInfo{"For",{begin->debug(),end->debug()}};
         if(step)ret->childs.push_back(step->debug());
-        for(auto stmt : statement_list)
-            ret->childs.push_back(stmt->debug());
+        auto iter = statement;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         return ret;
     }
 
@@ -182,8 +222,11 @@ namespace evoBasic::ast{
     DebugInfo *Case::debug() {
         auto ret = new DebugInfo{"Case"};
         if(condition)ret->childs.push_back(condition->debug());
-        for(auto stmt:statement_list)
-            ret->childs.push_back(stmt->debug());
+        auto iter = statement;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         return ret;
     }
 
@@ -193,8 +236,11 @@ namespace evoBasic::ast{
 
     DebugInfo *Annotation::debug() {
         auto ret = new DebugInfo{"Annotation"};
-        for(auto unit:unit_list)
-            ret->childs.push_back(unit->debug());
+        auto iter = unit;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         if(array_size)
             ret->childs.push_back(array_size->debug());
         return ret;
@@ -229,14 +275,17 @@ namespace evoBasic::ast{
 
     DebugInfo *expr::Callee::Argument::debug() {
         vector<string> PassKindStr{"Undefined","ByRef","ByVal"};
-        return new DebugInfo{format()<<"Argument "<<PassKindStr[pass_kind],{expr->debug()}};
+        return new DebugInfo{format()<<"Parameter "<<PassKindStr[pass_kind],{expr->debug()}};
     }
 
     DebugInfo *expr::Callee::debug() {
         auto ret = new DebugInfo{"Callee"};
         ret->childs.push_back(name->debug());
-        for(auto arg:arg_list)
-            ret->childs.push_back(arg->debug());
+        auto iter = argument;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
         return ret;
     }
 
@@ -258,6 +307,14 @@ namespace evoBasic::ast{
 
     DebugInfo *expr::Boolean::debug() {
         return new DebugInfo{format()<<"Boolean "<<(value?"true":"false")};
+    }
+
+    DebugInfo *EnumMember::debug() {
+        return new DebugInfo{"EnumMember"};
+    }
+
+    DebugInfo *Implement::debug() {
+        return new DebugInfo{"Implement"};
     }
 }
 

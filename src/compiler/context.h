@@ -23,23 +23,27 @@ namespace evoBasic{
         friend Context;
         explicit BuiltIn();
 
-        using Primivite = type::primitive::Primitive;
-        std::vector<std::shared_ptr<Primivite>> primitive_vector;
-        std::shared_ptr<type::primitive::VariantClass> variant_class;
-        std::shared_ptr<type::Error> error_symbol;
+        using Primitive = type::primitive::Primitive;
+        std::vector<Primitive*> primitive_vector;
+        type::primitive::VariantClass *variant_class = nullptr;
+        type::Error *error_symbol = nullptr;
+        type::Class *object_class = nullptr;
+        type::Class *string_class = nullptr;
         static BuiltIn builtin;
     public:
-        std::shared_ptr<type::primitive::VariantClass> getVariantClass()const;
-        std::shared_ptr<Primivite> getPrimitive(vm::Data kind)const;
-        std::shared_ptr<type::Error> getErrorPrototype()const;
+        type::VariantClass *getVariantClass()const;
+        Primitive *getPrimitive(vm::Data kind)const;
+        type::Class *getObjectClass()const;
+        type::Class *getStringClass()const;
+        type::Error *getErrorPrototype()const;
     };
 
     class ConversionRules{
         friend Context;
     public:
-        using sharedPtr = std::shared_ptr<type::Prototype>;
-        using Key = std::pair<sharedPtr,sharedPtr>;
-        using Value = sharedPtr;
+        using Ptr = type::Prototype*;
+        using Key = std::pair<Ptr,Ptr>;
+        using Value = Ptr;
         using Rule = std::pair<Key,Value>;
     private:
         explicit ConversionRules(BuiltIn* builtIn);
@@ -47,25 +51,24 @@ namespace evoBasic{
         std::set<Key> explicit_cast_rules;
         std::set<Key> implicit_cast_rules;//implicit narrowing or widening
     public:
-        bool isExplicitCastRuleExist(sharedPtr src, sharedPtr dst)const;
-        bool isImplicitCastRuleExist(sharedPtr src,sharedPtr dst)const;
-        std::optional<Rule> getImplicitPromotionRule(sharedPtr src,sharedPtr dst)const;
+        bool isExplicitCastRuleExist(Ptr src, Ptr dst)const;
+        bool isImplicitCastRuleExist(Ptr src, Ptr dst)const;
+        std::optional<Rule> getImplicitPromotionRule(Ptr src,Ptr dst)const;
         void insertCastAST(Value dst,ast::expr::Expression **expression);
     };
 
     class Context{
-        std::shared_ptr<type::Module> global;
-        std::shared_ptr<type::UserFunction> entrance;
+        type::Module *global = nullptr;
+        type::UserFunction *entrance = nullptr;
         BuiltIn builtin;
         ConversionRules conversion_rules;
     public:
-        Dependencies<std::shared_ptr<type::Domain>> byteLengthDependencies;
-        //Dependencies<std::pair<std::shared_ptr<type::Variable>,ast::expr::Expression*>> typeInferenceDependencies;
+        Dependencies<type::Domain*> byteLengthDependencies;
         Context(const Context&)=delete;
         Context();
-        std::shared_ptr<type::Module> getGlobal();
-        std::shared_ptr<type::UserFunction> getEntrance();
-        void setEntrance(std::shared_ptr<type::UserFunction> function);
+        type::Module *getGlobal();
+        type::UserFunction *getEntrance();
+        void setEntrance(type::UserFunction *function);
 
         const BuiltIn& getBuiltIn();
         ConversionRules& getConversionRules();

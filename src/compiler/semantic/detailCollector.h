@@ -8,25 +8,35 @@
 #include "type.h"
 #include "context.h"
 #include "utils.h"
-#include "baseVisitor.h"
 
 namespace evoBasic{
-
-    class DetailCollector : public ModifyVisitor<BaseArgs>{
+    struct DetailArgs{
+        Context *context = nullptr;
+        type::UserFunction *user_function = nullptr;
+        type::Domain *domain = nullptr;
+        type::Symbol *dot_expression_context = nullptr;
+        type::Class *parent_class = nullptr;
+        int checking_args_index = 0;
+        bool need_lookup = false;
+    };
+    
+    class DetailCollector : public ModifyVisitor<DetailArgs>{
     public:
-        std::any visitGlobal(ast::Global **global_node, BaseArgs args) override;
-        std::any visitModule(ast::Module **module_node, BaseArgs args) override;
-        std::any visitClass(ast::Class **class_node, BaseArgs args) override;
-        std::any visitEnum(ast::Enum **enum_node, BaseArgs args) override;
-        std::any visitType(ast::Type **type_node, BaseArgs args) override;
-        std::any visitDim(ast::Dim **dim_node, BaseArgs args) override;
-        std::any visitVariable(ast::Variable **variable_node, BaseArgs args) override;
-        std::any visitFunction(ast::Function **function_node, BaseArgs args) override;
-        std::any visitExternal(ast::External **external_node, BaseArgs args) override;
-        std::any visitParameter(ast::Parameter **parameter_node, BaseArgs args) override;
-        std::any visitMember(ast::Member **member_node, BaseArgs args) override;
-        std::any visitBinary(ast::expr::Binary **binary_node, BaseArgs args) override;
-        std::any visitID(ast::expr::ID **id_node, BaseArgs args) override;
+        std::any visitGlobal(ast::Global **global_node, DetailArgs args) override;
+        std::any visitModule(ast::Module **module_node, DetailArgs args) override;
+        std::any visitClass(ast::Class **class_node, DetailArgs args) override;
+        std::any visitEnum(ast::Enum **enum_node, DetailArgs args) override;
+        std::any visitType(ast::Type **type_node, DetailArgs args) override;
+        std::any visitDim(ast::Dim **dim_node, DetailArgs args) override;
+        std::any visitVariable(ast::Variable **variable_node, DetailArgs args) override;
+        std::any visitFunction(ast::Function **function_node, DetailArgs args) override;
+        std::any visitExternal(ast::External **external_node, DetailArgs args) override;
+        std::any visitParameter(ast::Parameter **parameter_node, DetailArgs args) override;
+        std::any visitMember(ast::Member **member_node, DetailArgs args) override;
+        std::any visitBinary(ast::expr::Binary **binary_node, DetailArgs args) override;
+        std::any visitID(ast::expr::ID **id_node, DetailArgs args) override;
+        std::any visitAnnotation(ast::Annotation **annotation_node, DetailArgs args) override;
+        std::any visitAnnotationUnit(ast::AnnotationUnit **unit_node, DetailArgs args) override;
     };
 
 }

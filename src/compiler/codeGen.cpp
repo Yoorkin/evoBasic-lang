@@ -32,8 +32,8 @@ namespace evoBasic{
         }
     }
     
-    shared_ptr<IR> IRGen::gen(AST *ast,std::shared_ptr<Context> context) {
-        auto ir = std::make_shared<IR>();
+    IR *IRGen::gen(AST *ast,Context *context) {
+        auto ir = new IR;
         IRGenArgs args;
         args.ir = ir;
         args.domain = context->getGlobal();
@@ -43,21 +43,26 @@ namespace evoBasic{
     }
 
     std::any IRGen::visitGlobal(ast::Global *global_node, IRGenArgs args) {
-        for(auto& m:global_node->member_list)
-            visitMember(m,args);
-        return nullptr;
+        NotNull(global_node);
+        args.domain = args.context->getGlobal();
+        for(auto iter = (*global_node).member;iter!=nullptr;iter=iter->next_sibling){
+            visitMember(iter,args);
+        }
+        return {};
     }
 
-    std::any IRGen::visitModule(ast::Module *mod_node, IRGenArgs args) {
-        args.domain = args.domain->find(getID(mod_node->name))->as_shared<Domain>();
-        for(auto& m:mod_node->member_list)
-            visitMember(m,args);
-        return nullptr;
+    std::any IRGen::visitModule(ast::Module *module_node, IRGenArgs args) {
+        NotNull(module_node);
+        args.domain = (*module_node).module_symbol;
+        for(auto iter = (*module_node).member;iter!=nullptr;iter=iter->next_sibling){
+            visitMember(iter,args);
+        }
+        return {};
     }
 
     std::any IRGen::visitClass(ast::Class *cls_node, IRGenArgs args) {
         list<Pair*> members;
-        auto ty = args.domain->find(getID(cls_node->name))->as_shared<type::Record>();
+        auto ty = cls_node->class_symbol;
         for(auto &p : ty->getFields()){
             auto field_type_ir = new Mark(p->getPrototype()->mangling(),false,false);
             members.push_back(new Pair(p->getName(),field_type_ir));
@@ -66,26 +71,26 @@ namespace evoBasic{
         args.ir->addMeta(new Pair(ty->mangling(), record_ir));
 
         args.domain = ty;
-        for(auto& m:cls_node->member_list){
-            switch (m->member_kind) {
-                case ast::Member::function_:
-                case ast::Member::enum_:
-                case ast::Member::operator_:
-                case ast::Member::init_:
-                    visitMember(m,args);
-                    break;
-            }
+        
+        auto iter = cls_node->member;
+        while(iter){
+            visitMember(iter,args);
+            iter = iter->next_sibling;
         }
-        return nullptr;
+
+        return {};
     }
 
 
     std::any IRGen::visitType(ast::Type *ty_node, IRGenArgs args) {
         list<Pair*> members;
-        auto ty = args.domain->find(getID(ty_node->name))->as_shared<type::Record>();
-        for(auto &p : ty->getFields()){
+        auto ty = ty_node->type_symbol;
+        auto iter = ty_node->member;
+        while(iter){
+            auto p = iter->variable_symbol;
             auto field_type_ir = new Mark(p->getPrototype()->mangling(),false,false);
             members.push_back(new Pair(p->getName(),field_type_ir));
+            iter = iter->next_sibling;
         }
         auto record_ir = new ir::Record(members);
         args.ir->addMeta(new Pair(ty->mangling(), record_ir));
@@ -94,11 +99,11 @@ namespace evoBasic{
 
     std::any IRGen::visitEnum(ast::Enum *em_node, IRGenArgs args) {
         auto name = getID(em_node->name);
-        auto em = args.domain->find(name)->as_shared<Enumeration>();
+        auto em = em_node->enum_symbol;
         list<pair<string,int>> members;
         for(auto p = em->begin();p!=em->end();p++){
             auto key = p->getName();
-            auto value = p->as_shared<EnumMember>()->getIndex();
+            auto value = p->as<EnumMember*>()->getIndex();
             members.emplace_back(key,value);
         }
         auto enum_ir = new Enum(members);
@@ -107,23 +112,25 @@ namespace evoBasic{
     }
 
     std::any IRGen::visitDim(ast::Dim *dim_node, IRGenArgs args) {
-        if(args.domain->getKind() == DeclarationEnum::Module){
-            for(auto &var:dim_node->variable_list)
-                visitVariable(var,args);
+        if(args.domain->getKind() == SymbolKind::Module){
+            auto iter = dim_node->variable;
+            while(iter){
+                visitVariable(iter,args);
+            }
         }
-        return nullptr;
+        return {};
     }
 
     std::any IRGen::visitVariable(ast::Variable *var_node, IRGenArgs args) {
         auto name = getID(var_node->name);
-        auto field = args.domain->find(name)->as_shared<Variable>();
+        auto field = var_node->variable_symbol;
         auto type_ref = new Mark(field->getPrototype()->mangling(),false,false);
         args.ir->addMeta(new Pair(field->mangling(), type_ref));
         return nullptr;
     }
 
     std::any IRGen::visitFunction(ast::Function *func_node, IRGenArgs args) {
-        auto func = args.domain->find(getID(func_node->name))->as_shared<type::Function>();
+        auto func = func_node->function_symbol;
         args.function = func;
 
         list<Pair*> params;
@@ -131,9 +138,9 @@ namespace evoBasic{
         for(auto &param : func->getArgsSignature()){
             auto isArray = false,isRef = !param->isByval();
             string name;
-            if(param->getPrototype()->getKind() == DeclarationEnum::Array){
+            if(param->getPrototype()->getKind() == SymbolKind::Array){
                 isArray = true;
-                name = param->getPrototype()->as_shared<Array>()->getElementPrototype()->mangling();
+                name = param->getPrototype()->as<Array*>()->getElementPrototype()->mangling();
             }
             else{
                 isArray = false;
@@ -146,9 +153,9 @@ namespace evoBasic{
         if(func->getRetSignature()){
             bool isArray;
             string name;
-            if(func->getRetSignature()->getKind() == DeclarationEnum::Array){
+            if(func->getRetSignature()->getKind() == SymbolKind::Array){
                 isArray = true;
-                name = func->getRetSignature()->as_shared<Array>()->getElementPrototype()->mangling();
+                name = func->getRetSignature()->as<Array*>()->getElementPrototype()->mangling();
             }
             else{
                 isArray = false;
@@ -169,21 +176,21 @@ namespace evoBasic{
 
         for(int i = func->getArgsSignature().size()-1;i>=0;i--){
             auto argument = func->getArgsSignature()[i];
-            auto variable = func->find(argument->getName())->as_shared<Variable>();
+            auto variable = func->find(argument->getName())->as<Variable*>();
             args.previous_block->PushFrameBase()
                     .Push(Data::ptr,new Const<data::ptr>(variable->getOffset()))
                     .Add(Data::ptr);
             if(argument->isByval()){
                 switch (argument->getPrototype()->getKind()) {
-                    case DeclarationEnum::Array:
-                    case DeclarationEnum::Type:
-                        args.previous_block->StmR(argument->getPrototype()->as_shared<Domain>()->getByteLength());
+                    case SymbolKind::Array:
+                    case SymbolKind::Record:
+                        args.previous_block->StmR(argument->getPrototype()->as<Domain*>()->getByteLength());
                         break;
-                    case DeclarationEnum::Class:
+                    case SymbolKind::Class:
                         args.previous_block->StoreR(Data::ptr);
                         break;
-                    case DeclarationEnum::Primitive:
-                        args.previous_block->StoreR(argument->getPrototype()->as_shared<primitive::Primitive>()->getDataKind());
+                    case SymbolKind::Primitive:
+                        args.previous_block->StoreR(argument->getPrototype()->as<type::Primitive*>()->getDataKind());
                         break;
                 }
             }
@@ -192,23 +199,25 @@ namespace evoBasic{
             }
         }
 
-        auto after_block = visitStatementList(func_node->statement_list,args);
+        auto after_block = visitStatementList(func_node->statement,args);
         after_block->Ret();
         return nullptr;
     }
 
-    Block *IRGen::visitStatementList(std::list<ast::stmt::Statement*> &stmt_list, IRGenArgs args) {
-        for(auto& s:stmt_list){
-            auto *after_block = any_cast<Block*>(visitStatement(s,args));
+    Block *IRGen::visitStatementList(ast::stmt::Statement *statement, IRGenArgs args) {
+        while(statement){
+            auto *after_block = any_cast<Block*>(visitStatement(statement,args));
             if(after_block)args.previous_block = after_block;
+            statement = statement->next_sibling;
         }
         return args.previous_block;
     }
 
     std::any IRGen::visitLet(ast::stmt::Let *let_node, IRGenArgs args) {
-        for(auto &var : let_node->variable_list){
+        auto var = let_node->variable;
+        while(var){
             auto tmp = args.domain->find(getID(var->name));
-            auto field = tmp->as_shared<Variable>();
+            auto field = tmp->as<Variable*>();
             auto offset = field->getOffset();
             args.previous_block->PushFrameBase()
                                 .Push(Data::ptr,new Const<data::u32>(field->getOffset()))
@@ -237,24 +246,25 @@ namespace evoBasic{
                 }
             }
             else switch(field->getPrototype()->getKind()){
-                case DeclarationEnum::Primitive:{
-                    auto data = field->getPrototype()->as_shared<primitive::Primitive>()->getDataKind();
+                case SymbolKind::Primitive:{
+                    auto data = field->getPrototype()->as<Primitive*>()->getDataKind();
                     args.previous_block->Push(data,convertNumberToConst(data,0));
                     args.previous_block->Store(data);
                     break;
                 }
-                case DeclarationEnum::Type:{
+                case SymbolKind::Record:{
                     break;
                 }
-                case DeclarationEnum::Array:{
+                case SymbolKind::Array:{
                     break;
                 }
-                case DeclarationEnum::Class:{
+                case SymbolKind::Class:{
                     args.previous_block->Push(Data::ptr,new Const<data::ptr>(0));
                     args.previous_block->Store(Data::ptr);
                     break;
                 }
             }
+            var = var->next_sibling;
         }
         return (Block*)nullptr;
     }
@@ -262,8 +272,11 @@ namespace evoBasic{
     std::any IRGen::visitIf(ast::stmt::If *ifstmt_node, IRGenArgs args) {
         auto after_if_block = new Block(args.domain->mangling() + "_if_after");
         args.next_block = after_if_block;
-        for(auto &ca:ifstmt_node->case_list){
+        
+        auto ca = ifstmt_node->case_;
+        while(ca){
             visitCase(ca,args);
+            ca = ca->next_sibling;
         }
         args.previous_block->Jmp(after_if_block);
         args.ir->addBlock(after_if_block);
@@ -277,11 +290,11 @@ namespace evoBasic{
             args.ir->addBlock(case_block);
             args.previous_block->Jif(case_block);
             args.previous_block = case_block;
-            auto after_stmts_block = visitStatementList(ca_node->statement_list, args);
+            auto after_stmts_block = visitStatementList(ca_node->statement, args);
             after_stmts_block->Jmp(args.next_block);
         }
         else{
-            visitStatementList(ca_node->statement_list, args);
+            visitStatementList(ca_node->statement, args);
         }
         return (Segment*)nullptr;
     }
@@ -305,7 +318,7 @@ namespace evoBasic{
         args.ir->addBlock(loop_block);
         args.previous_block = loop_block;
         args.next_block = after_loop_block;
-        visitStatementList(loop_node->statement_list,args);
+        visitStatementList(loop_node->statement,args);
         loop_block->Jmp(condition_block);
 
         args.ir->addBlock(after_loop_block);
@@ -321,14 +334,18 @@ namespace evoBasic{
         auto data = get<DataType>(inner_operand).data;
         //duplicate condition value for each Case
         int need_value_count = 0;
-        for(auto &ca:select_node->case_list){
+        auto ca = select_node->case_;
+        while(ca){
             if(ca->condition)need_value_count++;
+            ca = ca->next_sibling;
         }
         for(int i=0;i<need_value_count-1;i++){
             args.previous_block->Dup(data);
         }
-        for(auto &ca:select_node->case_list){
+        ca = select_node->case_;
+        while(ca){
             visitCaseInSelectStmt(ca,args);
+            ca = ca->next_sibling;
         }
         args.previous_block->Jmp(after_select_block);
         args.ir->addBlock(after_select_block);
@@ -346,11 +363,11 @@ namespace evoBasic{
             args.previous_block->EQ(data);
             args.previous_block->Jif(case_block);
             args.previous_block = case_block;
-            auto after_stmts_block = visitStatementList(ca_node->statement_list, args);
+            auto after_stmts_block = visitStatementList(ca_node->statement, args);
             after_stmts_block->Jmp(args.next_block);
         }
         else{
-            visitStatementList(ca_node->statement_list, args);
+            visitStatementList(ca_node->statement, args);
         }
         return (Segment*)nullptr;
     }
@@ -403,7 +420,7 @@ namespace evoBasic{
         args.previous_block = loop_block;
         args.next_block = after_loop_block;
         args.continue_block = condition_block;
-        auto after_stmts_segment = visitStatementList(forstmt_node->statement_list,args);
+        auto after_stmts_segment = visitStatementList(forstmt_node->statement,args);
         //jump from loop end to condition previous_block
         after_stmts_segment->Jmp(condition_block);
 
@@ -457,7 +474,7 @@ namespace evoBasic{
                         auto second_element = get<AddressType>(*element).element;
                         switch ((OperandEnum)second_element->index()) {
                             case OperandEnum::ClassType: {
-                                // ByVal Class Argument or Class Variable,
+                                // ByVal Class Parameter or Class Variable,
                                 // operand top value is ptr->ptr->class memory begin
                                 args.previous_block->Dup(Data::ptr)
                                                     .Load(Data::ptr) // ptr->class memory begin
@@ -465,7 +482,7 @@ namespace evoBasic{
                                 break;
                             }
                             case OperandEnum::AddressType: {
-                                // AddressType,must be ByRef Class Argument,
+                                // AddressType,must be ByRef Class Parameter,
                                 // operand top value is ptr->ptr->ptr->class memory
                                 args.previous_block->Load(Data::ptr) // ptr->ptr->class memory begin
                                                     .Dup(Data::ptr)
@@ -583,6 +600,7 @@ namespace evoBasic{
                 args.previous_block->Not();
                 return boolean;
         }
+        return {};
     }
 
 
@@ -631,11 +649,13 @@ namespace evoBasic{
                 args.previous_block->FDiv(data);
                 return rhs_operand;//TODO FIDV support
         }
+        return {};
     }
 
-    OperandType visitArithmeticOverride(std::shared_ptr<type::Class> cls,ast::expr::Binary *logic_node, IRGenArgs args){
+    OperandType visitArithmeticOverride(type::Class *class_node,ast::expr::Binary *logic_node, IRGenArgs args){
         // The lhs operand is guaranteed to be Class, which prototype is type::Class
         //TODO operator override support
+        return {};
     }
 
     std::any IRGen::visitBinary(ast::expr::Binary *logic_node, IRGenArgs args) {
@@ -668,49 +688,54 @@ namespace evoBasic{
         else if(logic_node->op == Op::Dot || logic_node->op == Op::Index ){
             return visitDot(logic_node,args);
         }
+        return {};
     }
 
     std::any IRGen::visitID(ast::expr::ID *id_node, IRGenArgs args) {
         auto name = getID(id_node);
         shared_ptr<Symbol> ret;
         if(args.need_lookup) {
-            return args.dot_expression_context->as_shared<Domain>()->lookUp(name);
+            return args.dot_expression_context->as<Domain*>()->lookUp(name);
         }
         else{
-            return args.dot_expression_context->as_shared<Domain>()->find(name);
+            return args.dot_expression_context->as<Domain*>()->find(name);
         }
     }
 
 
     std::any IRGen::visitCallee(ast::expr::Callee *callee_node, IRGenArgs args) {
-        shared_ptr<type::Function> function = any_cast<shared_ptr<Symbol>>(visitID(callee_node->name,args))->as_shared<type::Function>();
+        auto function = any_cast<Symbol*>(visitID(callee_node->name,args))->as<type::Function*>();
         args.function = function;
         args.need_lookup = true;
         args.dot_expression_context = nullptr;
 
-        for(int i=0;i<callee_node->arg_list.size();i++){
+        auto argument = callee_node->argument;
+        int i = 0;
+        while(argument){
             args.current_args_index = i;
-            visitArg(callee_node->arg_list[i],args);
+            visitArg(argument,args);
+            argument = argument->next_sibling;
+            i++;
         }
         args.previous_block->Invoke(function->mangling());
 
         auto ret = function->getRetSignature();
         switch(ret->getKind()){
-            case DeclarationEnum::Primitive: {
-                auto pr = ret->as_shared<type::primitive::Primitive>();
+            case SymbolKind::Primitive: {
+                auto pr = ret->as<type::Primitive*>();
                 return OperandType(DataType{pr->getDataKind(),pr});
                 break;
             }
-            case DeclarationEnum::Type: {
-                auto record = ret->as_shared<type::Record>();
+            case SymbolKind::Record: {
+                auto record = ret->as<type::Record*>();
                 return OperandType(RecordType{record->getByteLength(),record});
             }
-            case DeclarationEnum::Array: {
-                auto array = ret->as_shared<type::Array>();
+            case SymbolKind::Array: {
+                auto array = ret->as<type::Array*>();
                 return OperandType(RecordType{array->getByteLength(),array});
             }
-            case DeclarationEnum::Class: {
-                auto cls = ret->as_shared<type::Class>();
+            case SymbolKind::Class: {
+                auto cls = ret->as<type::Class*>();
                 return OperandType(addressOf(ClassType{cls->getByteLength(),cls}));
             }
             default: PANIC;
@@ -718,13 +743,13 @@ namespace evoBasic{
     }
 
 
-    OperandType IRGen::pushVariableAddress(const std::shared_ptr<Variable> &variable, Block *block, bool need_push_base){
+    OperandType IRGen::pushVariableAddress(Variable *variable, Block *block, bool need_push_base){
         if(need_push_base){
-            switch(variable->getParent().lock()->getKind()){
-                case DeclarationEnum::Function:
+            switch(variable->getParent()->getKind()){
+                case SymbolKind::Function:
                     block->PushFrameBase();
                     break;
-                case DeclarationEnum::Module:
+                case SymbolKind::Module:
                     block->PushGlobalBase();
                     break;
             }
@@ -733,7 +758,7 @@ namespace evoBasic{
               .Add(Data::ptr);
         //push variable address to operand
 
-        if(auto argument = variable->as_shared<Argument>()){
+        if(auto argument = variable->as<Parameter*>()){
             if(!argument->isByval()){
                 //push referencing address to operand
                 block->Load(Data::ptr);
@@ -745,8 +770,8 @@ namespace evoBasic{
 
     OperandType IRGen::visitIndex(ast::expr::Binary *index,IRGenArgs args,bool need_push_base){
         auto symbol = any_cast<shared_ptr<Symbol>>(visitID((ast::expr::ID*)index->lhs,args));
-        auto variable = symbol->as_shared<Variable>();
-        NotNull(variable.get());
+        auto variable = symbol->as<Variable*>();
+        NotNull(variable);
         auto lhs_operand = pushVariableAddress(variable,args.previous_block,need_push_base);
 
         switch ((OperandEnum)lhs_operand.index()) {
@@ -771,6 +796,7 @@ namespace evoBasic{
             }
             default: PANIC; break;
         }
+        return {};
     }
 
     std::any IRGen::visitArg(ast::expr::Callee::Argument *arg_node, IRGenArgs args) {
@@ -836,26 +862,26 @@ namespace evoBasic{
         return nullptr;
     }
 
-    OperandType IRGen::mapSymbolToOperandType(shared_ptr<Symbol> symbol) {
-        NotNull(symbol.get());
+    OperandType IRGen::mapSymbolToOperandType(Symbol *symbol) {
+        NotNull(symbol);
         switch (symbol->getKind()) {
-            case DeclarationEnum::Class: {
-                auto cls = symbol->as_shared<Class>();
+            case SymbolKind::Class: {
+                auto cls = symbol->as<Class*>();
                 return addressOf(ClassType{cls->getByteLength(),cls});
             }
-            case DeclarationEnum::Enum_: {
+            case SymbolKind::Enum: {
                 return DataType{Data::ptr};
             }
-            case DeclarationEnum::Array: {
-                auto array = symbol->as_shared<type::Array>();
+            case SymbolKind::Array: {
+                auto array = symbol->as<type::Array*>();
                 return ArrayType{array->getByteLength(),array};
             }
-            case DeclarationEnum::Type: {
-                auto record = symbol->as_shared<type::Record>();
+            case SymbolKind::Record: {
+                auto record = symbol->as<type::Record*>();
                 return RecordType{record->getByteLength(),record};
             }
-            case DeclarationEnum::Argument: {
-                auto argument = symbol->as_shared<Argument>();
+            case SymbolKind::Argument: {
+                auto argument = symbol->as<Parameter*>();
                 auto element = mapSymbolToOperandType(argument->getPrototype());
                 if(argument->isByval()) {
                     return addressOf(element);
@@ -864,13 +890,13 @@ namespace evoBasic{
                     return addressOf(addressOf(element));
                 }
             }
-            case DeclarationEnum::Variable: {
-                auto variable = symbol->as_shared<Variable>();
+            case SymbolKind::Variable: {
+                auto variable = symbol->as<Variable*>();
                 auto element = mapSymbolToOperandType(variable->getPrototype());
                 return addressOf(element);
             }
-            case DeclarationEnum::Primitive: {
-                auto primitive = symbol->as_shared<primitive::Primitive>();
+            case SymbolKind::Primitive: {
+                auto primitive = symbol->as<primitive::Primitive*>();
                 return DataType{primitive->getDataKind(),primitive};
             }
             default: PANIC;
@@ -897,17 +923,19 @@ namespace evoBasic{
             case ast::expr::Expression::char_:
                 return visitDot(expr_node,args);
         }
+        return {};
     }
 
-    std::shared_ptr<Symbol> stripOperandType(OperandType type){
+    Symbol *stripOperandType(OperandType type){
         switch ((OperandEnum)type.index()) {
             case OperandEnum::DataType: return get<DataType>(type).primitive;
             case OperandEnum::ClassType: return get<ClassType>(type).cls;
             case OperandEnum::ArrayType: return get<ArrayType>(type).array;
             case OperandEnum::RecordType: return get<RecordType>(type).record;
             case OperandEnum::AddressType: return stripOperandType(*get<AddressType>(type).element);
-            case OperandEnum::SymbolPtr: return get<std::shared_ptr<type::Symbol>>(type);
+            case OperandEnum::SymbolPtr: return get<type::Symbol*>(type);
         }
+        return nullptr;
     }
 
     OperandType IRGen::visitDot(ast::expr::Expression *node,IRGenArgs args,OperandType lhs){
@@ -966,8 +994,8 @@ namespace evoBasic{
                 }
             }
             case ast::expr::Expression::ID_: {
-                auto symbol = any_cast<shared_ptr<Symbol>>(visitID((ID*)node,args));
-                if(auto variable = symbol->as_shared<type::Variable>())
+                auto symbol = any_cast<Symbol*>(visitID((ID*)node,args));
+                if(auto variable = symbol->as<type::Variable*>())
                     return pushVariableAddress(variable,args.previous_block,push_base_address);
                 return symbol;
             }
@@ -993,6 +1021,7 @@ namespace evoBasic{
                 return any_cast<OperandType>(visitCallee((Callee*)node,args));
 
         }
+        return {};
     }
 
 
@@ -1006,13 +1035,14 @@ namespace evoBasic{
                 return inner;
             case OperandEnum::RecordType:
             case OperandEnum::ArrayType:
-                PANIC("MemType");
+                PANICMSG("MemType");
             case OperandEnum::AddressType:
-                PANIC("AddressType");
+                PANICMSG("AddressType");
                 //TODO unary operator override for Ptr->Class
             case OperandEnum::ClassType:
-                PANIC("ClassType");
+                PANICMSG("ClassType");
         }
+        return {};
     }
 
 
@@ -1062,44 +1092,45 @@ namespace evoBasic{
 
 
     std::any IRGen::visitExprStmt(ast::stmt::ExprStmt *expr_stmt_node, IRGenArgs args) {
-        Visitor::visitExprStmt(expr_stmt_node, args);
+        visitExpression(expr_stmt_node->expr,args);
         return (Block*)nullptr;
     }
 
     std::any IRGen::visitAnnotation(ast::Annotation *anno_node, IRGenArgs args) {
         if(anno_node->array_size)return Data(Data::u32);
 
-        shared_ptr<Symbol> target = args.domain;
-        for(auto &unit:anno_node->unit_list){
+        Symbol *target = args.domain;
+        auto unit = anno_node->unit;
+        while(unit){
             auto name = getID(unit->name);
-            auto domain = target->as_shared<Domain>();
-            NotNull(domain.get());
-            if(&unit == &anno_node->unit_list.front()){
+            auto domain = target->as<Domain*>();
+            NotNull(domain);
+            if(unit == anno_node->unit){
                 target = domain->lookUp(name);
             }
             else{
                 target = domain->find(name);
             }
-            NotNull(target.get());
+            NotNull(target);
+            unit = unit->next_sibling;
         }
 
         switch (target->getKind()) {
-            case DeclarationEnum::Class:
-            case DeclarationEnum::Type:
-            case DeclarationEnum::Function:
-            case DeclarationEnum::Interface:
-            case DeclarationEnum::Array:
-            case DeclarationEnum::Enum_:
+            case SymbolKind::Class:
+            case SymbolKind::Record:
+            case SymbolKind::Function:
+            case SymbolKind::Interface:
+            case SymbolKind::Array:
+            case SymbolKind::Enum:
                 return Data(Data::ptr);
-            case DeclarationEnum::Primitive:
-                return target->as_shared<primitive::Primitive>()->getDataKind();
-            case DeclarationEnum::Argument:
-            case DeclarationEnum::TmpDomain:
-            case DeclarationEnum::EnumMember:
-            case DeclarationEnum::Module:
-            case DeclarationEnum::Variable:
-            case DeclarationEnum::Error:
-            case DeclarationEnum::Variant:
+            case SymbolKind::Primitive:
+                return target->as<Primitive*>()->getDataKind();
+            case SymbolKind::Argument:
+            case SymbolKind::TmpDomain:
+            case SymbolKind::EnumMember:
+            case SymbolKind::Module:
+            case SymbolKind::Variable:
+            case SymbolKind::Error:
                 ASSERT(true,"invalid annotation");
         }
     }

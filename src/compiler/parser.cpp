@@ -996,17 +996,6 @@ namespace evoBasic{
         return unit;
     }
 
-    ast::Member *Parser::parseMemberList(const set<Token::Enum> &follows) {
-
-    }
-
-    ast::AnnotationUnit *Parser::parseAnnotationUnitList(const set<Token::Enum> &follows) {
-        return nullptr;
-    }
-
-    ast::Variable *Parser::parseVariableList(const set<Token::Enum> &follows) {
-        return nullptr;
-    }
 
     ast::Implement *Parser::parseImplement(const std::set<Token::Enum> &follows) {
         auto impl = new Implement;
@@ -1025,4 +1014,5 @@ namespace evoBasic{
         Logger::debugMode = true;
         return ast;
     }
+
 }

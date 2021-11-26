@@ -29,7 +29,7 @@ namespace evoBasic::type{
 
     enum class InstanceEnum{INSTANCE_ENUM_LIST};
     enum class FunctionEnum{FUNCTION_ENUM_LIST};
-    enum class DeclarationEnum{DECLARATION_ENUM_LIST};
+ //   enum class DeclarationEnum{DECLARATION_ENUM_LIST};
 
 /*
  *  谁用宏在项目中搞花样谁就是没事找抽 8/10/2021
@@ -40,37 +40,45 @@ namespace evoBasic::type{
 
     class Domain;
     class Class;
-    class Object;
     class Symbol;
     class Variant;
     class Prototype;
     class Function;
     class Interface;
+    class Variable;
 
     void strToLowerByRef(std::string& str);
 
-    class Symbol : public std::enable_shared_from_this<Symbol> {
+    enum class SymbolKind{
+        Error,Class,Enum,EnumMember,Record,Function,Module,
+        Primitive,TmpDomain,Variable,Argument,Array,Interface
+    };
+
+    class Symbol {
+    public:
+
+    private:
         friend Domain;
         std::string name;
         std::string mangling_name;
-        DeclarationEnum kind;
+        SymbolKind kind;
         Location *location_ = nullptr;
         AccessFlag access = AccessFlag::Public;
     protected:
-        std::weak_ptr<Domain> parent;
+        Domain *parent = nullptr;
     public:
         const std::string indent_unit = "\t";
 
         Symbol(const Symbol&)=delete;
-        explicit Symbol(DeclarationEnum kind): kind(kind){}
+        explicit Symbol(SymbolKind kind): kind(kind){}
 
         virtual std::string getName();
         virtual void setName(std::string str);
 
-        DeclarationEnum getKind(){return kind;}
+        SymbolKind getKind(){return kind;}
 
-        virtual std::weak_ptr<Domain> getParent();
-        virtual void setParent(std::weak_ptr<Domain> parent);
+        virtual Domain *getParent();
+        virtual void setParent(Domain *parent);
 
         void setAccessFlag(AccessFlag flag);
         AccessFlag getAccessFlag();
@@ -79,12 +87,11 @@ namespace evoBasic::type{
         Location *getLocation();
 
         template<typename T>
-        std::shared_ptr<T> as_shared(){
-            if(this==nullptr)return {nullptr};
-            return dynamic_pointer_cast<T>(shared_from_this());
+        T as(){
+            return dynamic_cast<T>(this);
         }
 
-        std::string mangling();
+        std::string mangling(char separator = '$');
 
         virtual std::string debug(int indent)=0;
     };
@@ -94,8 +101,8 @@ namespace evoBasic::type{
         data::ptr byte_length = 0;
     public:
         Prototype(const Prototype&)=delete;
-        explicit Prototype(DeclarationEnum kind): Symbol(kind){};
-        virtual bool equal(std::shared_ptr<Prototype> ptr)=0;
+        explicit Prototype(SymbolKind kind): Symbol(kind){};
+        virtual bool equal(Prototype *ptr)=0;
 
         virtual data::ptr getByteLength();
         virtual void setByteLength(data::ptr value);
@@ -106,24 +113,24 @@ namespace evoBasic::type{
         Error(const Error&)=delete;
         explicit Error();
         std::string debug(int indent)override;
-        bool equal(std::shared_ptr<Prototype> ptr)override{
-            return this == ptr.get();
+        bool equal(Prototype *ptr)override{
+            return this == ptr;
         }
     };
 
     class Variable : public Symbol{
         friend class Record;
-        std::shared_ptr<Prototype> prototype{nullptr};
+        Prototype *prototype{nullptr};
         bool is_const = false;
         bool is_global = false;
         std::size_t offset = -1;
     public:
         Variable();
-        explicit Variable(DeclarationEnum kind);
+        explicit Variable(SymbolKind kind);
         bool isConstant();
         void setConstant(bool value);
-        std::shared_ptr<Prototype> getPrototype();
-        void setPrototype(std::shared_ptr<Prototype> ptr);
+        Prototype *getPrototype();
+        void setPrototype(Prototype *ptr);
         std::string debug(int indent)override;
         std::size_t getOffset();
         void setOffset(std::size_t value);
@@ -132,15 +139,15 @@ namespace evoBasic::type{
 
     //domain interface
     class Domain : public Prototype{
-        using MemberMap = std::map<std::string,std::shared_ptr<Symbol>>;
+        using MemberMap = std::map<std::string,Symbol*>;
         MemberMap childs;
-        std::vector<std::shared_ptr<Variable>> memory_layout;
+        std::vector<Variable*> memory_layout;
     public:
         class iterator : public std::iterator<std::input_iterator_tag,
-                                                    std::shared_ptr<Symbol>,
+                                                    Symbol*,
                                                     std::ptrdiff_t,
-                                                    std::shared_ptr<Symbol>,
-                                                    std::shared_ptr<Symbol>&>{
+                                                    Symbol*,
+                                                    Symbol*>{
             MemberMap::iterator iterator_;
         public:
             explicit iterator(MemberMap::iterator iter) : iterator_(iter){}
@@ -148,41 +155,41 @@ namespace evoBasic::type{
             iterator operator++(int) {auto tmp = *this; iterator_++; return tmp;}
             bool operator==(const iterator& other) const {return other.iterator_==this->iterator_;}
             bool operator!=(const iterator& other) const {return !(other==*this);}
-            Symbol* operator->() const {return iterator_->second.get();}
-            Symbol* operator*() const {return iterator_->second.get();}
+            Symbol* operator->() const {return iterator_->second;}
+            Symbol* operator*() const {return iterator_->second;}
         };
         Domain(const Domain&)=delete;
-        explicit Domain(DeclarationEnum kind) : Prototype(kind){}
-        virtual void add(std::shared_ptr<Symbol> symbol);
-        virtual std::shared_ptr<Symbol> find(const std::string& name); //search object in members
-        virtual std::shared_ptr<Symbol> lookUp(const std::string& name); //search object in members and importedModule
+        explicit Domain(SymbolKind kind) : Prototype(kind){}
+        virtual void add(Symbol *symbol);
+        virtual Symbol *find(const std::string& name); //search object in members
+        virtual Symbol *lookUp(const std::string& name); //search object in members and importedModule
         iterator begin();
         iterator end();
         void updateMemoryLayout();
-        void addMemoryLayout(std::shared_ptr<Variable> variable);
+        void addMemoryLayout(Variable *variable);
     };
 
     class Module : public Domain{
-        std::list<std::shared_ptr<Module>> importedModule;
+        std::list<Module*> importedModule;
     public:
         Module(const Module&)=delete;
-        explicit Module(): Domain(DeclarationEnum::Module){}
+        explicit Module(): Domain(SymbolKind::Module){}
 
-        void addImport(std::shared_ptr<Symbol> child);
+        void addImport(Symbol *child);
 
-        bool equal(std::shared_ptr<Prototype> ptr)override {return false;}
+        bool equal(Prototype *ptr)override {return false;}
         std::string debug(int indent)override;
     };
 
     class Record : public Domain {
-        std::vector<std::shared_ptr<Variable>> fields;
+        std::vector<Variable*> fields;
     public:
-        explicit Record() : Domain(DeclarationEnum::Type){}
-        explicit Record(DeclarationEnum kind) : Domain(kind){}
-        bool equal(std::shared_ptr<Prototype> ptr)override;
+        explicit Record() : Domain(SymbolKind::Record){}
+        explicit Record(SymbolKind kind) : Domain(kind){}
+        bool equal(Prototype *ptr)override;
 
-        const std::vector<std::shared_ptr<Variable>>& getFields();
-        void add(std::shared_ptr<Symbol> symbol)override;
+        const std::vector<Variable*>& getFields();
+        void add(Symbol *symbol)override;
         std::string debug(int indent)override;
     };
 
@@ -190,21 +197,21 @@ namespace evoBasic::type{
     protected:
         //std::list<ast::Variable*> initialize_rules;
 
-        std::shared_ptr<Class> base_class;
-        std::list<std::shared_ptr<Interface>> impl_interface;
-        std::shared_ptr<Function> constructor;
+        Class *base_class;
+        std::list<Interface*> impl_interface;
+        Function *constructor;
     public:
         Class(const Class&)=delete;
         explicit Class();
-        explicit Class(DeclarationEnum kind): Record(kind){}
+        explicit Class(SymbolKind kind): Record(kind){}
 
-        bool equal(std::shared_ptr<Prototype> ptr)override;
+        bool equal(Prototype *ptr)override;
 
-        void add(std::shared_ptr<Symbol> symbol) override;
+        void add(Symbol *symbol) override;
 
-        void setExtend(std::shared_ptr<Class> base);
-        void setConstructor(std::shared_ptr<Function> constructor);
-        void addImplementation(std::shared_ptr<Interface> interface);
+        void setExtend(Class *base);
+        void setConstructor(Function *constructor);
+        void addImplementation(Interface *interface);
         void addInitializeRule(ast::Variable* variable_node);
 
         std::string debug(int indent)override;
@@ -212,10 +219,10 @@ namespace evoBasic::type{
 
     class Interface : public Domain{
     public:
-        explicit Interface():Domain(DeclarationEnum::Interface){}
-        void add(std::shared_ptr<Symbol> symbol)final;
+        explicit Interface():Domain(SymbolKind::Interface){}
+        void add(Symbol *symbol)final;
 
-        bool equal(std::shared_ptr<Prototype> ptr)final{throw "error";}
+        bool equal(Prototype *ptr)final{PANIC;}
 
         std::string debug(int indent)final;
     };
@@ -232,12 +239,13 @@ namespace evoBasic::type{
             vm::Data kind_;
         public:
             explicit Primitive(std::string name,vm::Data data_kind);
-            bool equal(std::shared_ptr<Prototype> ptr)override;
+            bool equal(Prototype *ptr)override;
             std::string debug(int indent)override;
             vm::Data getDataKind();
         };
 
     }
+    using namespace primitive;
 
     class Enumeration : public Class{
         int defaultValue;
@@ -246,9 +254,9 @@ namespace evoBasic::type{
         explicit Enumeration();
         int getDefaultNumber() const{return defaultValue;}
         void setDefaultNumber(int num){ defaultValue=num;}
-        void add(std::shared_ptr<Symbol> symbol) override;
+        void add(Symbol *symbol) override;
 
-        bool equal(std::shared_ptr<Prototype> ptr)override;
+        bool equal(Prototype *ptr)override;
         std::string debug(int indent)override;
     };
 
@@ -256,15 +264,15 @@ namespace evoBasic::type{
         int index;
     public:
         EnumMember(const Enumeration&)=delete;
-        explicit EnumMember(int index): Symbol(DeclarationEnum::EnumMember),index(index){}
+        explicit EnumMember(int index): Symbol(SymbolKind::EnumMember),index(index){}
         int getIndex()const{return index;}
         std::string debug(int indent)override;
     };
 
-    class Argument : public Variable{
+    class Parameter : public Variable{
         bool is_byval,is_optional;
     public:
-        Argument(std::string name,std::shared_ptr<Prototype> prototype,bool isByval,bool isOptional);
+        Parameter(std::string name, Prototype *prototype, bool isByval, bool isOptional);
         std::string debug(int indent)override;
         bool isByval();
         bool isOptional();
@@ -272,12 +280,12 @@ namespace evoBasic::type{
     };
 
     class Array : public Class{
-        std::shared_ptr<Prototype> element_type;
+        Prototype *element_type;
         data::ptr size_;
     public:
-        explicit Array(std::shared_ptr<Prototype> element,data::u32 size);
-        std::shared_ptr<Prototype> getElementPrototype();
-        bool equal(std::shared_ptr<Prototype> ptr)override;
+        explicit Array(Prototype *element,data::u32 size);
+        Prototype *getElementPrototype();
+        bool equal(Prototype *ptr)override;
         std::string debug(int indent)override;
         data::ptr getByteLength()override;
         data::ptr getSize(){return size_;}
@@ -288,22 +296,22 @@ namespace evoBasic::type{
     public:
         enum Flag{Method,Static,Virtual};
     private:
-        std::vector<std::shared_ptr<Argument>> argsSignature;
-        std::shared_ptr<Prototype> retSignature;
+        std::vector<Parameter*> argsSignature;
+        Prototype *retSignature;
         std::size_t tmp_domain_count = 0;
     public:
         Function(const Function&)=delete;
         explicit Function();
 
-        void add(std::shared_ptr<Symbol> symbol)override;
+        void add(Symbol *symbol)override;
 
-        std::vector<std::shared_ptr<Argument>>& getArgsSignature();
-        std::shared_ptr<Prototype> getRetSignature();
-        void setRetSignature(std::shared_ptr<Prototype> ptr);
+        std::vector<Parameter*>& getArgsSignature();
+        Prototype *getRetSignature();
+        void setRetSignature(Prototype *ptr);
         virtual Flag getFunctionFlag()=0;
         std::string debug(int indent)override;
 
-        bool equal(std::shared_ptr<Prototype> ptr)override;
+        bool equal(Prototype *ptr)override;
     };
 
     class UserFunction: public Function{
@@ -316,12 +324,6 @@ namespace evoBasic::type{
         Function::Flag getFunctionFlag()override{return flag;}
     };
 
-//    class InitFunction: public UserFunction{
-//    public:
-//        InitFunction(const InitFunction&)=delete;
-//        InitFunction(std::shared_ptr<Node> implCodeTree): UserFunction(MethodFlag::Normal,implCodeTree){}
-//    };
-//
 
     class ExternalFunction: public Function{
         std::string library,name;
@@ -332,11 +334,11 @@ namespace evoBasic::type{
     };
 
     class TemporaryDomain : public Domain {
-        std::shared_ptr<UserFunction> parent_function;
+        UserFunction *parent_function;
     public:
-        explicit TemporaryDomain(std::weak_ptr<type::Domain> parent,std::shared_ptr<UserFunction> function);
-        void add(std::shared_ptr<type::Symbol> symbol)override;
-        bool equal(std::shared_ptr<Prototype> ptr)override{throw "error";};
+        explicit TemporaryDomain(type::Domain *parent,UserFunction *function);
+        void add(type::Symbol *symbol)override;
+        bool equal(Prototype *ptr)override{PANIC;};
         std::string debug(int indent)override;
     };
 

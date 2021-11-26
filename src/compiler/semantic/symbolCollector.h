@@ -11,7 +11,8 @@
 
 namespace evoBasic{
     struct SymbolCollectorArgs{
-        std::shared_ptr<type::Domain> domain;
+        type::Domain *domain = nullptr;
+        Context *context = nullptr;
     };
 
     class SymbolCollector : public Visitor<SymbolCollectorArgs>{
@@ -22,7 +23,7 @@ namespace evoBasic{
         std::any visitEnum(ast::Enum *em, SymbolCollectorArgs args) override;
         std::any visitType(ast::Type *ty, SymbolCollectorArgs args) override;
         std::any visitDim(ast::Dim *dim, SymbolCollectorArgs args) override;
-        std::any visitVariable(ast::Variable *var, SymbolCollectorArgs args) override;
+        std::any visitVariable(ast::Variable *variable_node, SymbolCollectorArgs args) override;
         std::any visitID(ast::expr::ID *id, SymbolCollectorArgs args) override;
         std::any visitMember(ast::Member *member_node, SymbolCollectorArgs args) override;
     };

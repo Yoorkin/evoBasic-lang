@@ -81,7 +81,7 @@ int main(int argc,char *argv[]) {
         distributor.distribute(argv[i]);
     }
 
-    auto context = make_shared<Context>();
+    auto context = new Context;
     list<ast::Global*> asts;
 
     if(!enable_compile)return 0;

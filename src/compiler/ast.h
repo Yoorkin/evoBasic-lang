@@ -4,6 +4,7 @@
 #include "data.h"
 #include "nullSafe.h"
 #include <memory>
+#include <list>
 
 namespace evoBasic{
     enum class AccessFlag {Public,Private,Friend,Protected};
@@ -11,6 +12,15 @@ namespace evoBasic{
     struct ExpressionType;
     namespace type{
         class Variable;
+        class Domain;
+        class Class;
+        class Function;
+        class UserFunction;
+        class ExternalFunction;
+        class Enumeration;
+        class EnumMember;
+        class Record;
+        class Parameter;
     }
 }
 
@@ -69,33 +79,31 @@ namespace evoBasic::ast{
     using Expr = expr::Expression;
 
     struct DebugInfo{
+    public:
         std::string text;
-        DebugInfo *child = nullptr,*sibling = nullptr;
+        std::list<DebugInfo*> childs;
 
         ~DebugInfo(){
-            while(sibling!=nullptr){
-                auto head = sibling;
-                sibling = head->sibling;
-                delete head;
-            }
-            delete child;
+            for(auto child:childs)delete child;
         }
     };
 
     struct Node{
         Location *location = nullptr;
+        bool has_error = false;
         virtual DebugInfo *debug()=0;
     };
 
     struct Global : Node{
         Member *member = nullptr;
         DebugInfo *debug()override;
+        type::Domain *global_symbol = nullptr;
     };
 
     struct Member : Node{
         AccessFlag access;
         enum MemberKind{
-            error,function_,class_,module_,type_,enum_,dim_,operator_,init_,
+            error,function_,class_,module_,type_,enum_,dim_,
             import_,external_
         }member_kind = error;
 
@@ -110,6 +118,7 @@ namespace evoBasic::ast{
 
         Member *member = nullptr;
         DebugInfo *debug()override;
+        type::Class *class_symbol = nullptr;
     };
 
     struct Module : Member{
@@ -117,6 +126,7 @@ namespace evoBasic::ast{
         expr::ID *name = nullptr;
         Member *member = nullptr;
         DebugInfo *debug()override;
+        type::Domain *module_symbol = nullptr;
     };
 
     struct Implement : Node {
@@ -145,6 +155,7 @@ namespace evoBasic::ast{
         expr::Expression *initial = nullptr;
         DebugInfo *debug()override;
         Variable *next_sibling = nullptr,*prv_sibling = nullptr;
+        type::Variable *variable_symbol = nullptr;
     };
 
     struct Function : Member{
@@ -155,6 +166,7 @@ namespace evoBasic::ast{
         Annotation *return_annotation = nullptr;
         stmt::Statement* statement = nullptr;
         DebugInfo *debug()override;
+        type::UserFunction *function_symbol = nullptr;
     };
 
     struct External : Member{
@@ -164,6 +176,7 @@ namespace evoBasic::ast{
         Parameter* parameter = nullptr;
         Annotation *return_annotation = nullptr;
         DebugInfo *debug()override;
+        type::ExternalFunction *function_symbol = nullptr;
     };
 
     struct EnumMember : Node {
@@ -171,6 +184,7 @@ namespace evoBasic::ast{
         expr::Digit *value = nullptr;
         EnumMember *next_sibling = nullptr,*prv_sibling = nullptr;
         DebugInfo *debug()override;
+        type::EnumMember *enum_member_symbol = nullptr;
     };
 
     struct Enum : Member{
@@ -178,6 +192,7 @@ namespace evoBasic::ast{
         expr::ID *name = nullptr;
         EnumMember *member = nullptr;
         DebugInfo *debug()override;
+        type::Enumeration *enum_symbol = nullptr;
     };
 
 
@@ -186,6 +201,7 @@ namespace evoBasic::ast{
         expr::ID *name = nullptr;
         Variable *member = nullptr;
         DebugInfo *debug()override;
+        type::Record *type_symbol = nullptr;
     };
 
 
@@ -196,6 +212,7 @@ namespace evoBasic::ast{
         Annotation *annotation = nullptr;
         DebugInfo *debug()override;
         Parameter *next_sibling = nullptr,*prv_sibling = nullptr;
+        type::Parameter *parameter_symbol = nullptr;
     };
 
     namespace stmt{
@@ -314,7 +331,7 @@ namespace evoBasic::ast{
             Expression *lhs = nullptr;
             Enum op = Empty;
             Expression *rhs = nullptr;
-            std::shared_ptr<type::Variable> temp_address = nullptr;
+            type::Variable *temp_address = nullptr;
             DebugInfo *debug()override;
         };
 
@@ -360,7 +377,7 @@ namespace evoBasic::ast{
         struct Callee : Expression{
             struct Argument : Node{
                 enum PassKind{undefined,byref,byval}pass_kind = undefined;
-                std::shared_ptr<type::Variable> temp_address = nullptr;
+                type::Variable *temp_address = nullptr;
                 expr::Expression *expr = nullptr;
                 Argument *next_sibling = nullptr,*prv_sibling = nullptr;
                 DebugInfo *debug()override;
