@@ -142,6 +142,7 @@ namespace evoBasic::type{
     class Domain : public Prototype{
         using MemberMap = std::map<std::string,Symbol*>;
         MemberMap childs;
+    protected:
         std::vector<Variable*> memory_layout;
     public:
         class iterator : public std::iterator<std::input_iterator_tag,
@@ -167,7 +168,7 @@ namespace evoBasic::type{
         virtual Symbol *lookUp(const std::string& name); //search object in members and importedModule
         iterator begin();
         iterator end();
-        void updateMemoryLayout();
+        virtual void updateMemoryLayout();
         void addMemoryLayout(Variable *variable);
     };
 
@@ -197,8 +198,6 @@ namespace evoBasic::type{
 
     class Class : public Record {
     protected:
-        //std::list<ast::Variable*> initialize_rules;
-
         Class *base_class = nullptr;
         std::list<Interface*> impl_interface;
         Function *constructor = nullptr;
@@ -217,6 +216,8 @@ namespace evoBasic::type{
         void setConstructor(Function *constructor);
         void addImplementation(Interface *interface);
         void addInitializeRule(ast::Variable* variable_node);
+
+        void updateMemoryLayout()override;
 
         std::string debug(int indent)override;
         Symbol *find(const std::string& name)override;
@@ -297,10 +298,9 @@ namespace evoBasic::type{
         data::ptr getSize(){return size_;}
     };
 
+    enum class FunctionFlag{Method=0,Static,Virtual,Override};
 
     class Function: public Domain{
-    public:
-        enum Flag{Method,Static,Virtual};
     private:
         std::vector<Parameter*> argsSignature;
         Prototype *retSignature = nullptr;
@@ -314,7 +314,7 @@ namespace evoBasic::type{
         std::vector<Parameter*>& getArgsSignature();
         Prototype *getRetSignature();
         void setRetSignature(Prototype *ptr);
-        virtual Flag getFunctionFlag()=0;
+        virtual FunctionFlag getFunctionFlag()=0;
         std::string debug(int indent)override;
 
         bool equal(Prototype *ptr)override;
@@ -322,15 +322,14 @@ namespace evoBasic::type{
 
     class UserFunction: public Function{
         ast::Function *function_node;
-        Function::Flag flag;
-        bool is_static = false;
+        FunctionFlag flag = FunctionFlag::Method;
     public:
         UserFunction(const UserFunction&)=delete;
-        explicit UserFunction(Function::Flag flag,ast::Function *function_node);
+        explicit UserFunction(FunctionFlag flag,ast::Function *function_node);
         ast::Function *getFunctionNode();
-        Function::Flag getFunctionFlag()override{return flag;}
-        bool isStatic();
+        FunctionFlag getFunctionFlag()override;
         void setStatic(bool value);
+        std::string debug(int indent)override;
     };
 
 
@@ -339,7 +338,7 @@ namespace evoBasic::type{
     public:
         ExternalFunction(const ExternalFunction&)=delete;
         explicit ExternalFunction(std::string library,std::string name);
-        Function::Flag getFunctionFlag()override{return Function::Flag::Static;}
+        FunctionFlag getFunctionFlag()override{return FunctionFlag::Static;}
     };
 
     class TemporaryDomain : public Domain {

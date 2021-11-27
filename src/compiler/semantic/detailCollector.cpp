@@ -129,7 +129,6 @@ namespace evoBasic{
                     }
                     break;
                 case type::SymbolKind::Class:
-                    args.domain->addMemoryLayout(variable);
                     switch (variable->getPrototype()->getKind()) {
                         case type::SymbolKind::Record:
                         case type::SymbolKind::Array:
@@ -154,19 +153,23 @@ namespace evoBasic{
     std::any DetailCollector::visitFunction(ast::Function **function_node, DefaultArgs args) {
         auto name = getID((**function_node).name);
         if(is_name_valid(name,(**function_node).name->location,args.domain)){
-            type::Function::Flag flag;
+            type::FunctionFlag flag = FunctionFlag::Static;
+            if((**function_node).is_static){
+                flag = type::FunctionFlag::Static;
+                if(args.domain->getKind() != type::SymbolKind::Class){
+                    Logger::error((**function_node).location,"Function in Module cannot be marked by 'Static'");
+                }
+            }
+
             switch((**function_node).method_flag){
-//                case MethodFlag::Static:
-//                    flag = type::Function::Flag::Static;
-//                    if(args.domain->getKind() == type::SymbolKind::Class){
-//                        Logger::error((**function_node).location,"Function in Module cannot be marked by 'Static'");
-//                    }
-//                    break;
-//TODO
                 case MethodFlag::Virtual:
                 case MethodFlag::Override:
+                    if((**function_node).is_static){
+                        Logger::error((**function_node).location,"Static Method cannot be marked by 'Virtual' or 'Override'");
+                    }
+
                     if(args.domain->getKind() == type::SymbolKind::Class){
-                        flag = type::Function::Flag::Virtual;
+                        flag = type::FunctionFlag::Virtual;
                     }
                     else{
                         Logger::error((**function_node).location,"Function in Module cannot be marked by 'Virtual' or 'Override'");
@@ -174,7 +177,7 @@ namespace evoBasic{
                     break;
                 case MethodFlag::None:
                     if(args.domain->getKind() == type::SymbolKind::Class){
-                        flag = type::Function::Flag::Method;
+                        flag = type::FunctionFlag::Method;
                     }
                     break;
             }
@@ -191,8 +194,8 @@ namespace evoBasic{
             }
 
             switch (function->getFunctionFlag()) {
-                case type::Function::Flag::Virtual:
-                case type::Function::Flag::Method:
+                case type::FunctionFlag::Virtual:
+                case type::FunctionFlag::Method:
                     if(args.parent_class_or_module && args.parent_class_or_module->getKind() == SymbolKind::Class){
                         auto self = new type::Parameter("self", args.parent_class_or_module, true, false);
                         function->add(self);

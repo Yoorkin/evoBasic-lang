@@ -807,7 +807,7 @@ namespace evoBasic{
           *              allow implicit conversion      Yes             is not lvalue
           */
         NotNull(arg_node);
-        int param_index = (args.function->getFunctionFlag() != type::Function::Flag::Static) ? args.current_args_index : args.current_args_index+1;
+        int param_index = (args.function->getFunctionFlag() != type::FunctionFlag::Static) ? args.current_args_index : args.current_args_index+1;
         auto &param =  args.function->getArgsSignature()[param_index];
         auto arg_type = arg_node->expr->type;
         if(param->isByval()){ // ByVal Parameter

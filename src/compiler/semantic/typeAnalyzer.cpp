@@ -648,7 +648,7 @@ namespace evoBasic{
         auto args_count = 0;
         auto params_count = target->getArgsSignature().size();
 
-        if(target->getFunctionFlag() != type::Function::Flag::Static){
+        if(target->getFunctionFlag() != type::FunctionFlag::Static){
             params_count--;
             current_arg++;
         }

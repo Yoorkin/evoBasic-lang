@@ -14,6 +14,7 @@ using namespace std;
 namespace evoBasic::type{
 
     vector AccessFlagString = {"Public","Private","Friend","Protected"};
+    vector FunctionFlagString = {"Method","Static","Virtual","Override"};
 
     void strToLowerByRef(string& str){
         transform(str.begin(),str.end(),str.begin(),[](unsigned char c){ return std::tolower(c); });
@@ -151,19 +152,38 @@ namespace evoBasic::type{
     Function::Function() : Domain(SymbolKind::Function){}
 
 
-    UserFunction::UserFunction(Function::Flag flag,ast::Function *function_node)
+    UserFunction::UserFunction(FunctionFlag flag,ast::Function *function_node)
         :function_node(function_node),flag(flag){}
 
     ast::Function* UserFunction::getFunctionNode() {
         return this->function_node;
     }
 
-    bool UserFunction::isStatic() {
-        return is_static;
+
+    std::string UserFunction::debug(int indent) {
+        stringstream str;
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<this->getName()<<" : "<<AccessFlagString[(int)getAccessFlag()];
+        str<<" "<<FunctionFlagString[(int)getFunctionFlag()];
+        str<<" Function(";
+        for(const auto& arg:this->getArgsSignature()){
+            str<<arg->debug(0);
+            if(&arg!=&getArgsSignature().back())str<<',';
+        }
+        str<<')';
+        if(getRetSignature())
+            str<<" As "<<getRetSignature()->getName();
+        str<<"{\n";
+        for(auto p : *this){
+            p->debug(indent+1);
+        }
+        for(int i=0;i<indent;i++)str<<indent_unit;
+        str<<"}\n";
+        return str.str();
     }
 
-    void UserFunction::setStatic(bool value) {
-        is_static = value;
+    FunctionFlag UserFunction::getFunctionFlag() {
+        return flag;
     }
 
     ExternalFunction::ExternalFunction(std::string library, std::string name)
@@ -357,6 +377,16 @@ namespace evoBasic::type{
         if(getExtend()!=nullptr)
             return getExtend()->find(name);
         return nullptr;
+    }
+
+    void Class::updateMemoryLayout() {
+        data::u32 size = 0;
+        if(getExtend()) size = getExtend()->getByteLength();
+        for(auto &variable:memory_layout){
+            variable->setOffset(size);
+            size += variable->getRealByteLength();
+        }
+        Prototype::setByteLength(size);
     }
 
     void Record::add(Symbol *symbol) {
