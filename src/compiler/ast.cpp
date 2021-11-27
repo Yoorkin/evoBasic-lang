@@ -51,6 +51,7 @@ namespace evoBasic::ast{
 
     DebugInfo *Class::debug() {
         auto ret = new DebugInfo{"Class",{name->debug()}};
+        if(extend)ret->childs.push_back(extend->debug());
         auto iter = member;
         while(iter){
             ret->childs.push_back(iter->debug());

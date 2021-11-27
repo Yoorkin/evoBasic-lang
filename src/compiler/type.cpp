@@ -13,6 +13,8 @@
 using namespace std;
 namespace evoBasic::type{
 
+    vector AccessFlagString = {"Public","Private","Friend","Protected"};
+
     void strToLowerByRef(string& str){
         transform(str.begin(),str.end(),str.begin(),[](unsigned char c){ return std::tolower(c); });
     }
@@ -46,7 +48,7 @@ namespace evoBasic::type{
     std::string Enumeration::debug(int indent) {
         stringstream str;
         for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<getName()<<" : Enum{\n";
+        str<<getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Enum{\n";
         for(auto p = begin();p!=end();p++){
             str<<p->debug(indent+1);
         }
@@ -104,7 +106,7 @@ namespace evoBasic::type{
     std::string Function::debug(int indent) {
         stringstream str;
         for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<this->getName()<<" : Function(";
+        str<<this->getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Function(";
         for(const auto& arg:this->argsSignature){
             str<<arg->debug(0);
             if(&arg!=&argsSignature.back())str<<',';
@@ -184,7 +186,7 @@ namespace evoBasic::type{
     std::string TemporaryDomain::debug(int indent) {
         stringstream str;
         for(int i=0;i<indent;i++)str<<indent_unit;
-        str<< getName() <<" : Domain{\n";
+        str<< getName() <<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Domain{\n";
         for(auto p = begin();p!=end();p++){
             str<<p->debug(indent+1);
         }
@@ -274,6 +276,10 @@ namespace evoBasic::type{
     }
 
     Symbol *Domain::find(const string &name) {
+        return findInDomainOnly(name);
+    }
+
+    Symbol *Domain::findInDomainOnly(const string &name) {
         auto target = childs.find(name);
         if(target == childs.end())return nullptr;
         return target->second;
@@ -292,10 +298,11 @@ namespace evoBasic::type{
         Prototype::setByteLength(size);
     }
 
+
     std::string Module::debug(int indent) {
         stringstream str;
         for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<this->getName()<<" : Module{\n";
+        str<<this->getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Module{\n";
         for(auto p = begin();p!=end();p++){
             str<<p->debug(indent+1);
         }
@@ -308,7 +315,7 @@ namespace evoBasic::type{
     std::string Class::debug(int indent) {
         stringstream str;
         for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<getName()<<" : Class{\n";
+        str<<getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Class{\n";
         for(auto p = begin();p!=end();p++){
             str<<p->debug(indent+1);
         }
@@ -344,6 +351,14 @@ namespace evoBasic::type{
         return base_class;
     }
 
+    Symbol *Class::find(const string &name) {
+        auto target = Domain::findInDomainOnly(name);
+        if(target)return target;
+        if(getExtend()!=nullptr)
+            return getExtend()->find(name);
+        return nullptr;
+    }
+
     void Record::add(Symbol *symbol) {
         auto field = symbol->as<Variable*>();
         NotNull(field);
@@ -376,7 +391,7 @@ namespace evoBasic::type{
         std::string Primitive::debug(int indent) {
             std::stringstream str;
             for(int i=0;i<indent;i++)str<<indent_unit;
-            str<<getName()<<" : Primitive("<<kind_.toString()<<")\n";
+            str<<getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Primitive("<<kind_.toString()<<")\n";
             return str.str();
         }
 
@@ -404,7 +419,7 @@ namespace evoBasic::type{
     std::string Record::debug(int indent) {
         stringstream str;
         for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<this->getName()<<" : Record{\n";
+        str<<this->getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Record{\n";
         for(auto p = begin();p!=end();p++){
             str<<p->debug(indent+1);
         }
@@ -421,7 +436,7 @@ namespace evoBasic::type{
     std::string Variable::debug(int indent) {
         stringstream str;
         for(int i=0;i<indent;i++)str << indent_unit;
-        str << this->getName() << " : Variable(";
+        str << this->getName() << " : "<<AccessFlagString[(int)getAccessFlag()]<<" Variable(";
         if(getPrototype()) str << getPrototype()->getName();
         else str << " ? ";
         str << ")\n";
@@ -501,7 +516,7 @@ namespace evoBasic::type{
     std::string Interface::debug(int indent) {
         stringstream str;
         for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<getName()<<" : Interface{\n";
+        str<<getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Interface{\n";
         for(auto p = begin();p!=end();p++){
             str<<p->debug(indent+1);
         }

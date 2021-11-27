@@ -61,7 +61,7 @@ namespace evoBasic::type{
         std::string mangling_name;
         SymbolKind kind;
         Location *location_ = nullptr;
-        AccessFlag access = AccessFlag::Public;
+        AccessFlag access = AccessFlag::Private;
     protected:
         Domain *parent = nullptr;
     public:
@@ -162,7 +162,8 @@ namespace evoBasic::type{
         Domain(const Domain&)=delete;
         explicit Domain(SymbolKind kind) : Prototype(kind){}
         virtual void add(Symbol *symbol);
-        virtual Symbol *find(const std::string& name); //search object in members
+        virtual Symbol *find(const std::string& name);
+        Symbol *findInDomainOnly(const std::string& name); //search object in members
         virtual Symbol *lookUp(const std::string& name); //search object in members and importedModule
         iterator begin();
         iterator end();
@@ -198,9 +199,9 @@ namespace evoBasic::type{
     protected:
         //std::list<ast::Variable*> initialize_rules;
 
-        Class *base_class;
+        Class *base_class = nullptr;
         std::list<Interface*> impl_interface;
-        Function *constructor;
+        Function *constructor = nullptr;
     public:
         Class(const Class&)=delete;
         explicit Class();
@@ -218,6 +219,8 @@ namespace evoBasic::type{
         void addInitializeRule(ast::Variable* variable_node);
 
         std::string debug(int indent)override;
+        Symbol *find(const std::string& name)override;
+
     };
 
     class Interface : public Domain{

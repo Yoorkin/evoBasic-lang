@@ -28,7 +28,7 @@ namespace evoBasic{
 
     bool is_name_valid(const string& name,Location *location, type::Domain *domain){
         NotNull(location);
-        if(domain->find(name)){
+        if(domain->findInDomainOnly(name)){
             Logger::error(location,"Naming conflict in current scope");
             return false;
         }

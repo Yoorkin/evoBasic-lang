@@ -57,6 +57,7 @@ namespace evoBasic{
         cls->location = cls->name->location;
 
         if(lexer->predict(Token::extend_)){
+            lexer->match(Token::extend_);
             cls->extend = parseAnnotation(combine(follows,{Token::impl,Token::COMMA}));
         }
 

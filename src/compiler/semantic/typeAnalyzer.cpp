@@ -202,6 +202,7 @@ namespace evoBasic{
 
     std::any TypeAnalyzer::visitReturn(ast::stmt::Return **ret_node, DefaultArgs args) {
         auto type = any_cast<ExpressionType*>(visitExpression(&(**ret_node).expr,args));
+        if(type->value_kind == ExpressionType::error)return {};
         if(!type->prototype->equal(args.user_function->getRetSignature())){
             Logger::error((**ret_node).location,format()<<"Return type '"
                                                      <<type->prototype->getName()<<"' is not equivalent to Function signature '"

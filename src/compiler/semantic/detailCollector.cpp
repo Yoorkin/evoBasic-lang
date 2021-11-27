@@ -41,7 +41,7 @@ namespace evoBasic{
         if((**class_node).extend){
             auto symbol = visitAnnotation(&(**class_node).extend,args);
             if(symbol.has_value())
-                base_class = any_cast<Symbol*>(symbol)->as<type::Class*>();
+                base_class = any_cast<Prototype*>(symbol)->as<type::Class*>();
             else
                 base_class = object_class;
         }
@@ -49,14 +49,26 @@ namespace evoBasic{
             base_class = object_class;
         }
 
-        class_symbol->setExtend(base_class);
-        args.context->byteLengthDependencies.addDependent(class_symbol,base_class);
+        if(is_extend_valid(class_symbol,base_class)){
+            class_symbol->setExtend(base_class);
+            args.context->byteLengthDependencies.addDependent(class_symbol,base_class);
+        }
+        else{
+            Logger::error((**class_node).extend->location,"inheritance is recursive");
+        }
 
         for(auto iter = (**class_node).member;iter!=nullptr;iter=iter->next_sibling){
             visitMember(&iter,args);
         }
 
         return {};
+    }
+
+    bool DetailCollector::is_extend_valid(type::Class *class_symbol,type::Class *base_class){
+        for(auto extend = base_class;extend!=nullptr;extend = extend->getExtend()){
+            if(extend == class_symbol) return false;
+        }
+        return true;
     }
 
     std::any DetailCollector::visitEnum(ast::Enum **enum_node, DefaultArgs args) {

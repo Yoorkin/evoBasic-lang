@@ -27,6 +27,7 @@ namespace evoBasic{
         std::any visitMember(ast::Member **member_node, DefaultArgs args) override;
         std::any visitBinary(ast::expr::Binary **binary_node, DefaultArgs args) override;
         std::any visitID(ast::expr::ID **id_node, DefaultArgs args) override;
+        bool is_extend_valid(type::Class *class_symbol,type::Class *base_class);
     };
 
 }
