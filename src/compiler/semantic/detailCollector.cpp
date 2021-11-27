@@ -15,7 +15,7 @@ namespace evoBasic{
 
     std::any DetailCollector::visitGlobal(ast::Global **global_node, DefaultArgs args) {
         NotNull(*global_node);
-        args.domain = args.context->getGlobal();
+        args.domain = args.parent_class_or_module = args.context->getGlobal();
         for(auto iter = (**global_node).member;iter!=nullptr;iter=iter->next_sibling){
             visitMember(&iter,args);
         }
@@ -25,7 +25,7 @@ namespace evoBasic{
 
     std::any DetailCollector::visitModule(ast::Module **module_node, DefaultArgs args) {
         NotNull(*module_node);
-        args.domain = (**module_node).module_symbol;
+        args.domain = args.parent_class_or_module = (**module_node).module_symbol;
         for(auto iter = (**module_node).member;iter!=nullptr;iter=iter->next_sibling){
             visitMember(&iter,args);
         }
@@ -35,7 +35,7 @@ namespace evoBasic{
     std::any DetailCollector::visitClass(ast::Class **class_node, DefaultArgs args) {
         NotNull(*class_node);
         auto class_symbol =  (**class_node).class_symbol;
-        args.domain = args.parent_class = class_symbol;
+        args.domain = args.parent_class_or_module = class_symbol;
 
         type::Class *base_class = nullptr,*object_class = args.context->getBuiltIn().getObjectClass();
         if((**class_node).extend){
@@ -179,8 +179,8 @@ namespace evoBasic{
             switch (function->getFunctionFlag()) {
                 case type::Function::Flag::Virtual:
                 case type::Function::Flag::Method:
-                    if(args.parent_class){
-                        auto self = new type::Parameter("self", args.parent_class, true, false);
+                    if(args.parent_class_or_module && args.parent_class_or_module->getKind() == SymbolKind::Class){
+                        auto self = new type::Parameter("self", args.parent_class_or_module, true, false);
                         function->add(self);
                     }
                     break;

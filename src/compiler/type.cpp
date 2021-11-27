@@ -340,6 +340,10 @@ namespace evoBasic::type{
             Domain::add(symbol);
     }
 
+    Class *Class::getExtend() {
+        return base_class;
+    }
+
     void Record::add(Symbol *symbol) {
         auto field = symbol->as<Variable*>();
         NotNull(field);

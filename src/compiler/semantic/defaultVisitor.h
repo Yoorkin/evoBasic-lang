@@ -14,7 +14,7 @@ namespace evoBasic{
         type::UserFunction *user_function = nullptr;
         type::Domain *domain = nullptr;
         type::Symbol *dot_expression_context = nullptr;
-        type::Class *parent_class = nullptr;
+        type::Domain *parent_class_or_module = nullptr;
         int checking_args_index = 0;
         bool need_lookup = false;
     };

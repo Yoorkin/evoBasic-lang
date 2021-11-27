@@ -14,7 +14,7 @@ namespace evoBasic{
 
 
     std::any TypeAnalyzer::visitGlobal(ast::Global **global_node, DefaultArgs args) {
-        args.domain = args.context->getGlobal();
+        args.domain = args.parent_class_or_module = args.context->getGlobal();
 
         auto iter = (**global_node).member;
         while(iter){
@@ -25,7 +25,7 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitModule(ast::Module **module_node, DefaultArgs args) {
-        args.domain = (**module_node).module_symbol;
+        args.domain = args.parent_class_or_module = (**module_node).module_symbol;
 
         auto iter = (**module_node).member;
         while(iter){
@@ -36,7 +36,7 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitClass(ast::Class **class_node, DefaultArgs args) {
-        args.domain = (**class_node).class_symbol;
+        args.domain = args.parent_class_or_module = (**class_node).class_symbol;
 
         auto iter = (**class_node).member;
         while(iter){
@@ -484,6 +484,7 @@ namespace evoBasic{
 
                 dot_node->lhs = self_id;
                 dot_node->rhs = (*id_node);
+                dot_node->location = (**id_node).location;
                 *((Expression**)id_node) = dot_node;
             }
         }
@@ -495,6 +496,8 @@ namespace evoBasic{
             }
         }
 
+        check_access((**id_node).location,target,args.domain,args.parent_class_or_module);
+
         switch (target->getKind()) {
             case type::SymbolKind::Variable:
             case type::SymbolKind::Argument:
@@ -504,7 +507,32 @@ namespace evoBasic{
         }
     }
 
-
+    void TypeAnalyzer::check_access(Location *code_location,Symbol *target,Domain *current,Domain *current_class_or_module){
+        switch(target->getAccessFlag()){
+            case AccessFlag::Public:
+                break;
+            case AccessFlag::Private:{
+                auto domain = current;
+                while(domain){
+                    if(target->getParent() == domain)return;
+                    domain = domain->getParent();
+                }
+                Logger::error(code_location,format()<<"'"<<target->mangling('.')<<"' is private");
+                break;
+            }
+            case AccessFlag::Protected:{
+                if(current_class_or_module->getKind()==SymbolKind::Class){
+                    auto domain = current_class_or_module->as<type::Class*>();
+                    while(domain){
+                        if(target->getParent() == domain)return;
+                        domain = domain->getExtend();
+                    }
+                }
+                Logger::error(code_location,format()<<"'"<<target->mangling('.')<<"' is protected");
+                break;
+            }
+        }
+    }
 
 
     std::any TypeAnalyzer::visitDigit(ast::expr::Digit **digit_node, DefaultArgs args) {

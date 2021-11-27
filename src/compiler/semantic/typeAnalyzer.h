@@ -48,6 +48,7 @@ namespace evoBasic{
         std::any visitExpression(ast::expr::Expression **expr_node, DefaultArgs args) override;
         std::any visitNew(ast::expr::New **new_node, DefaultArgs args)override;
         void check_callee(Location *location,ast::expr::Argument *argument,type::Function *target, DefaultArgs args);
+        void check_access(Location *code_location,type::Symbol *target,type::Domain *current,type::Domain *current_class_or_module);
     };
 }
 

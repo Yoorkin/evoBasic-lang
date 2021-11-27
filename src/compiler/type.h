@@ -211,6 +211,8 @@ namespace evoBasic::type{
         void add(Symbol *symbol) override;
 
         void setExtend(Class *base);
+        Class *getExtend();
+
         void setConstructor(Function *constructor);
         void addImplementation(Interface *interface);
         void addInitializeRule(ast::Variable* variable_node);
