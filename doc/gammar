@@ -116,7 +116,8 @@ terminal -> DIGIT
           | STRING  
           | CHAR
           | (expr)    
-          | ID argsBody                 
+          | ID argsBody
+          | NEW annotation
 
 argsBody -> (argList)   
           | e

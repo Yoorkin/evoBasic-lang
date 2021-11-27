@@ -201,13 +201,7 @@ TEST(CodeGen,PassByValTypeArray_Load_And_Store){
         End Type
 
 
-        Function Test(ByV// Demonstrate some basic assertions.
-TEST(HelloTest, BasicAssertions) {
-    // Expect two strings not to be equal.
-    EXPECT_STRNE("hello", "world");
-    // Expect equality.
-    EXPECT_EQ(7 * 6, 41);
-}al a as MyType,ByVal b as Integer[5]) as long
+        Function Test(ByVal a as MyType,ByVal b as Integer[5]) as long
             a.m2 = b[3] + 1
             b[4] = a.m1 + 2
         End Function

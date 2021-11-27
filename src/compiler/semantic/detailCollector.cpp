@@ -19,6 +19,7 @@ namespace evoBasic{
         for(auto iter = (**global_node).member;iter!=nullptr;iter=iter->next_sibling){
             visitMember(&iter,args);
         }
+        args.context->byteLengthDependencies.addIsolate(args.context->getGlobal());
         return {};
     }
 
@@ -34,7 +35,7 @@ namespace evoBasic{
     std::any DetailCollector::visitClass(ast::Class **class_node, DefaultArgs args) {
         NotNull(*class_node);
         auto class_symbol =  (**class_node).class_symbol;
-        args.domain = class_symbol;
+        args.domain = args.parent_class = class_symbol;
 
         type::Class *base_class = nullptr,*object_class = args.context->getBuiltIn().getObjectClass();
         if((**class_node).extend){
@@ -142,12 +143,13 @@ namespace evoBasic{
         if(is_name_valid(name,(**function_node).name->location,args.domain)){
             type::Function::Flag flag;
             switch((**function_node).method_flag){
-                case MethodFlag::Static:
-                    flag = type::Function::Flag::Static;
-                    if(args.domain->getKind() == type::SymbolKind::Class){
-                        Logger::error((**function_node).location,"Function in Module cannot be marked by 'Static'");
-                    }
-                    break;
+//                case MethodFlag::Static:
+//                    flag = type::Function::Flag::Static;
+//                    if(args.domain->getKind() == type::SymbolKind::Class){
+//                        Logger::error((**function_node).location,"Function in Module cannot be marked by 'Static'");
+//                    }
+//                    break;
+//TODO
                 case MethodFlag::Virtual:
                 case MethodFlag::Override:
                     if(args.domain->getKind() == type::SymbolKind::Class){
@@ -258,6 +260,7 @@ namespace evoBasic{
             case ast::expr::Binary::Dot:{
                 auto lhs_type = any_cast<ExpressionType*>(visitExpression(&(**binary_node).lhs,args));
                 if(lhs_type->value_kind == ExpressionType::error)return lhs_type;
+
                 auto rhs_name = getID((ID*)(**binary_node).rhs);
                 auto domain = lhs_type->prototype->as<Domain*>();
                 Prototype *target;
@@ -279,12 +282,13 @@ namespace evoBasic{
     std::any DetailCollector::visitID(ast::expr::ID **id_node, DefaultArgs args) {
         auto name = getID(*id_node);
         auto target = args.domain->lookUp(name)->as<Prototype*>();
+
         if(!target){
             Logger::error((**id_node).location,"object not find");
             return ExpressionType::Error;
         }
+
         return new ExpressionType(target,ExpressionType::path);
     }
-
 
 }

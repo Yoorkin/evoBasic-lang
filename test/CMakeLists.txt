@@ -27,6 +27,7 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/src/compiler/lexer.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/parser.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/semantic/semantic.cpp
+    ${CMAKE_SOURCE_DIR}/src/compiler/semantic/defaultVisitor.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/semantic/detailCollector.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/semantic/symbolCollector.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/semantic/typeAnalyzer.cpp

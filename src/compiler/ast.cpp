@@ -98,7 +98,10 @@ namespace evoBasic::ast{
             ret->childs.push_back(iter->debug());
             iter = iter->next_sibling;
         }
-        ret->childs.push_back(return_annotation->debug());
+
+        if(return_annotation)
+            ret->childs.push_back(return_annotation->debug());
+
         auto stmt = statement;
         while(stmt){
             ret->childs.push_back(stmt->debug());
@@ -315,6 +318,16 @@ namespace evoBasic::ast{
 
     DebugInfo *Implement::debug() {
         return new DebugInfo{"Implement"};
+    }
+
+    DebugInfo *expr::New::debug() {
+        auto ret = new DebugInfo{"New",{annotation->debug()}};
+        auto iter = argument;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
+        return ret;
     }
 }
 

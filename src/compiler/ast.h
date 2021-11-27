@@ -8,7 +8,7 @@
 
 namespace evoBasic{
     enum class AccessFlag {Public,Private,Friend,Protected};
-    enum class MethodFlag {Static,Virtual,Override,None};
+    enum class MethodFlag {Virtual,Override,None};
     struct ExpressionType;
     namespace type{
         class Variable;
@@ -64,6 +64,7 @@ namespace evoBasic::ast{
         struct Binary;
         struct Unary;
         struct Terminal;
+        struct Argument;
         struct Callee;
         struct ID;
         struct Digit;
@@ -102,6 +103,7 @@ namespace evoBasic::ast{
 
     struct Member : Node{
         AccessFlag access;
+        bool is_static = false;
         enum MemberKind{
             error,function_,class_,module_,type_,enum_,dim_,
             import_,external_
@@ -308,7 +310,7 @@ namespace evoBasic::ast{
         struct Expression : Node{
             enum ExpressionKind{
                 error_ = 0,binary_,unary_,parentheses_,ID_,cast_,
-                digit_,decimal_,string_,char_,boolean_,callee_
+                digit_,decimal_,string_,char_,boolean_,callee_,new_
             }expression_kind = error_;
             DebugInfo *debug()override;
             ExpressionType *type = nullptr;
@@ -346,6 +348,15 @@ namespace evoBasic::ast{
             DebugInfo *debug()override;
         };
 
+        struct New : Expression{
+            New(){
+                expression_kind = new_;
+            }
+            Annotation *annotation = nullptr;
+            Argument *argument = nullptr;
+            DebugInfo * debug() override;
+        };
+
         struct Unary : Expression{
             Unary(){expression_kind = ExpressionKind::unary_;}
             enum Enum{Empty,MINUS,ADD}op = Empty;
@@ -374,15 +385,16 @@ namespace evoBasic::ast{
             DebugInfo *debug()override;
         };
 
-        struct Callee : Expression{
-            struct Argument : Node{
-                enum PassKind{undefined,byref,byval}pass_kind = undefined;
-                type::Variable *temp_address = nullptr;
-                expr::Expression *expr = nullptr;
-                Argument *next_sibling = nullptr,*prv_sibling = nullptr;
-                DebugInfo *debug()override;
-            };
+        struct Argument : Node{
+            enum PassKind{undefined,byref,byval}pass_kind = undefined;
+            type::Variable *temp_address = nullptr;
+            expr::Expression *expr = nullptr;
+            Argument *next_sibling = nullptr,*prv_sibling = nullptr;
+            DebugInfo *debug()override;
+        };
 
+        struct Callee : Expression{
+            using Argument = Argument;//TODO remove it
             Callee(){
                 expression_kind = ExpressionKind::callee_;
             }

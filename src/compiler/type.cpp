@@ -156,6 +156,14 @@ namespace evoBasic::type{
         return this->function_node;
     }
 
+    bool UserFunction::isStatic() {
+        return is_static;
+    }
+
+    void UserFunction::setStatic(bool value) {
+        is_static = value;
+    }
+
     ExternalFunction::ExternalFunction(std::string library, std::string name)
         : library(std::move(library)),name(std::move(name)){}
 
@@ -457,6 +465,14 @@ namespace evoBasic::type{
                 return vm::Data::ptr.getSize();
         }
         PANIC;
+    }
+
+    bool Variable::isStatic() {
+        return is_static;
+    }
+
+    void Variable::setStatic(bool value) {
+        is_static = value;
     }
 
 

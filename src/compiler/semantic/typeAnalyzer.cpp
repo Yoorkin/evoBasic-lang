@@ -373,32 +373,7 @@ namespace evoBasic{
             return ExpressionType::Error;
         }
 
-        auto current_arg = 0;
-        auto args_count = 0;
-        auto params_count = func->getArgsSignature().size();
-
-        if(func->getFunctionFlag() != type::Function::Flag::Static){
-            params_count--;
-            current_arg++;
-        }
-
-        auto arg = callee_node->argument;
-        while(arg){
-            args.checking_args_index = current_arg;
-            arg = arg->next_sibling;
-            current_arg++;
-            args_count++;
-        }
-
-
-        if(args_count > params_count){
-            Logger::error(callee_node->location,format()<<"too many arguments to function call, expected "
-                                                        <<params_count<<", have "<<args_count);
-        }
-        else if(args_count < params_count){
-            Logger::error(callee_node->location,format()<<"too few arguments to function call, expected "
-                                                        <<params_count<<", have "<<args_count);
-        }
+        check_callee(callee_node->location,callee_node->argument,func,args);
 
         auto ret = func->getRetSignature();
         return callee_node->type = new ExpressionType(ret->as<type::Prototype*>(),ExpressionType::rvalue);
@@ -496,6 +471,20 @@ namespace evoBasic{
             if(!target){
                 Logger::error((**id_node).location,"object not find");
                 return ExpressionType::Error;
+            }
+
+            //insert Self.x node for Class variable.
+            if(target->getParent()->getKind() == SymbolKind::Class){
+                auto dot_node = new Binary;
+                dot_node->op = ast::expr::Binary::Dot;
+                auto self_id = new ID;
+                self_id->lexeme = "Self";
+                self_id->type = new ExpressionType(target->getParent(),ExpressionType::rvalue);
+                self_id->location = (**id_node).location;
+
+                dot_node->lhs = self_id;
+                dot_node->rhs = (*id_node);
+                *((Expression**)id_node) = dot_node;
             }
         }
         else{
@@ -598,8 +587,59 @@ namespace evoBasic{
                 return visitBoolean((ast::expr::Boolean**)expr_node,args);
             case ast::expr::Expression::ID_:
                 return visitID((ast::expr::ID**)expr_node,args);
+            case ast::expr::Expression::new_:
+                return visitNew((ast::expr::New**)expr_node,args);
         }
         PANIC;
+    }
+
+    std::any TypeAnalyzer::visitNew(ast::expr::New **new_node, DefaultArgs args) {
+        auto prototype = any_cast<Prototype*>(DefaultModifyVisitor::visitAnnotation(&(**new_node).annotation,args));
+        if(prototype->getKind() == SymbolKind::Error) return prototype;
+
+        auto cls = prototype->as<type::Class*>();
+        if(!cls){
+            Logger::error((**new_node).location,"type is not a Class");
+            return ExpressionType::Error;
+        }
+
+        auto init = cls->find("init")->as<UserFunction*>();
+        if(!init){
+            Logger::error((**new_node).location,format()<<"cannot find initializer in '"<<cls->mangling('.')<<"'");
+            return ExpressionType::Error;
+        }
+
+        check_callee((**new_node).location,(**new_node).argument,init,args);
+
+        return new ExpressionType(cls,ExpressionType::rvalue);
+    }
+
+    void TypeAnalyzer::check_callee(Location *location,Argument *argument,type::Function *target, DefaultArgs args){
+        auto current_arg = 0;
+        auto args_count = 0;
+        auto params_count = target->getArgsSignature().size();
+
+        if(target->getFunctionFlag() != type::Function::Flag::Static){
+            params_count--;
+            current_arg++;
+        }
+
+        auto arg = argument;
+        while(arg){
+            args.checking_args_index = current_arg;
+            arg = arg->next_sibling;
+            current_arg++;
+            args_count++;
+        }
+
+        if(args_count > params_count){
+            Logger::error(location,format()<<"too many arguments to function call, expected "
+                                                        <<params_count<<", have "<<args_count);
+        }
+        else if(args_count < params_count){
+            Logger::error(location,format()<<"too few arguments to function call, expected "
+                                                        <<params_count<<", have "<<args_count);
+        }
     }
 
 

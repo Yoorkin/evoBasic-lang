@@ -59,6 +59,7 @@ namespace evoBasic{
         virtual std::any visitMember(ast::Member *member_node,ARGS args){PANIC;}
         virtual std::any visitStatement(ast::stmt::Statement *stmt_node,ARGS args){PANIC;}
         virtual std::any visitExpression(ast::expr::Expression *expr_node,ARGS args){PANIC;}
+        virtual std::any visitNew(ast::expr::New *new_node,ARGS args){PANIC;}
     };
 
 
@@ -112,6 +113,7 @@ namespace evoBasic{
         virtual std::any visitMember(ast::Member **member_node,ARGS args){PANIC;}
         virtual std::any visitStatement(ast::stmt::Statement **stmt_node,ARGS args){PANIC;}
         virtual std::any visitExpression(ast::expr::Expression **expr_node,ARGS args){PANIC;}
+        virtual std::any visitNew(ast::expr::New **new_node,ARGS args){PANIC;}
     };
 }
 

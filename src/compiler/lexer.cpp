@@ -45,7 +45,6 @@ namespace evoBasic{
                 {Token::class_,    Token::END_CLASS},
                 {Token::select_,   Token::END_SELECT},
                 {Token::type_,     Token::END_TYPE},
-                {Token::init_,     Token::END_INIT},
                 {Token::operator_, Token::END_OPERATOR},
                 {Token::interface_,Token::END_INTERFACE}
         };

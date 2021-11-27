@@ -139,11 +139,12 @@ namespace evoBasic{
         {"declare",Enum::declare_},
         {"lib",Enum::lib_},
         {"alias",Enum::alias_},
-        {"init",Enum::init_},
         {"operator",Enum::operator_},
         {"impl",Enum::impl},
         {"extend",Enum::extend_},
-        {"interface",Enum::interface_}
+        {"interface",Enum::interface_},
+        {"new",Enum::new_},
+        {"const",Enum::const_}
     };
 
     vector<string> Token::enum_to_string = {
@@ -155,7 +156,7 @@ namespace evoBasic{
         "Function","Sub","Byval","Byref","Optional","As","Let","End","Enum","type",
         "Select","Case","For","To","Step","While","Wend","If","Then","ElseIf","Else",
         "And","Or","Xor","Not","Return","Continue","Exit","Next","False","True",
-        "Import","Declare","Lib","Alias","Init","Operator","Impl","Extend","Interface",
+        "Import","Declare","Lib","Alias","Operator","Impl","Extend","Interface","New","Const",
             /* end domain token */
         "End If","End Function","End Sub","End Module","End Class","End type","End Enum",
         "End Select","End Init","End Operator","End Interface"

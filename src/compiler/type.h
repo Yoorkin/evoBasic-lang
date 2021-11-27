@@ -55,8 +55,6 @@ namespace evoBasic::type{
     };
 
     class Symbol {
-    public:
-
     private:
         friend Domain;
         std::string name;
@@ -124,6 +122,7 @@ namespace evoBasic::type{
         bool is_const = false;
         bool is_global = false;
         std::size_t offset = -1;
+        bool is_static = false;
     public:
         Variable();
         explicit Variable(SymbolKind kind);
@@ -135,6 +134,8 @@ namespace evoBasic::type{
         std::size_t getOffset();
         void setOffset(std::size_t value);
         virtual data::ptr getRealByteLength();
+        bool isStatic();
+        void setStatic(bool value);
     };
 
     //domain interface
@@ -297,7 +298,7 @@ namespace evoBasic::type{
         enum Flag{Method,Static,Virtual};
     private:
         std::vector<Parameter*> argsSignature;
-        Prototype *retSignature;
+        Prototype *retSignature = nullptr;
         std::size_t tmp_domain_count = 0;
     public:
         Function(const Function&)=delete;
@@ -317,11 +318,14 @@ namespace evoBasic::type{
     class UserFunction: public Function{
         ast::Function *function_node;
         Function::Flag flag;
+        bool is_static = false;
     public:
         UserFunction(const UserFunction&)=delete;
         explicit UserFunction(Function::Flag flag,ast::Function *function_node);
         ast::Function *getFunctionNode();
         Function::Flag getFunctionFlag()override{return flag;}
+        bool isStatic();
+        void setStatic(bool value);
     };
 
 

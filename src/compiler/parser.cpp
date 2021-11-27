@@ -24,7 +24,7 @@ namespace evoBasic{
     
     ast::Global *Parser::parseGlobal(){
         set<Token::Enum> member_follows = {
-                Token::function_,Token::init_,Token::operator_,Token::type_,
+                Token::function_,Token::operator_,Token::type_,
                 Token::enum_,Token::dim_,Token::END_CLASS,Token::EOF_
         };
 
@@ -45,9 +45,9 @@ namespace evoBasic{
         return global;
     }
 
-    ast::Class *Parser::parseClass(const set<Token::Enum>& follows){
+    ast::Class *Parser::parseClass(Follows follows){
         auto member_follows = combine(follows,{
-                Token::function_,Token::init_,Token::operator_,Token::type_,
+                Token::function_,Token::operator_,Token::type_,
                 Token::enum_,Token::dim_,Token::END_CLASS
         });
 
@@ -88,10 +88,10 @@ namespace evoBasic{
         return cls;
     }
 
-    ast::Module *Parser::parseModule(const set<Token::Enum>& follows){
+    ast::Module *Parser::parseModule(Follows follows){
         auto member_follows = combine(follows,{
                 Token::private_,Token::public_,Token::friend_,Token::protected_,
-                Token::function_,Token::sub_,Token::init_,Token::operator_,Token::type_,
+                Token::function_,Token::sub_,Token::operator_,Token::type_,
                 Token::enum_,Token::dim_,Token::END_CLASS
         });
 
@@ -115,7 +115,7 @@ namespace evoBasic{
         return mod;
     }
 
-    ast::Type *Parser::parseType(const set<Token::Enum>& follows){
+    ast::Type *Parser::parseType(Follows follows){
         auto member_follows = combine(follows,{Token::END_TYPE});
 
         auto type = new Type;
@@ -138,7 +138,7 @@ namespace evoBasic{
         return type;
     }
 
-    ast::Enum *Parser::parseEnum(const set<Token::Enum>& follows){
+    ast::Enum *Parser::parseEnum(Follows follows){
         auto member_follows = combine(follows,{Token::END_ENUM});
 
         auto enum_ = new Enum;
@@ -162,16 +162,18 @@ namespace evoBasic{
 
 
 
-    ast::Member *Parser::parseMember(const set<Token::Enum>& follows){
+    ast::Member *Parser::parseMember(Follows follows){
         auto access = parseAccessFlag();
+        bool is_static = false;
+        if(lexer->predict(Token::static_)){
+            lexer->match(Token::static_);
+            is_static = true;
+        }
         Member *member = nullptr;
         switch (lexer->getNextToken()->getKind()) {
             case Token::override_:
             case Token::virtual_:
-            case Token::static_:
             case Token::sub_:
-            case Token::init_:
-            case Token::operator_:
             case Token::function_:
                 member = parseFunction(follows);
                 break;
@@ -185,6 +187,8 @@ namespace evoBasic{
                 member = parseEnum(follows);
                 break;
             case Token::dim_:
+            case Token::const_:
+            case Token::ID:
                 member = parseDim(follows);
                 break;
             case Token::class_:
@@ -197,7 +201,10 @@ namespace evoBasic{
                 Logger::error(lexer->getNextToken()->getLocation(),"unexpected token");
                 lexer->skipUntil(follows);
         }
-        if(member)member->access = access;
+        if(member){
+            member->access = access;
+            member->is_static = is_static;
+        }
         return member;
     }
 
@@ -220,17 +227,25 @@ namespace evoBasic{
         }
     }
 
-    ast::Import *Parser::parseImport(const set<Token::Enum>& follows){
+    ast::Import *Parser::parseImport(Follows follows){
         auto import = new Import;
         lexer->match(Token::import_);
         import->location = lexer->getToken()->getLocation();
         import->annotation = parseAnnotation(follows);
         return import;
     }
-    ast::Dim *Parser::parseDim(const set<Token::Enum>& follows){
+    ast::Dim *Parser::parseDim(Follows follows){
         auto member_follows = combine(follows,{Token::COMMA});
         auto dim = new Dim;
-        lexer->match(Token::dim_);
+
+        if(lexer->predict(Token::const_)){
+            lexer->match(Token::const_);
+            dim->is_const = true;
+        }
+        else if(lexer->predict(Token::dim_)){
+            lexer->match(Token::dim_);
+        }
+
         dim->location = lexer->getToken()->getLocation();
 
         dim->variable = parseVariable(member_follows);
@@ -244,7 +259,7 @@ namespace evoBasic{
         }
         return dim;
     }
-    ast::Variable *Parser::parseVariable(const set<Token::Enum>& follows){
+    ast::Variable *Parser::parseVariable(Follows follows){
         auto var = new Variable;
         var->name = parseID(combine(follows,{Token::as_}));
         var->location = var->name->location;
@@ -261,16 +276,12 @@ namespace evoBasic{
 
         return var;
     }
-    ast::Function *Parser::parseFunction(const set<Token::Enum>& follows){
+    ast::Function *Parser::parseFunction(Follows follows){
         auto stmt_follows = combine(follows,{Token::END_FUNCTION,Token::END_SUB});
 
         auto func = new Function;
 
         switch(lexer->getNextToken()->getKind()){
-            case Token::static_:
-                lexer->match(Token::static_);
-                func->method_flag = MethodFlag::Static;
-                break;
             case Token::override_:
                 lexer->match(Token::override_);
                 func->method_flag = MethodFlag::Override;
@@ -304,7 +315,7 @@ namespace evoBasic{
         }
         return func;
     }
-    ast::External *Parser::parseExternal(const set<Token::Enum>& follows){
+    ast::External *Parser::parseExternal(Follows follows){
         auto ext = new External;
         lexer->match(Token::declare_);
         bool hasReturn = false;
@@ -341,7 +352,7 @@ namespace evoBasic{
         return ext;
     }
 
-    ast::EnumMember *Parser::parseEnumMember(const set<Token::Enum>& follows){
+    ast::EnumMember *Parser::parseEnumMember(Follows follows){
         auto member = new EnumMember;
         member->name = parseID(combine(follows,{Token::ASSIGN}));
         if(lexer->predict(Token::ASSIGN)){
@@ -352,7 +363,7 @@ namespace evoBasic{
         return member;
     }
 
-    ast::Parameter* Parser::parseParameterList(const set<Token::Enum>& follows){
+    ast::Parameter* Parser::parseParameterList(Follows follows){
         auto member_follows = combine(follows,{Token::RP, Token::COMMA});
 
         lexer->match(Token::LP);
@@ -371,7 +382,7 @@ namespace evoBasic{
         return head;
     }
 
-    ast::stmt::Statement* Parser::parseStmtList(const set<Token::Enum>& follows){
+    ast::stmt::Statement* Parser::parseStmtList(Follows follows){
         set<Token::Enum> stmt_follows = {statement_follows};
         auto member_follows = combine(follows,stmt_follows);
 
@@ -428,7 +439,7 @@ namespace evoBasic{
         return head;
     }
 
-    ast::Parameter *Parser::parseParameter(const set<Token::Enum>& follows){
+    ast::Parameter *Parser::parseParameter(Follows follows){
         auto param = new Parameter;
         if(lexer->predict(Token::optional_)){
             lexer->match(Token::optional_);
@@ -454,7 +465,7 @@ namespace evoBasic{
         return param;
     }
 
-    ast::expr::ID *Parser::parseID(const set<Token::Enum>& follows){
+    ast::expr::ID *Parser::parseID(Follows follows){
         lexer->match(Token::ID);
         auto id = new ID;
         id->location = lexer->getToken()->getLocation();
@@ -462,7 +473,7 @@ namespace evoBasic{
         return id;
     }
 
-    ast::stmt::Let *Parser::parseLet(const set<Token::Enum>& follows){
+    ast::stmt::Let *Parser::parseLet(Follows follows){
         auto member_follows = combine(follows,{Token::COMMA});
 
         auto let = new Let;
@@ -481,7 +492,7 @@ namespace evoBasic{
         return let;
     }
 
-    ast::stmt::Select *Parser::parseSelect(const set<Token::Enum>& follows){
+    ast::stmt::Select *Parser::parseSelect(Follows follows){
         auto member_follows = combine(follows,{Token::case_,Token::END_SELECT});
 
         auto select = new Select;
@@ -516,7 +527,7 @@ namespace evoBasic{
         return select;
     }
 
-    ast::stmt::Loop *Parser::parseLoop(const set<Token::Enum>& follows){
+    ast::stmt::Loop *Parser::parseLoop(Follows follows){
         auto member_follows = combine(follows,{Token::wend_});
 
         auto loop = new Loop;
@@ -528,7 +539,7 @@ namespace evoBasic{
         return loop;
     }
 
-    ast::stmt::If *Parser::parseIf(const set<Token::Enum>& follows){
+    ast::stmt::If *Parser::parseIf(Follows follows){
         auto member_follows = combine(follows,{Token::END_IF,Token::else_,Token::elseif_});
 
         auto if_ = new If;
@@ -574,7 +585,7 @@ namespace evoBasic{
         return if_;
     }
 
-    ast::stmt::For *Parser::parseFor(const set<Token::Enum>& follows){
+    ast::stmt::For *Parser::parseFor(Follows follows){
         auto addition_follows = combine(follows, {Token::next_,statement_follows});
 
         auto for_ = new For;
@@ -601,7 +612,7 @@ namespace evoBasic{
         return for_;
     }
 
-    ast::stmt::Return *Parser::parseReturn(const set<Token::Enum>& follows){
+    ast::stmt::Return *Parser::parseReturn(Follows follows){
         auto tmp = new Return;
         lexer->match(Token::return_);
         tmp->location = lexer->getToken()->getLocation();
@@ -609,7 +620,7 @@ namespace evoBasic{
         return tmp;
     }
 
-    ast::stmt::Exit *Parser::parseExit(const set<Token::Enum>& follows){
+    ast::stmt::Exit *Parser::parseExit(Follows follows){
         auto tmp = new Exit;
         lexer->match(Token::exit_);
         tmp->location = lexer->getToken()->getLocation();
@@ -630,7 +641,7 @@ namespace evoBasic{
         return tmp;
     }
 
-    ast::expr::Expression *Parser::parseLogic(const set<Token::Enum>& follows){
+    ast::expr::Expression *Parser::parseLogic(Follows follows){
         auto addition_follows = combine(follows,{Token::and_,Token::or_,Token::xor_,Token::not_});
 
         Expression *rhs,*lhs = parseCmp(addition_follows);
@@ -657,7 +668,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseCmp(const set<Token::Enum>& follows){
+    ast::expr::Expression *Parser::parseCmp(Follows follows){
         auto addition_follows = combine(follows,{Token::EQ,Token::NE,Token::LT,Token::GT,Token::LE,Token::GE});
 
         Expression *rhs,*lhs = parseAdd(addition_follows);
@@ -699,7 +710,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseAdd(const set<Token::Enum>& follows){
+    ast::expr::Expression *Parser::parseAdd(Follows follows){
         auto addition_follows = combine(follows,{Token::ADD,Token::MINUS});
 
         Expression *rhs,*lhs = parseTerm(addition_follows);
@@ -721,7 +732,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseTerm(const set<Token::Enum>& follows){
+    ast::expr::Expression *Parser::parseTerm(Follows follows){
         auto addition_follows = combine(follows,{Token::MUL,Token::FDIV,Token::DIV});
 
         Expression *rhs,*lhs = parseFactor(addition_follows);
@@ -748,7 +759,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseFactor(const set<Token::Enum>& follows){
+    ast::expr::Expression *Parser::parseFactor(Follows follows){
         auto addition_follows = combine(follows,{Token::as_,Token::ASSIGN});
 
         Expression *lhs = parseUnary(addition_follows);
@@ -769,7 +780,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseUnary(const set<Token::Enum>& follows){
+    ast::expr::Expression *Parser::parseUnary(Follows follows){
         switch(lexer->getNextToken()->getKind()){
             case Token::MINUS:
                 lexer->match(Token::MINUS);
@@ -782,7 +793,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseDot(const set<Token::Enum>& follows) {
+    ast::expr::Expression *Parser::parseDot(Follows follows) {
         auto addition_follows = combine(follows,{Token::DOT});
 
         Expression *rhs,*lhs = parseTerminal(follows);
@@ -799,7 +810,7 @@ namespace evoBasic{
 
     }
 
-    ast::expr::Expression *Parser::parseTerminal(const set<Token::Enum>& follows){
+    ast::expr::Expression *Parser::parseTerminal(Follows follows){
         auto addition_follows = combine(follows,{Token::DOT});
         bool panic = false;
         while(true){
@@ -819,6 +830,8 @@ namespace evoBasic{
                     return parseBoolean(addition_follows);
                 case Token::LP:
                     return parseParentheses(addition_follows);
+                case Token::new_:
+                    return parseNew(addition_follows);
                 default:
                     if(panic){
                         auto err = new ast::expr::Expression;
@@ -832,7 +845,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseUnit(const set<Token::Enum>& follows){
+    ast::expr::Expression *Parser::parseUnit(Follows follows){
         auto begin_location = lexer->getNextToken()->getLocation();
         Expression *ret = parseID(follows);
 
@@ -855,7 +868,7 @@ namespace evoBasic{
     }
 
 
-    ast::expr::Callee::Argument* Parser::parseArgsList(const set<Token::Enum>& follows){
+    ast::expr::Callee::Argument* Parser::parseArgsList(Follows follows){
         auto addition_follows = combine(follows,{Token::COMMA});
 
         lexer->match(Token::LP);
@@ -878,7 +891,7 @@ namespace evoBasic{
     }
 
 
-    ast::expr::Callee::Argument *Parser::parseArg(const set<Token::Enum>& follows) {
+    ast::expr::Callee::Argument *Parser::parseArg(Follows follows) {
         auto arg = new Callee::Argument;
         auto begin_location = lexer->getNextToken()->getLocation();
         if(lexer->predict(Token::byval_)){
@@ -894,7 +907,7 @@ namespace evoBasic{
         return arg;
     }
 
-    ast::expr::Digit *Parser::parseDigit(const set<Token::Enum>& follows){
+    ast::expr::Digit *Parser::parseDigit(Follows follows){
         if(lexer->predict(Token::DIGIT)){
             lexer->match(Token::DIGIT);
             auto digit = new expr::Digit;
@@ -908,7 +921,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Decimal *Parser::parseDecimal(const set<Token::Enum>& follows){
+    ast::expr::Decimal *Parser::parseDecimal(Follows follows){
         lexer->match(Token::DECIMAL);
         auto decimal = new expr::Decimal;
         decimal->location = lexer->getToken()->getLocation();
@@ -916,7 +929,7 @@ namespace evoBasic{
         return decimal;
     }
 
-    ast::expr::String *Parser::parseString(const set<Token::Enum>& follows){
+    ast::expr::String *Parser::parseString(Follows follows){
         lexer->match(Token::STRING);
         auto str = new expr::String;
         str->location = lexer->getToken()->getLocation();
@@ -925,7 +938,7 @@ namespace evoBasic{
         return str;
     }
 
-    ast::expr::Char *Parser::parseChar(const set<Token::Enum>& follows){
+    ast::expr::Char *Parser::parseChar(Follows follows){
         lexer->match(Token::CHAR);
         auto ch = new expr::Char;
         ch->location = lexer->getToken()->getLocation();
@@ -934,7 +947,7 @@ namespace evoBasic{
         return ch;
     }
 
-    ast::expr::Boolean *Parser::parseBoolean(const set<Token::Enum>& follows){
+    ast::expr::Boolean *Parser::parseBoolean(Follows follows){
         auto boo = new Boolean;
         if(lexer->predict(Token::false_)){
             lexer->match(Token::false_);
@@ -949,7 +962,7 @@ namespace evoBasic{
         return boo;
     }
 
-    ast::expr::Expression *Parser::parseParentheses(const set<Token::Enum>& follows) {
+    ast::expr::Expression *Parser::parseParentheses(Follows follows) {
         lexer->match(Token::LP);
         auto location_begin = lexer->getToken()->getLocation();
         auto parentheses = new ast::expr::Parentheses;
@@ -959,7 +972,7 @@ namespace evoBasic{
         return parentheses;
     }
 
-    ast::stmt::ExprStmt *Parser::parseExprStmt(const set<Token::Enum>& follows) {
+    ast::stmt::ExprStmt *Parser::parseExprStmt(Follows follows) {
         auto tmp = new ExprStmt;
         tmp->expr = parseLogic(follows);
         return tmp;
@@ -1003,6 +1016,16 @@ namespace evoBasic{
         impl->annotation = parseAnnotation(follows);
         impl->location = impl->annotation->location;
         return impl;
+    }
+
+    ast::expr::New *Parser::parseNew(const set<Token::Enum> &follows) {
+        lexer->match(Token::new_);
+        auto ret = new New;
+        auto location_begin = lexer->getToken()->getLocation();
+        ret->annotation = parseAnnotation(combine(follows,{Token::LP}));
+        ret->argument = parseArgsList(follows);
+        ret->location = new Location(location_begin,lexer->getToken()->getLocation());
+        return ret;
     }
 
 

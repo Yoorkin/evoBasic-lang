@@ -116,6 +116,7 @@ namespace evoBasic{
             auto iter = dim_node->variable;
             while(iter){
                 visitVariable(iter,args);
+                iter = iter->next_sibling;
             }
         }
         return {};
@@ -682,7 +683,6 @@ namespace evoBasic{
             }
         }
         else if(logic_node->op == Op::ASSIGN){
-            args.need_return_value = false;
             return visitAssign(logic_node,args);
         }
         else if(logic_node->op == Op::Dot || logic_node->op == Op::Index ){
@@ -1091,6 +1091,7 @@ namespace evoBasic{
 
 
     std::any IRGen::visitExprStmt(ast::stmt::ExprStmt *expr_stmt_node, IRGenArgs args) {
+        args.need_return_value = false;
         visitExpression(expr_stmt_node->expr,args);
         return (Block*)nullptr;
     }

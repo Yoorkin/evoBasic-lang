@@ -16,14 +16,14 @@ using namespace std;
 using namespace evoBasic;
 using namespace evoBasic::ir;
 
-std::shared_ptr<IR> compile(std::string code){
+IR *compile(std::string code){
     Logger::debugMode = false;
     auto source = new evoBasic::StringSource(code);
     Lexer lexer(source);
     Parser parser(&lexer);
     auto ast = parser.parseGlobal();
 
-    auto context = make_shared<Context>();
+    auto context = new Context;
     Semantic::collectSymbol(ast,context);
     Semantic::collectDetail(ast,context);
     Semantic::typeCheck(ast,context);

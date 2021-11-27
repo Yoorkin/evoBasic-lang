@@ -20,9 +20,8 @@ namespace evoBasic{
     };
 
     class DefaultModifyVisitor : public ModifyVisitor<DefaultArgs> {
+    public:
         std::any visitAnnotationUnit(ast::AnnotationUnit **unit_node, DefaultArgs args) override;
-
-    protected:
         std::any visitAnnotation(ast::Annotation **annotation_node, DefaultArgs args) override;
     };
 
