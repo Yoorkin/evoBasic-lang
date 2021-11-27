@@ -89,6 +89,7 @@ namespace evoBasic{
             auto variable = iter->variable_symbol;
             NotNull(variable);
             auto variable_prototype = any_cast<type::Prototype*>(visitAnnotation(&iter->annotation, args));
+            variable_prototype->setAccessFlag(AccessFlag::Public);
             switch (variable_prototype->getKind()) {
                 case type::SymbolKind::Record:
                 case type::SymbolKind::Array:
@@ -168,6 +169,7 @@ namespace evoBasic{
             auto function = new type::UserFunction(flag, *function_node);
             function->setLocation((**function_node).name->location);
             function->setName(name);
+            function->setAccessFlag((**function_node).access);
 
             args.context->byteLengthDependencies.addIsolate(function);
             
