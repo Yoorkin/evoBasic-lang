@@ -693,7 +693,7 @@ namespace evoBasic{
 
     std::any IRGen::visitID(ast::expr::ID *id_node, IRGenArgs args) {
         auto name = getID(id_node);
-        shared_ptr<Symbol> ret;
+        Symbol *ret = nullptr;
         if(args.need_lookup) {
             return args.dot_expression_context->as<Domain*>()->lookUp(name);
         }
@@ -769,7 +769,7 @@ namespace evoBasic{
     }
 
     OperandType IRGen::visitIndex(ast::expr::Binary *index,IRGenArgs args,bool need_push_base){
-        auto symbol = any_cast<shared_ptr<Symbol>>(visitID((ast::expr::ID*)index->lhs,args));
+        auto symbol = any_cast<Symbol*>(visitID((ast::expr::ID*)index->lhs,args));
         auto variable = symbol->as<Variable*>();
         NotNull(variable);
         auto lhs_operand = pushVariableAddress(variable,args.previous_block,need_push_base);
@@ -941,7 +941,6 @@ namespace evoBasic{
     OperandType IRGen::visitDot(ast::expr::Expression *node,IRGenArgs args,OperandType lhs){
         using namespace ast;
         using namespace ast::expr;
-        using sharedPrototype = shared_ptr<Prototype>;
 
         bool push_base_address = true;
         switch ((OperandEnum)lhs.index()) {
@@ -1133,6 +1132,34 @@ namespace evoBasic{
             case SymbolKind::Error:
                 ASSERT(true,"invalid annotation");
         }
+    }
+
+    std::any IRGen::visitMember(ast::Member *member_node, IRGenArgs args) {
+        switch (member_node->member_kind) {
+            case ast::Member::function_: return visitFunction((ast::Function*)member_node,args);
+            case ast::Member::class_:    return visitClass((ast::Class*)member_node,args);
+            case ast::Member::module_:   return visitModule((ast::Module*)member_node,args);
+            case ast::Member::type_:     return visitType((ast::Type*)member_node,args);
+            case ast::Member::enum_:     return visitEnum((ast::Enum*)member_node,args);
+            case ast::Member::dim_:      return visitDim((ast::Dim*)member_node,args);
+            case ast::Member::external_: return visitExternal((ast::External*)member_node,args);
+        }
+        return {};
+    }
+
+    std::any IRGen::visitStatement(ast::stmt::Statement *stmt_node, IRGenArgs args) {
+        switch (stmt_node->stmt_flag) {
+            case ast::stmt::Statement::let_: return visitLet((ast::stmt::Let*)stmt_node,args);
+            case ast::stmt::Statement::loop_:return visitLoop((ast::stmt::Loop*)stmt_node,args);
+            case ast::stmt::Statement::if_:  return visitIf((ast::stmt::If*)stmt_node,args);
+            case ast::stmt::Statement::for_: return visitFor((ast::stmt::For*)stmt_node,args);
+            case ast::stmt::Statement::select_:return visitSelect((ast::stmt::Select*)stmt_node,args);
+            case ast::stmt::Statement::return_:return visitReturn((ast::stmt::Return*)stmt_node,args);
+            case ast::stmt::Statement::continue_:return visitContinue((ast::stmt::Continue*)stmt_node,args);
+            case ast::stmt::Statement::exit_:return visitExit((ast::stmt::Exit*)stmt_node,args);
+            case ast::stmt::Statement::expr_:return visitExprStmt((ast::stmt::ExprStmt*)stmt_node,args);
+        }
+        return {};
     }
 
 

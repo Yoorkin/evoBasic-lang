@@ -29,7 +29,7 @@ namespace evoBasic{
 
     void Semantic::collectDetail(AST *ast, Context *context) {
         DetailCollector collector;
-        DetailArgs args;
+        DefaultArgs args;
         args.domain = context->getGlobal();
         args.context = context;
         collector.visitGlobal(&ast,args);
@@ -37,7 +37,7 @@ namespace evoBasic{
 
     void Semantic::typeCheck(AST *ast, Context *context) {
         TypeAnalyzer analyzer;
-        TypeAnalyzerArgs args;
+        DefaultArgs args;
         args.domain = context->getGlobal();
         args.context = context;
         analyzer.visitGlobal(&ast,args);

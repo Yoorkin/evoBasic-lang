@@ -121,6 +121,9 @@ namespace evoBasic{
         void dereference(std::shared_ptr<type::Symbol> symbol);
 
         std::any visitCaseInSelectStmt(ast::Case *ca_node, IRGenArgs args);
+
+        std::any visitMember(ast::Member *member_node, IRGenArgs args) override;
+        std::any visitStatement(ast::stmt::Statement *stmt_node, IRGenArgs args) override;
     };
 
 }

@@ -13,7 +13,7 @@ using namespace evoBasic::ast;
 using namespace evoBasic::ast::expr;
 namespace evoBasic{
 
-    std::any DetailCollector::visitGlobal(ast::Global **global_node, DetailArgs args) {
+    std::any DetailCollector::visitGlobal(ast::Global **global_node, DefaultArgs args) {
         NotNull(*global_node);
         args.domain = args.context->getGlobal();
         for(auto iter = (**global_node).member;iter!=nullptr;iter=iter->next_sibling){
@@ -22,7 +22,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitModule(ast::Module **module_node, DetailArgs args) {
+    std::any DetailCollector::visitModule(ast::Module **module_node, DefaultArgs args) {
         NotNull(*module_node);
         args.domain = (**module_node).module_symbol;
         for(auto iter = (**module_node).member;iter!=nullptr;iter=iter->next_sibling){
@@ -31,7 +31,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitClass(ast::Class **class_node, DetailArgs args) {
+    std::any DetailCollector::visitClass(ast::Class **class_node, DefaultArgs args) {
         NotNull(*class_node);
         auto class_symbol =  (**class_node).class_symbol;
         args.domain = class_symbol;
@@ -58,7 +58,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitEnum(ast::Enum **enum_node, DetailArgs args) {
+    std::any DetailCollector::visitEnum(ast::Enum **enum_node, DefaultArgs args) {
         NotNull(*enum_node);
         args.domain = (**enum_node).enum_symbol;
         int index = 0;
@@ -78,7 +78,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitType(ast::Type **type_node, DetailArgs args) {
+    std::any DetailCollector::visitType(ast::Type **type_node, DefaultArgs args) {
         NotNull(*type_node);
         auto name = getID((**type_node).name);
         auto type = (**type_node).type_symbol;
@@ -100,7 +100,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitDim(ast::Dim **dim_node, DetailArgs args) {
+    std::any DetailCollector::visitDim(ast::Dim **dim_node, DefaultArgs args) {
         for(ast::Variable *iter=(**dim_node).variable;iter!=nullptr;iter=iter->next_sibling){
             auto variable = any_cast<Symbol*>(visitVariable(&iter,args))->as<type::Variable*>();
 
@@ -128,7 +128,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitVariable(ast::Variable **variable_node, DetailArgs args) {
+    std::any DetailCollector::visitVariable(ast::Variable **variable_node, DefaultArgs args) {
         auto name = getID((**variable_node).name);
         auto variable = (**variable_node).variable_symbol;
         NotNull(variable);
@@ -137,7 +137,7 @@ namespace evoBasic{
         return variable->as<Symbol*>();
     }
 
-    std::any DetailCollector::visitFunction(ast::Function **function_node, DetailArgs args) {
+    std::any DetailCollector::visitFunction(ast::Function **function_node, DefaultArgs args) {
         auto name = getID((**function_node).name);
         if(is_name_valid(name,(**function_node).name->location,args.domain)){
             type::Function::Flag flag;
@@ -200,7 +200,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitExternal(ast::External **external_node, DetailArgs args) {
+    std::any DetailCollector::visitExternal(ast::External **external_node, DefaultArgs args) {
         auto name = getID((**external_node).name);
         
         if(is_name_valid(name,(**external_node).name->location,args.domain)){
@@ -222,7 +222,7 @@ namespace evoBasic{
         return nullptr;
     }
 
-    std::any DetailCollector::visitParameter(ast::Parameter **parameter_node, DetailArgs args) {
+    std::any DetailCollector::visitParameter(ast::Parameter **parameter_node, DefaultArgs args) {
         auto name = getID((**parameter_node).name);
         auto prototype = any_cast<Prototype*>(visitAnnotation(&(**parameter_node).annotation,args));
         NotNull(prototype);
@@ -240,7 +240,7 @@ namespace evoBasic{
         return nullptr;
     }
 
-    std::any DetailCollector::visitMember(ast::Member **member_node, DetailArgs args) {
+    std::any DetailCollector::visitMember(ast::Member **member_node, DefaultArgs args) {
         switch ((**member_node).member_kind) {
             case ast::Member::function_: return visitFunction((ast::Function**)member_node,args);
             case ast::Member::class_:    return visitClass((ast::Class**)member_node,args);
@@ -253,7 +253,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitBinary(ast::expr::Binary **binary_node, DetailArgs args) {
+    std::any DetailCollector::visitBinary(ast::expr::Binary **binary_node, DefaultArgs args) {
         switch ((**binary_node).op) {
             case ast::expr::Binary::Dot:{
                 auto lhs_type = any_cast<ExpressionType*>(visitExpression(&(**binary_node).lhs,args));
@@ -276,7 +276,7 @@ namespace evoBasic{
         }
     }
 
-    std::any DetailCollector::visitID(ast::expr::ID **id_node, DetailArgs args) {
+    std::any DetailCollector::visitID(ast::expr::ID **id_node, DefaultArgs args) {
         auto name = getID(*id_node);
         auto target = args.domain->lookUp(name)->as<Prototype*>();
         if(!target){
@@ -286,42 +286,5 @@ namespace evoBasic{
         return new ExpressionType(target,ExpressionType::path);
     }
 
-    std::any DetailCollector::visitAnnotation(ast::Annotation **annotation_node, DetailArgs args) {
-        auto iter = (**annotation_node).unit;
-        args.need_lookup = true;
-        args.dot_expression_context = args.domain;
-        auto symbol = visitAnnotationUnit(&iter,args);
-        if(symbol.has_value()) args.dot_expression_context = any_cast<Symbol*>(symbol);
-        else return {};
-
-        args.need_lookup = false;
-        while(iter!=nullptr){
-            iter=iter->next_sibling;
-            symbol = visitAnnotationUnit(&iter,args);
-            args.dot_expression_context = any_cast<Symbol*>(symbol);
-            if(symbol.has_value()) args.dot_expression_context = any_cast<Symbol*>(symbol);
-            else return {};
-        }
-        return args.dot_expression_context;
-    }
-
-    std::any DetailCollector::visitAnnotationUnit(ast::AnnotationUnit **unit_node, DetailArgs args) {
-        auto name = getID((**unit_node).name);
-        Symbol *symbol = nullptr;
-        if(args.need_lookup){
-            symbol = args.dot_expression_context->as<Domain*>()->lookUp(name);
-        }
-        else{
-            symbol = args.dot_expression_context->as<Domain*>()->find(name);
-        }
-
-        if(!symbol){
-            Logger::error((**unit_node).name->location,format()<<"cannot find object '"
-                                                                <<args.dot_expression_context->mangling('.')
-                                                                <<'.'<<name<<"'");
-            return {};
-        }
-        return symbol;
-    }
 
 }

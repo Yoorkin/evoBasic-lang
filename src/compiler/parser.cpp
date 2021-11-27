@@ -35,6 +35,7 @@ namespace evoBasic{
             if(tail){
                 tail->next_sibling = member;
                 member->prv_sibling = tail;
+                tail = tail->next_sibling;
             }
             else global->member = tail = member;
         }

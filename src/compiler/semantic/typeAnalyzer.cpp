@@ -13,7 +13,7 @@ using namespace evoBasic::ast::expr;
 namespace evoBasic{
 
 
-    std::any TypeAnalyzer::visitGlobal(ast::Global **global_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitGlobal(ast::Global **global_node, DefaultArgs args) {
         args.domain = args.context->getGlobal();
 
         auto iter = (**global_node).member;
@@ -24,7 +24,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitModule(ast::Module **module_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitModule(ast::Module **module_node, DefaultArgs args) {
         args.domain = (**module_node).module_symbol;
 
         auto iter = (**module_node).member;
@@ -35,7 +35,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitClass(ast::Class **class_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitClass(ast::Class **class_node, DefaultArgs args) {
         args.domain = (**class_node).class_symbol;
 
         auto iter = (**class_node).member;
@@ -46,7 +46,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitFunction(ast::Function **function_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitFunction(ast::Function **function_node, DefaultArgs args) {
         auto function = (**function_node).function_symbol;
         args.domain = args.user_function = function;
 
@@ -58,7 +58,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitLet(ast::stmt::Let **let_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitLet(ast::stmt::Let **let_node, DefaultArgs args) {
         auto iter = (**let_node).variable;
         while(iter){
             auto name = getID(iter->name);
@@ -118,11 +118,11 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitVariable(ast::Variable **var_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitVariable(ast::Variable **var_node, DefaultArgs args) {
 
     }
 
-    std::any TypeAnalyzer::visitSelect(ast::stmt::Select **select_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitSelect(ast::stmt::Select **select_node, DefaultArgs args) {
         auto condition_type = any_cast<ExpressionType*>(visitExpression(&(**select_node).condition,args));
         auto iter = (**select_node).case_;
         while(iter){
@@ -140,7 +140,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitLoop(ast::stmt::Loop **loop_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitLoop(ast::stmt::Loop **loop_node, DefaultArgs args) {
         auto condition_type = any_cast<ExpressionType*>(visitExpression(&(**loop_node).condition,args));
         if(!condition_type->prototype->equal(args.context->getBuiltIn().getPrimitive(vm::Data::boolean))){
             Logger::error((**loop_node).condition->location,"expression type of loop condition must be Boolean");
@@ -149,7 +149,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitIf(ast::stmt::If **ifstmt_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitIf(ast::stmt::If **ifstmt_node, DefaultArgs args) {
         auto iter = (**ifstmt_node).case_;
         while(iter){
             if(iter->condition){
@@ -164,7 +164,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitFor(ast::stmt::For **forstmt_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitFor(ast::stmt::For **forstmt_node, DefaultArgs args) {
         auto iterator_type = any_cast<ExpressionType*>(visitExpression(&(**forstmt_node).iterator,args));
         if(iterator_type->value_kind == ExpressionType::error){
             Logger::error((**forstmt_node).iterator->location,"iterator not found");
@@ -200,7 +200,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitReturn(ast::stmt::Return **ret_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitReturn(ast::stmt::Return **ret_node, DefaultArgs args) {
         auto type = any_cast<ExpressionType*>(visitExpression(&(**ret_node).expr,args));
         if(!type->prototype->equal(args.user_function->getRetSignature())){
             Logger::error((**ret_node).location,format()<<"Return type '"
@@ -210,11 +210,11 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitExprStmt(ast::stmt::ExprStmt **expr_stmt_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitExprStmt(ast::stmt::ExprStmt **expr_stmt_node, DefaultArgs args) {
         return visitExpression(&(**expr_stmt_node).expr,args);
     }
 
-    void TypeAnalyzer::visitStatementList(ast::stmt::Statement **stmt_list, TypeAnalyzerArgs args) {
+    void TypeAnalyzer::visitStatementList(ast::stmt::Statement **stmt_list, DefaultArgs args) {
         args.domain = new type::TemporaryDomain(args.domain,args.user_function);
         auto iter = (*stmt_list);
         while(iter){
@@ -223,7 +223,7 @@ namespace evoBasic{
         }
     }
 
-    std::any TypeAnalyzer::visitBinary(ast::expr::Binary **binary_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitBinary(ast::expr::Binary **binary_node, DefaultArgs args) {
         auto logic_node = *binary_node;
         auto lhs_type = any_cast<ExpressionType*>(visitExpression(&logic_node->lhs,args));
         if(logic_node->op == ast::expr::Binary::Dot){
@@ -353,11 +353,11 @@ namespace evoBasic{
         }
     }
 
-    std::any TypeAnalyzer::visitUnary(ast::expr::Unary **unit_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitUnary(ast::expr::Unary **unit_node, DefaultArgs args) {
         return (**unit_node).type = any_cast<ExpressionType*>(visitExpression(&(**unit_node).terminal,args));
     }
 
-    std::any TypeAnalyzer::visitCallee(ast::expr::Callee **callee_node_ptr, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitCallee(ast::expr::Callee **callee_node_ptr, DefaultArgs args) {
         auto callee_node = *callee_node_ptr;
         auto target_type = any_cast<ExpressionType*>(visitID(&callee_node->name,args));
         args.dot_expression_context = target_type->prototype;
@@ -404,7 +404,7 @@ namespace evoBasic{
         return callee_node->type = new ExpressionType(ret->as<type::Prototype*>(),ExpressionType::rvalue);
     }
 
-    std::any TypeAnalyzer::visitArg(ast::expr::Callee::Argument **argument_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitArg(ast::expr::Callee::Argument **argument_node, DefaultArgs args) {
         auto function = args.dot_expression_context->as<type::Function*>();
         if(args.checking_args_index >= function->getArgsSignature().size())return {};
         auto param =  function->getArgsSignature()[args.checking_args_index];
@@ -488,7 +488,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitID(ast::expr::ID **id_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitID(ast::expr::ID **id_node, DefaultArgs args) {
         auto name = getID(*id_node);
         Symbol *target;
         if(!args.dot_expression_context){
@@ -518,34 +518,89 @@ namespace evoBasic{
 
 
 
-    std::any TypeAnalyzer::visitDigit(ast::expr::Digit **digit_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitDigit(ast::expr::Digit **digit_node, DefaultArgs args) {
         auto prototype = args.context->getBuiltIn().getPrimitive(vm::Data::i32)->as<type::Class*>();
         return (**digit_node).type = new ExpressionType(prototype,ExpressionType::rvalue);
     }
 
-    std::any TypeAnalyzer::visitDecimal(ast::expr::Decimal **decimal_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitDecimal(ast::expr::Decimal **decimal_node, DefaultArgs args) {
         auto prototype = args.context->getBuiltIn().getPrimitive(vm::Data::i32)->as<type::Class*>();
         return (**decimal_node).type = new ExpressionType(prototype,ExpressionType::rvalue);
     }
 
-    std::any TypeAnalyzer::visitBoolean(ast::expr::Boolean **bl_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitBoolean(ast::expr::Boolean **bl_node, DefaultArgs args) {
         auto prototype = args.context->getBuiltIn().getPrimitive(vm::Data::i32)->as<type::Class*>();
         return (**bl_node).type = new ExpressionType(prototype,ExpressionType::rvalue);
     }
 
-    std::any TypeAnalyzer::visitChar(ast::expr::Char **ch_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitChar(ast::expr::Char **ch_node, DefaultArgs args) {
         auto prototype = args.context->getBuiltIn().getPrimitive(vm::Data::i32)->as<type::Class*>();
         return (**ch_node).type = new ExpressionType(prototype,ExpressionType::rvalue);
     }
 
-    std::any TypeAnalyzer::visitString(ast::expr::String **str_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitString(ast::expr::String **str_node, DefaultArgs args) {
         auto cls = args.context->getBuiltIn().getStringClass();
         return (**str_node).type = new ExpressionType(cls,ExpressionType::rvalue);
     }
 
-    std::any TypeAnalyzer::visitParentheses(ast::expr::Parentheses **parentheses_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitParentheses(ast::expr::Parentheses **parentheses_node, DefaultArgs args) {
         args.dot_expression_context = args.domain;
         return visitExpression(&(**parentheses_node).expr,args);
     }
+
+    std::any TypeAnalyzer::visitMember(ast::Member **member_node, DefaultArgs args) {
+        switch ((**member_node).member_kind) {
+            case ast::Member::function_: return visitFunction((ast::Function**)member_node,args);
+            case ast::Member::class_:    return visitClass((ast::Class**)member_node,args);
+            case ast::Member::module_:   return visitModule((ast::Module**)member_node,args);
+            case ast::Member::type_:     return{}; //return visitType((ast::Type**)member_node,args);
+            case ast::Member::enum_:     return{}; //visitEnum((ast::Enum**)member_node,args);
+            case ast::Member::dim_:      return{}; //return visitDim((ast::Dim**)member_node,args);
+            case ast::Member::external_: return visitExternal((ast::External**)member_node,args);
+        }
+        PANIC;
+    }
+
+    std::any TypeAnalyzer::visitStatement(ast::stmt::Statement **stmt_node, DefaultArgs args) {
+        switch ((**stmt_node).stmt_flag) {
+            case ast::stmt::Statement::let_: return visitLet((ast::stmt::Let**)stmt_node,args);
+            case ast::stmt::Statement::loop_:return visitLoop((ast::stmt::Loop**)stmt_node,args);
+            case ast::stmt::Statement::if_:  return visitIf((ast::stmt::If**)stmt_node,args);
+            case ast::stmt::Statement::for_: return visitFor((ast::stmt::For**)stmt_node,args);
+            case ast::stmt::Statement::select_:return visitSelect((ast::stmt::Select**)stmt_node,args);
+            case ast::stmt::Statement::return_:return visitReturn((ast::stmt::Return**)stmt_node,args);
+            case ast::stmt::Statement::continue_:return visitContinue((ast::stmt::Continue**)stmt_node,args);
+            case ast::stmt::Statement::exit_:return visitExit((ast::stmt::Exit**)stmt_node,args);
+            case ast::stmt::Statement::expr_:return visitExprStmt((ast::stmt::ExprStmt**)stmt_node,args);
+        }
+        PANIC;
+    }
+
+    std::any TypeAnalyzer::visitExpression(ast::expr::Expression **expr_node, DefaultArgs args) {
+        switch ((**expr_node).expression_kind) {
+            case ast::expr::Expression::binary_:
+                return visitBinary((ast::expr::Binary**)expr_node,args);
+            case ast::expr::Expression::unary_:
+                return visitUnary((ast::expr::Unary**)expr_node, args);
+            case ast::expr::Expression::digit_:
+                return visitDigit((ast::expr::Digit**)expr_node,args);
+            case ast::expr::Expression::decimal_:
+                return visitDecimal((ast::expr::Decimal **)expr_node,args);
+            case ast::expr::Expression::string_:
+                return visitString((ast::expr::String**)expr_node,args);
+            case ast::expr::Expression::char_:
+                return visitChar((ast::expr::Char**)expr_node,args);
+            case ast::expr::Expression::parentheses_:
+                return visitParentheses((ast::expr::Parentheses**)expr_node,args);
+            case ast::expr::Expression::callee_:
+                return visitCallee((ast::expr::Callee**)expr_node,args);
+            case ast::expr::Expression::boolean_:
+                return visitBoolean((ast::expr::Boolean**)expr_node,args);
+            case ast::expr::Expression::ID_:
+                return visitID((ast::expr::ID**)expr_node,args);
+        }
+        PANIC;
+    }
+
 
 }
