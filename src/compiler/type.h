@@ -328,7 +328,6 @@ namespace evoBasic::type{
         explicit UserFunction(FunctionFlag flag,ast::Function *function_node);
         ast::Function *getFunctionNode();
         FunctionFlag getFunctionFlag()override;
-        void setStatic(bool value);
         std::string debug(int indent)override;
     };
 

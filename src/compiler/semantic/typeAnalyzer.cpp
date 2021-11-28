@@ -118,9 +118,6 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitVariable(ast::Variable **var_node, DefaultArgs args) {
-
-    }
 
     std::any TypeAnalyzer::visitSelect(ast::stmt::Select **select_node, DefaultArgs args) {
         auto condition_type = any_cast<ExpressionType*>(visitExpression(&(**select_node).condition,args));
@@ -473,21 +470,6 @@ namespace evoBasic{
                 Logger::error((**id_node).location,"object not find");
                 return ExpressionType::Error;
             }
-
-            //insert Self.x node for Class variable.
-            if(target->getParent()->getKind() == SymbolKind::Class){
-                auto dot_node = new Binary;
-                dot_node->op = ast::expr::Binary::Dot;
-                auto self_id = new ID;
-                self_id->lexeme = "Self";
-                self_id->type = new ExpressionType(target->getParent(),ExpressionType::rvalue);
-                self_id->location = (**id_node).location;
-
-                dot_node->lhs = self_id;
-                dot_node->rhs = (*id_node);
-                dot_node->location = (**id_node).location;
-                *((Expression**)id_node) = dot_node;
-            }
         }
         else{
             auto domain = args.dot_expression_context->as<Domain*>();
@@ -495,6 +477,36 @@ namespace evoBasic{
                 Logger::error((**id_node).location,"object not find");
                 return ExpressionType::Error;
             }
+        }
+//        if(target->getKind() == SymbolKind::Variable || target->getKind() == SymbolKind::Function)
+//        if(target->getParent() == args.parent_class_or_module
+//           && target->getParent()->getKind() == SymbolKind::Class){
+//            switch(args.user_function->getFunctionFlag()){
+//                case FunctionFlag::Static:
+//                    Logger::error((**id_node).location,"static method cannot access non-static variable");
+//                    break;
+//                case FunctionFlag::Method:
+//                case FunctionFlag::Virtual:
+//                case FunctionFlag::Override:{
+//                    //insert Self.x node for Class variable.
+//                    auto dot_node = new Binary;
+//                    dot_node->op = ast::expr::Binary::Dot;
+//                    auto self_id = new ID;
+//                    self_id->lexeme = "Self";
+//                    self_id->type = new ExpressionType(target->getParent(),ExpressionType::rvalue);
+//                    self_id->location = (**id_node).location;
+//
+//                    dot_node->lhs = self_id;
+//                    dot_node->rhs = (*id_node);
+//                    dot_node->location = (**id_node).location;
+//                    *((Expression**)id_node) = dot_node;
+//                    break;
+//                }
+//            }
+//        }
+//
+        if(args.is_dot_expression_context_static){
+
         }
 
         check_access((**id_node).location,target,args.domain,args.parent_class_or_module);

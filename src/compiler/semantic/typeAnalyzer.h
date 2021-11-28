@@ -19,7 +19,7 @@ namespace evoBasic{
         std::any visitFunction(ast::Function **func_node, DefaultArgs args) override;
 
         std::any visitLet(ast::stmt::Let **let_node,DefaultArgs args)override;
-        std::any visitVariable(ast::Variable **var_node, DefaultArgs args) override;
+        //std::any visitVariable(ast::Variable **var_node, DefaultArgs args) override;
         std::any visitSelect(ast::stmt::Select **select_node,DefaultArgs args)override;
         std::any visitLoop(ast::stmt::Loop **loop_node,DefaultArgs args)override;
         std::any visitIf(ast::stmt::If **ifstmt_node,DefaultArgs args)override;
