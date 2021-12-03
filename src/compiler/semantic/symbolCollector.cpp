@@ -106,6 +106,7 @@ namespace evoBasic{
         for(auto iter = dim_node->variable; iter!=nullptr; iter=iter->next_sibling){
             symbol = any_cast<type::Symbol*>(visitVariable(iter,args));
             symbol->setAccessFlag(dim_node->access);
+            symbol->setStatic(dim_node->is_static);
             symbol->as<type::Variable*>()->setConstant(dim_node->is_const);
             if(is_name_valid(symbol->getName(), symbol->getLocation(), args.domain)){
                 args.domain->add(symbol);

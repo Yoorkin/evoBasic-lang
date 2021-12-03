@@ -346,5 +346,17 @@ namespace evoBasic::ast{
         }
         return ret;
     }
+
+    DebugInfo *expr::Index::debug() {
+        return new DebugInfo{"Index",{target->debug(),value->debug()}};
+    }
+
+    DebugInfo *expr::Dot::debug() {
+        return new DebugInfo{"Dot",{lhs->debug(),rhs->debug()}};
+    }
+
+    DebugInfo *expr::Assign::debug() {
+        return new DebugInfo{"'='",{lhs->debug(),rhs->debug()}};
+    }
 }
 

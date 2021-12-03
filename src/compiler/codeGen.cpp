@@ -682,12 +682,12 @@ namespace evoBasic{
                 default: PANIC;
             }
         }
-        else if(logic_node->op == Op::ASSIGN){
-            return visitAssign(logic_node,args);
-        }
-        else if(logic_node->op == Op::Dot || logic_node->op == Op::Index ){
-            return visitDot(logic_node,args);
-        }
+//        else if(logic_node->op == Op::ASSIGN){
+//            return visitAssign(logic_node,args);
+//        }
+//        else if(logic_node->op == Op::Dot || logic_node->op == Op::Index ){
+//            return visitDot(logic_node,args);
+//        }
         return {};
     }
 
@@ -800,66 +800,66 @@ namespace evoBasic{
     }
 
     std::any IRGen::visitArg(ast::expr::Callee::Argument *arg_node, IRGenArgs args) {
-        /*
-          *   Param\Arg          ByVal                  ByRef            Undefined
-          *   ByVal      Yes,allow implicit conversion  Error      Yes,allow implicit conversion
-          *   ByRef      store value to tmp address,                   Error when arg
-          *              allow implicit conversion      Yes             is not lvalue
-          */
-        NotNull(arg_node);
-        int param_index = (args.function->getFunctionFlag() != type::FunctionFlag::Static) ? args.current_args_index : args.current_args_index+1;
-        auto &param =  args.function->getArgsSignature()[param_index];
-        auto arg_type = arg_node->expr->type;
-        if(param->isByval()){ // ByVal Parameter
-            switch (arg_node->pass_kind) {
-                case ast::expr::Callee::Argument::byref:
-                    //do nothing
-                    break;
-                case ast::expr::Callee::Argument::undefined:
-                case ast::expr::Callee::Argument::byval: {
-                    auto arg_operand = any_cast<OperandType>(visitExpression(arg_node->expr, args));
-                    loadOperandAddress(arg_operand,args.previous_block);
-                    break;
-                }
-            }
-        }
-        else{ // ByRef Parameter
-            switch (arg_node->pass_kind) {
-                case ast::expr::Callee::Argument::byval: {
-                    // store value in temporary address
-                    pushVariableAddress(arg_node->temp_address, args.previous_block, true);
-                    auto operand = any_cast<OperandType>(visitExpression(arg_node->expr, args));
-                    loadOperandAddress(operand,args.previous_block);
-                    auto arg_operand = operand;
-
-                    switch ((OperandEnum)arg_operand.index()) {
-                        case OperandEnum::DataType:
-                            args.previous_block->Store(get<DataType>(arg_operand).data);
-                            break;
-                        case OperandEnum::ArrayType:
-                            args.previous_block->Stm(get<ArrayType>(arg_operand).size);
-                            break;
-                        case OperandEnum::RecordType:
-                            args.previous_block->Stm(get<RecordType>(arg_operand).size);
-                            break;
-                        case OperandEnum::AddressType:
-                            args.previous_block->Store(Data::ptr);
-                            break;
-                        default:
-                            PANIC;
-                    }
-
-                    // pass temporary address to ByRef parameter
-                    pushVariableAddress(arg_node->temp_address, args.previous_block, true);
-                    break;
-                }
-                case ast::expr::Callee::Argument::byref:
-                case ast::expr::Callee::Argument::undefined:
-                    visitExpression(arg_node->expr,args);
-                    break;
-            }
-        }
-        return nullptr;
+//        /*
+//          *   Param\Arg          ByVal                  ByRef            Undefined
+//          *   ByVal      Yes,allow implicit conversion  Error      Yes,allow implicit conversion
+//          *   ByRef      store value to tmp address,                   Error when arg
+//          *              allow implicit conversion      Yes             is not lvalue
+//          */
+//        NotNull(arg_node);
+//        int param_index = (args.function->getFunctionFlag() != type::FunctionFlag::Static) ? args.current_args_index : args.current_args_index+1;
+//        auto &param =  args.function->getArgsSignature()[param_index];
+//        auto arg_type = arg_node->expr->type;
+//        if(param->isByval()){ // ByVal Parameter
+//            switch (arg_node->pass_kind) {
+//                case ast::expr::Callee::Argument::byref:
+//                    //do nothing
+//                    break;
+//                case ast::expr::Callee::Argument::undefined:
+//                case ast::expr::Callee::Argument::byval: {
+//                    auto arg_operand = any_cast<OperandType>(visitExpression(arg_node->expr, args));
+//                    loadOperandAddress(arg_operand,args.previous_block);
+//                    break;
+//                }
+//            }
+//        }
+//        else{ // ByRef Parameter
+//            switch (arg_node->pass_kind) {
+//                case ast::expr::Callee::Argument::byval: {
+//                    // store value in temporary address
+//                    pushVariableAddress(arg_node->temp_address, args.previous_block, true);
+//                    auto operand = any_cast<OperandType>(visitExpression(arg_node->expr, args));
+//                    loadOperandAddress(operand,args.previous_block);
+//                    auto arg_operand = operand;
+//
+//                    switch ((OperandEnum)arg_operand.index()) {
+//                        case OperandEnum::DataType:
+//                            args.previous_block->Store(get<DataType>(arg_operand).data);
+//                            break;
+//                        case OperandEnum::ArrayType:
+//                            args.previous_block->Stm(get<ArrayType>(arg_operand).size);
+//                            break;
+//                        case OperandEnum::RecordType:
+//                            args.previous_block->Stm(get<RecordType>(arg_operand).size);
+//                            break;
+//                        case OperandEnum::AddressType:
+//                            args.previous_block->Store(Data::ptr);
+//                            break;
+//                        default:
+//                            PANIC;
+//                    }
+//
+//                    // pass temporary address to ByRef parameter
+//                    pushVariableAddress(arg_node->temp_address, args.previous_block, true);
+//                    break;
+//                }
+//                case ast::expr::Callee::Argument::byref:
+//                case ast::expr::Callee::Argument::undefined:
+//                    visitExpression(arg_node->expr,args);
+//                    break;
+//            }
+//        }
+//        return nullptr;
     }
 
     OperandType IRGen::mapSymbolToOperandType(Symbol *symbol) {
@@ -939,88 +939,88 @@ namespace evoBasic{
     }
 
     OperandType IRGen::visitDot(ast::expr::Expression *node,IRGenArgs args,OperandType lhs){
-        using namespace ast;
-        using namespace ast::expr;
-
-        bool push_base_address = true;
-        switch ((OperandEnum)lhs.index()) {
-            case OperandEnum::EmptyType:
-                args.need_lookup = true;
-                args.dot_expression_context = args.domain;
-                break;
-            case OperandEnum::AddressType:{
-                auto element = get<AddressType>(lhs).element;
-                switch ((OperandEnum)element->index()) {
-                    case OperandEnum::RecordType:
-                    case OperandEnum::ArrayType:
-                        push_base_address = false;
-                        break;
-                    case OperandEnum::AddressType:{
-                        push_base_address = false;
-                        args.previous_block->Load(Data::ptr);
-                        break;
-                    }
-                    case OperandEnum::ClassType:
-                        push_base_address = false;
-                        break;
-                    default: PANIC;
-                }
-                break;
-            }
-            case OperandEnum::SymbolPtr:
-                // do nothing
-                break;
-            default: PANICMSG(to_string(lhs.index()));
-        }
-
-        if((OperandEnum)lhs.index()!=OperandEnum::EmptyType){
-            args.dot_expression_context = stripOperandType(lhs);
-        }
-
-        switch(node->expression_kind){
-            case ast::expr::Expression::binary_: {
-                auto bin_node = (Binary*)node;
-                switch(bin_node->op){
-                    case Binary::Dot:{
-                        //lhs
-                        auto operand = visitDot(bin_node->lhs,args);
-                        //rhs
-                        return visitDot(bin_node->rhs,args,operand);
-                    }
-                    case Binary::Index:{
-                        return visitIndex(bin_node,args,push_base_address);
-                    }
-                }
-            }
-            case ast::expr::Expression::ID_: {
-                auto symbol = any_cast<Symbol*>(visitID((ID*)node,args));
-                if(auto variable = symbol->as<type::Variable*>())
-                    return pushVariableAddress(variable,args.previous_block,push_base_address);
-                return symbol;
-            }
-            case ast::expr::Expression::cast_:
-                return any_cast<OperandType>(visitCast((Cast*)node,args));
-
-            case ast::expr::Expression::digit_:
-                return any_cast<OperandType>(visitDigit((Digit*)node,args));
-
-            case ast::expr::Expression::decimal_:
-                return any_cast<OperandType>(visitDecimal((Decimal*)node,args));
-
-            case ast::expr::Expression::string_:
-                return any_cast<OperandType>(visitString((String*)node,args));
-
-            case ast::expr::Expression::char_:
-                return any_cast<OperandType>(visitChar((Char*)node,args));
-
-            case ast::expr::Expression::boolean_:
-                return any_cast<OperandType>(visitBoolean((Boolean*)node,args));
-
-            case ast::expr::Expression::callee_:
-                return any_cast<OperandType>(visitCallee((Callee*)node,args));
-
-        }
-        return {};
+//        using namespace ast;
+//        using namespace ast::expr;
+//
+//        bool push_base_address = true;
+//        switch ((OperandEnum)lhs.index()) {
+//            case OperandEnum::EmptyType:
+//                args.need_lookup = true;
+//                args.dot_expression_context = args.domain;
+//                break;
+//            case OperandEnum::AddressType:{
+//                auto element = get<AddressType>(lhs).element;
+//                switch ((OperandEnum)element->index()) {
+//                    case OperandEnum::RecordType:
+//                    case OperandEnum::ArrayType:
+//                        push_base_address = false;
+//                        break;
+//                    case OperandEnum::AddressType:{
+//                        push_base_address = false;
+//                        args.previous_block->Load(Data::ptr);
+//                        break;
+//                    }
+//                    case OperandEnum::ClassType:
+//                        push_base_address = false;
+//                        break;
+//                    default: PANIC;
+//                }
+//                break;
+//            }
+//            case OperandEnum::SymbolPtr:
+//                // do nothing
+//                break;
+//            default: PANICMSG(to_string(lhs.index()));
+//        }
+//
+//        if((OperandEnum)lhs.index()!=OperandEnum::EmptyType){
+//            args.dot_expression_context = stripOperandType(lhs);
+//        }
+//
+//        switch(node->expression_kind){
+//            case ast::expr::Expression::binary_: {
+//                auto bin_node = (Binary*)node;
+//                switch(bin_node->op){
+//                    case Binary::Dot:{
+//                        //lhs
+//                        auto operand = visitDot(bin_node->lhs,args);
+//                        //rhs
+//                        return visitDot(bin_node->rhs,args,operand);
+//                    }
+//                    case Binary::Index:{
+//                        return visitIndex(bin_node,args,push_base_address);
+//                    }
+//                }
+//            }
+//            case ast::expr::Expression::ID_: {
+//                auto symbol = any_cast<Symbol*>(visitID((ID*)node,args));
+//                if(auto variable = symbol->as<type::Variable*>())
+//                    return pushVariableAddress(variable,args.previous_block,push_base_address);
+//                return symbol;
+//            }
+//            case ast::expr::Expression::cast_:
+//                return any_cast<OperandType>(visitCast((Cast*)node,args));
+//
+//            case ast::expr::Expression::digit_:
+//                return any_cast<OperandType>(visitDigit((Digit*)node,args));
+//
+//            case ast::expr::Expression::decimal_:
+//                return any_cast<OperandType>(visitDecimal((Decimal*)node,args));
+//
+//            case ast::expr::Expression::string_:
+//                return any_cast<OperandType>(visitString((String*)node,args));
+//
+//            case ast::expr::Expression::char_:
+//                return any_cast<OperandType>(visitChar((Char*)node,args));
+//
+//            case ast::expr::Expression::boolean_:
+//                return any_cast<OperandType>(visitBoolean((Boolean*)node,args));
+//
+//            case ast::expr::Expression::callee_:
+//                return any_cast<OperandType>(visitCallee((Callee*)node,args));
+//
+//        }
+//        return {};
     }
 
 

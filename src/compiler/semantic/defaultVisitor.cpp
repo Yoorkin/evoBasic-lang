@@ -6,6 +6,7 @@
 #include "type.h"
 #include "utils.h"
 #include "logger.h"
+#include "semantic.h"
 
 using namespace evoBasic::type;
 namespace evoBasic{

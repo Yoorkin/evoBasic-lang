@@ -5,6 +5,7 @@
 #ifndef EVOBASIC_TYPE_H
 #define EVOBASIC_TYPE_H
 #include <map>
+#include <set>
 #include <string>
 #include <list>
 #include <utility>
@@ -20,17 +21,7 @@
 
 namespace evoBasic::type{
 
-#define PRIMITIVE               Variant,Integer,Long,Byte,Boolean
-
-#define INSTANCE_ENUM_LIST      PRIMITIVE,Object,Enum_
-#define DECLARATION_ENUM_LIST   Class,Enum_,EnumMember,Type,Function,Module,Variant,Primitive,TmpDomain, \
-                                Variable,Error,Interface,Argument,Array
-#define FUNCTION_ENUM_LIST      User,External,Intrinsic
-
-    enum class InstanceEnum{INSTANCE_ENUM_LIST};
-    enum class FunctionEnum{FUNCTION_ENUM_LIST};
- //   enum class DeclarationEnum{DECLARATION_ENUM_LIST};
-
+    enum class FunctionEnum{User,External,Intrinsic};
 /*
  *  谁用宏在项目中搞花样谁就是没事找抽 8/10/2021
     STRING_ENUM_DECLARE(InstanceEnum,INSTANCE_ENUM_LIST);
@@ -46,6 +37,7 @@ namespace evoBasic::type{
     class Function;
     class Interface;
     class Variable;
+    class Operator;
 
     void strToLowerByRef(std::string& str);
 
@@ -62,7 +54,7 @@ namespace evoBasic::type{
         SymbolKind kind;
         Location *location_ = nullptr;
         AccessFlag access = AccessFlag::Private;
-    protected:
+        bool is_static = false;
         Domain *parent = nullptr;
     public:
         const std::string indent_unit = "\t";
@@ -92,6 +84,9 @@ namespace evoBasic::type{
         std::string mangling(char separator = '$');
 
         virtual std::string debug(int indent)=0;
+
+        bool isStatic();
+        void setStatic(bool value);
     };
 
 
@@ -196,10 +191,66 @@ namespace evoBasic::type{
         std::string debug(int indent)override;
     };
 
+
+    enum class FunctionFlag{Method=0,Static,Virtual,Override};
+
+    class Function: public Domain{
+    private:
+        std::vector<Parameter*> argsSignature;
+        Prototype *retSignature = nullptr;
+        std::size_t tmp_domain_count = 0;
+    public:
+        Function(const Function&)=delete;
+        explicit Function();
+
+        void add(Symbol *symbol)override;
+        std::vector<Parameter*>& getArgsSignature();
+        Prototype *getRetSignature();
+        void setRetSignature(Prototype *ptr);
+
+        std::string debug(int indent)override;
+        bool equal(Prototype *ptr)override;
+    };
+
+    class Operator : public Function{
+    public:
+        enum Kind{Get,Compare,Times,Div,Plus,Minus,UnaryPlus,UnaryMinus,Invoke};
+        static std::vector<std::string> KindString;
+    private:
+        Kind kind;
+    public:
+        void setOperatorKind(Kind kind);
+        Kind getOperatorKind();
+        std::string getName()override;
+        void setName(std::string)override;
+    };
+
+    class UserFunction : public Function{
+        ast::Function *function_node;
+        FunctionFlag flag = FunctionFlag::Method;
+    public:
+        UserFunction(const UserFunction&)=delete;
+        explicit UserFunction(FunctionFlag flag,ast::Function *function_node);
+        ast::Function *getFunctionNode();
+        virtual FunctionFlag getFunctionFlag();
+        void setFunctionFlag(FunctionFlag flag);
+        std::string debug(int indent)override;
+    };
+
+
+    class ExternalFunction: public Function{
+        std::string library,name;
+    public:
+        ExternalFunction(const ExternalFunction&)=delete;
+        explicit ExternalFunction(std::string library,std::string name);
+    };
+
     class Class : public Record {
     protected:
         Class *base_class = nullptr;
-        std::list<Interface*> impl_interface;
+        std::map<std::string,Interface*> impl_interface;
+        std::multimap<Operator::Kind,Operator> operator_overload;
+        std::set<std::string> operator_signature;
         Function *constructor = nullptr;
     public:
         Class(const Class&)=delete;
@@ -214,8 +265,11 @@ namespace evoBasic::type{
         Class *getExtend();
 
         void setConstructor(Function *constructor);
+
         void addImplementation(Interface *interface);
-        void addInitializeRule(ast::Variable* variable_node);
+        Interface* getImplementation(std::string mangling_name);
+
+        //Operator *findOperator(Operator::Kind kind,)
 
         void updateMemoryLayout()override;
 
@@ -298,47 +352,6 @@ namespace evoBasic::type{
         data::ptr getSize(){return size_;}
     };
 
-    enum class FunctionFlag{Method=0,Static,Virtual,Override};
-
-    class Function: public Domain{
-    private:
-        std::vector<Parameter*> argsSignature;
-        Prototype *retSignature = nullptr;
-        std::size_t tmp_domain_count = 0;
-    public:
-        Function(const Function&)=delete;
-        explicit Function();
-
-        void add(Symbol *symbol)override;
-
-        std::vector<Parameter*>& getArgsSignature();
-        Prototype *getRetSignature();
-        void setRetSignature(Prototype *ptr);
-        virtual FunctionFlag getFunctionFlag()=0;
-        std::string debug(int indent)override;
-
-        bool equal(Prototype *ptr)override;
-    };
-
-    class UserFunction: public Function{
-        ast::Function *function_node;
-        FunctionFlag flag = FunctionFlag::Method;
-    public:
-        UserFunction(const UserFunction&)=delete;
-        explicit UserFunction(FunctionFlag flag,ast::Function *function_node);
-        ast::Function *getFunctionNode();
-        FunctionFlag getFunctionFlag()override;
-        std::string debug(int indent)override;
-    };
-
-
-    class ExternalFunction: public Function{
-        std::string library,name;
-    public:
-        ExternalFunction(const ExternalFunction&)=delete;
-        explicit ExternalFunction(std::string library,std::string name);
-        FunctionFlag getFunctionFlag()override{return FunctionFlag::Static;}
-    };
 
     class TemporaryDomain : public Domain {
         UserFunction *parent_function;

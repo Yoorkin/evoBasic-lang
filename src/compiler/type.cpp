@@ -151,7 +151,6 @@ namespace evoBasic::type{
 
     Function::Function() : Domain(SymbolKind::Function){}
 
-
     UserFunction::UserFunction(FunctionFlag flag,ast::Function *function_node)
         :function_node(function_node),flag(flag){}
 
@@ -184,6 +183,10 @@ namespace evoBasic::type{
 
     FunctionFlag UserFunction::getFunctionFlag() {
         return flag;
+    }
+
+    void UserFunction::setFunctionFlag(FunctionFlag flag) {
+        this->flag = flag;
     }
 
     ExternalFunction::ExternalFunction(std::string library, std::string name)
@@ -260,6 +263,14 @@ namespace evoBasic::type{
             }
         }
         else return mangling_name;
+    }
+
+    bool Symbol::isStatic() {
+        return is_static;
+    }
+
+    void Symbol::setStatic(bool value) {
+        is_static = value;
     }
 
 
@@ -355,7 +366,13 @@ namespace evoBasic::type{
     }
 
     void Class::addImplementation(Interface *interface) {
-        this->impl_interface.push_back(interface);
+        this->impl_interface.insert({interface->mangling(),interface});
+    }
+
+    Interface *Class::getImplementation(std::string mangling) {
+        auto target = impl_interface.find(mangling);
+        if(target == impl_interface.end())return nullptr;
+        return target->second;
     }
 
     Class::Class() : Record(SymbolKind::Class){}
@@ -388,6 +405,8 @@ namespace evoBasic::type{
         }
         Prototype::setByteLength(size);
     }
+
+
 
     void Record::add(Symbol *symbol) {
         auto field = symbol->as<Variable*>();
@@ -466,7 +485,9 @@ namespace evoBasic::type{
     std::string Variable::debug(int indent) {
         stringstream str;
         for(int i=0;i<indent;i++)str << indent_unit;
-        str << this->getName() << " : "<<AccessFlagString[(int)getAccessFlag()]<<" Variable(";
+        str << this->getName() << " : "<<AccessFlagString[(int)getAccessFlag()]
+            <<(isStatic()?" Static":"")
+            <<" Variable(";
         if(getPrototype()) str << getPrototype()->getName();
         else str << " ? ";
         str << ")\n";
@@ -586,5 +607,28 @@ namespace evoBasic::type{
 
     void Prototype::setByteLength(data::ptr value) {
         byte_length = value;
+    }
+    
+    vector<string> Operator::KindString = {"Get","Compare","Times","Div","Plus","Minus","UnaryPlus","UnaryMinus","Invoke"};
+
+    std::string Operator::getName() {
+        auto str = format();
+        str<<KindString[(int)kind];
+        for(auto parameter : getArgsSignature()){
+            str<< '-' << parameter->getName();
+        }
+        return (string)str;
+    }
+
+    void Operator::setName(std::string) {
+        PANIC;
+    }
+
+    void Operator::setOperatorKind(Kind kind) {
+        this->kind = kind;
+    }
+
+    Operator::Kind Operator::getOperatorKind() {
+        return kind;
     }
 }

@@ -24,14 +24,37 @@ namespace evoBasic{
 
 
     struct ExpressionType{
-        type::Prototype *prototype;
+        type::Prototype *prototype = nullptr;
+        /*
+         *   ========= Dot Expression =======
+         *   lhs\rhs    Static   Non-Static
+         *   static      yes       error
+         *   Non-Static  error      yes
+         *
+         *   ======================= Access Control =================
+         *   domain\target          Static Member    Non-Static Member
+         *   Static Function            yes                 error
+         *   None-Static Function       yes                 yes
+         *
+         */
+        bool is_static = false;
         enum ValueKind {lvalue,rvalue,path,error} value_kind;
         ExpressionType()=default;
-        ExpressionType(type::Prototype *prototype_,ValueKind kind){
-            this->prototype = prototype_;
+        ExpressionType(type::Prototype *prototype,ValueKind kind,bool is_static = false){
             this->value_kind = kind;
+            this->prototype = prototype;
+            this->is_static = is_static;
         }
         static ExpressionType *Error;
+    };
+
+    class SymbolNotFound : std::exception{
+    public:
+        type::Symbol *search_domain = nullptr;
+        Location *location = nullptr;
+        std::string search_name;
+        SymbolNotFound(Location *location,type::Symbol *search_domain,std::string search_name)
+                : search_domain(search_domain),search_name(search_name),location(location){}
     };
 }
 

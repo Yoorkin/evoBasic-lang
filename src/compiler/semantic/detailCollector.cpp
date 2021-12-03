@@ -272,40 +272,40 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitBinary(ast::expr::Binary **binary_node, DefaultArgs args) {
-        switch ((**binary_node).op) {
-            case ast::expr::Binary::Dot:{
-                auto lhs_type = any_cast<ExpressionType*>(visitExpression(&(**binary_node).lhs,args));
-                if(lhs_type->value_kind == ExpressionType::error)return lhs_type;
-
-                auto rhs_name = getID((ID*)(**binary_node).rhs);
-                auto domain = lhs_type->prototype->as<Domain*>();
-                Prototype *target;
-                if(domain && (target = domain->find(rhs_name)->as<Prototype*>())){
-                    return new ExpressionType(target,ExpressionType::path);
-                }
-                else{
-                    Logger::error((**binary_node).location,"object not find");
-                    return ExpressionType::Error;
-                }
-                break;
-            }
-            default:
-                Logger::error((**binary_node).location,"invalid expression");
-                return ExpressionType::Error;
-        }
-    }
-
-    std::any DetailCollector::visitID(ast::expr::ID **id_node, DefaultArgs args) {
-        auto name = getID(*id_node);
-        auto target = args.domain->lookUp(name)->as<Prototype*>();
-
-        if(!target){
-            Logger::error((**id_node).location,"object not find");
-            return ExpressionType::Error;
-        }
-
-        return new ExpressionType(target,ExpressionType::path);
-    }
+//    std::any DetailCollector::visitBinary(ast::expr::Binary **binary_node, DefaultArgs args) {
+//        switch ((**binary_node).op) {
+//            case ast::expr::Binary::Dot:{
+//                auto lhs_type = any_cast<ExpressionType*>(visitExpression(&(**binary_node).lhs,args));
+//                if(lhs_type->value_kind == ExpressionType::error)return lhs_type;
+//
+//                auto rhs_name = getID((ID*)(**binary_node).rhs);
+//                auto domain = lhs_type->prototype->as<Domain*>();
+//                Prototype *target;
+//                if(domain && (target = domain->find(rhs_name)->as<Prototype*>())){
+//                    return new ExpressionType(target,ExpressionType::path);
+//                }
+//                else{
+//                    Logger::error((**binary_node).location,"object not find");
+//                    return ExpressionType::Error;
+//                }
+//                break;
+//            }
+//            default:
+//                Logger::error((**binary_node).location,"invalid expression");
+//                return ExpressionType::Error;
+//        }
+//    }
+//
+//    std::any DetailCollector::visitID(ast::expr::ID **id_node, DefaultArgs args) {
+//        auto name = getID(*id_node);
+//        auto target = args.domain->lookUp(name)->as<Prototype*>();
+//
+//        if(!target){
+//            Logger::error((**id_node).location,"object not find");
+//            return ExpressionType::Error;
+//        }
+//
+//        return new ExpressionType(target,ExpressionType::path);
+//    }
 
 }

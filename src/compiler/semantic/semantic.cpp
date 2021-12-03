@@ -37,10 +37,10 @@ namespace evoBasic{
 
     void Semantic::typeCheck(AST *ast, Context *context) {
         TypeAnalyzer analyzer;
-        DefaultArgs args;
+        TypeAnalyzerArgs args;
         args.domain = context->getGlobal();
         args.context = context;
-        analyzer.visitGlobal(&ast,args);
+        analyzer.visitGlobal(ast,args);
     }
 
     bool Semantic::solveTypeInferenceDependencies(Context *context) {

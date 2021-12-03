@@ -117,7 +117,7 @@ namespace evoBasic{
 
         OperandType visitVariableCall(ast::expr::Callee *callee_node, IRGenArgs args, type::Variable *target);
 
-        std::any visitCast(ast::expr::Cast *cast_node, IRGenArgs args);
+        std::any visitCast(ast::expr::Cast *cast_node, IRGenArgs args)override;
         void dereference(std::shared_ptr<type::Symbol> symbol);
 
         std::any visitCaseInSelectStmt(ast::Case *ca_node, IRGenArgs args);

@@ -83,7 +83,6 @@ cmp_ -> == add cmp_1
       | =< add cmp_1 
       | >= add cmp_1 
       | e
-    };
 
 
 add  -> term add_ 
@@ -115,11 +114,12 @@ terminal -> DIGIT
           | DEMICAL
           | STRING  
           | CHAR
-          | (expr)    
+          | (expr)
           | ID argsBody
           | NEW annotation
 
-argsBody -> (argList)   
+argsBody -> (argList)
+          | [expr]
           | e
 
 argList  -> expr argList_      

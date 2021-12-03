@@ -25,10 +25,12 @@ namespace evoBasic{
 
         using Primitive = type::primitive::Primitive;
         std::vector<Primitive*> primitive_vector;
+        std::vector<std::string> operators_name;
         type::primitive::VariantClass *variant_class = nullptr;
         type::Error *error_symbol = nullptr;
         type::Class *object_class = nullptr;
         type::Class *string_class = nullptr;
+
         static BuiltIn builtin;
     public:
         type::VariantClass *getVariantClass()const;
@@ -36,6 +38,7 @@ namespace evoBasic{
         type::Class *getObjectClass()const;
         type::Class *getStringClass()const;
         type::Error *getErrorPrototype()const;
+        std::string getOperatorName()const;
     };
 
     class ConversionRules{
@@ -53,7 +56,7 @@ namespace evoBasic{
     public:
         bool isExplicitCastRuleExist(Ptr src, Ptr dst)const;
         bool isImplicitCastRuleExist(Ptr src, Ptr dst)const;
-        std::optional<Rule> getImplicitPromotionRule(Ptr src,Ptr dst)const;
+        std::optional<Rule> getImplicitPromotionRule(Ptr lhs, Ptr rhs)const;
         void insertCastAST(Value dst,ast::expr::Expression **expression);
     };
 

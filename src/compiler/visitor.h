@@ -34,13 +34,14 @@ namespace evoBasic{
         virtual std::any visitExit(ast::stmt::Exit *exit_node,ARGS args){PANIC;}
         virtual std::any visitContinue(ast::stmt::Continue *cont_node,ARGS args){PANIC;}
         virtual std::any visitCase(ast::Case *ca_node,ARGS args){PANIC;}
-        virtual std::any visitExprStmt(ast::stmt::ExprStmt *expr_stmt_node,ARGS args){
-            visitExpression(expr_stmt_node->expr,args);
-            PANIC;
-        }
+        virtual std::any visitExprStmt(ast::stmt::ExprStmt *expr_stmt_node,ARGS args){PANIC;}
 
         virtual std::any visitBinary(ast::expr::Binary *logic_node, ARGS args){PANIC;}
         virtual std::any visitUnary(ast::expr::Unary *unit_node, ARGS args){PANIC;}
+        virtual std::any visitIndex(ast::expr::Index *index_node, ARGS args){PANIC;}
+        virtual std::any visitDot(ast::expr::Dot *dot_node, ARGS args){PANIC;}
+        virtual std::any visitAssign(ast::expr::Assign *assign_node, ARGS args){PANIC;}
+        virtual std::any visitCast(ast::expr::Cast *cast_node,ARGS args){PANIC;}
 
         virtual std::any visitCallee(ast::expr::Callee *callee_node, ARGS args){PANIC;}
         virtual std::any visitArg(ast::expr::Callee::Argument *arg_node, ARGS args){PANIC;}
@@ -94,6 +95,9 @@ namespace evoBasic{
 
         virtual std::any visitBinary(ast::expr::Binary **logic_node, ARGS args){PANIC;}
         virtual std::any visitUnary(ast::expr::Unary **unit_node, ARGS args){PANIC;}
+        virtual std::any visitIndex(ast::expr::Index **index_node, ARGS args){PANIC;}
+        virtual std::any visitDot(ast::expr::Dot **dot_node, ARGS args){PANIC;}
+        virtual std::any visitAssign(ast::expr::Assign **assign_node, ARGS args){PANIC;}
         virtual std::any visitCast(ast::expr::Cast **cast_node,ARGS args){PANIC;}
 
         virtual std::any visitCallee(ast::expr::Callee **callee_node, ARGS args){PANIC;}

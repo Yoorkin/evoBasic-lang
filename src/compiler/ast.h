@@ -310,7 +310,7 @@ namespace evoBasic::ast{
         struct Expression : Node{
             enum ExpressionKind{
                 error_ = 0,binary_,unary_,parentheses_,ID_,cast_,
-                digit_,decimal_,string_,char_,boolean_,callee_,new_
+                digit_,decimal_,string_,char_,boolean_,callee_,new_,index_,dot_,assign_
             }expression_kind = error_;
             DebugInfo *debug()override;
             ExpressionType *type = nullptr;
@@ -320,7 +320,7 @@ namespace evoBasic::ast{
             Binary(){expression_kind = ExpressionKind::binary_;}
             enum Enum{
                 Empty,And,Or,Xor,Not,EQ,NE,GE,LE,GT,LT,
-                ADD,MINUS,MUL,DIV,FDIV,ASSIGN,Dot,Index
+                ADD,MINUS,MUL,DIV,FDIV
             };
             Binary(Expression *lhs,Enum op,Expression *rhs):Binary(){
                 NotNull(lhs);
@@ -345,6 +345,38 @@ namespace evoBasic::ast{
             }
             Expression *expr = nullptr;
             Annotation *annotation = nullptr;
+            DebugInfo *debug()override;
+        };
+
+        struct Index : Expression{
+            Index(Expression *target,Expression *value){
+                expression_kind = index_;
+                this->target = target;
+                this->value = value;
+            }
+            Expression *target = nullptr,*value = nullptr;
+            DebugInfo *debug()override;
+        };
+
+        struct Dot : Expression{
+            Dot(Expression *lhs,Expression *rhs){
+                expression_kind = dot_;
+                this->lhs = lhs;
+                this->rhs = rhs;
+                this->location = new Location(lhs->location,rhs->location);
+            }
+            Expression *lhs = nullptr,*rhs = nullptr;
+            DebugInfo *debug()override;
+        };
+
+        struct Assign : Expression{
+            Assign(Expression *lhs,Expression *rhs){
+                expression_kind = assign_;
+                this->lhs = lhs;
+                this->rhs = rhs;
+            }
+            Expression *lhs = nullptr;
+            Expression *rhs = nullptr;
             DebugInfo *debug()override;
         };
 

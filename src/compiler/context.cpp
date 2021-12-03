@@ -12,6 +12,7 @@ using namespace evoBasic::type;
 using namespace evoBasic::type::primitive;
 namespace evoBasic{
 
+
     BuiltIn::BuiltIn() {
         error_symbol = new Error;
         error_symbol->setName("< Error >");
@@ -32,14 +33,19 @@ namespace evoBasic{
             new Primitive("u64", vm::Data(vm::Data::u64)),
         };
 
-//        variant_class = make_shared<VariantClass>();
-//        variant_class->setName("variant");
+        variant_class = new VariantClass();
+        variant_class->setName("variant");
+
         object_class = new type::Class;
         object_class->setName("Object");
 
         string_class = new type::Class;
         string_class->setName("String");
         string_class->setExtend(object_class);
+
+        operators_name = {
+            "Get","Compare","Times","Div","Plus","Minus","Neg","Pos","Invoke"
+        };
     }
 
     VariantClass *BuiltIn::getVariantClass() const {
@@ -60,6 +66,10 @@ namespace evoBasic{
 
     type::Class *BuiltIn::getStringClass() const {
         return string_class;
+    }
+
+    std::string BuiltIn::getOperatorName() const {
+        return std::string();
     }
 
 
@@ -143,8 +153,8 @@ namespace evoBasic{
     }
 
     optional<ConversionRules::Rule>
-    ConversionRules::getImplicitPromotionRule(ConversionRules::Ptr src, ConversionRules::Ptr dst) const {
-        auto target = promotion_rules.find({src,dst});
+    ConversionRules::getImplicitPromotionRule(ConversionRules::Ptr lhs, ConversionRules::Ptr rhs) const {
+        auto target = promotion_rules.find({lhs, rhs});
         if(target == promotion_rules.end())return {};
         else return *target;
     }

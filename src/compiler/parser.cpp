@@ -773,7 +773,7 @@ namespace evoBasic{
                 case Token::ASSIGN:
                     lexer->match(Token::ASSIGN);
                     //ASSIGN 语法树向右生长
-                    return new Binary(lhs,Binary::ASSIGN, parseLogic(addition_follows));
+                    return new Assign(lhs,parseLogic(addition_follows));
                     break;
                 default:
                     return lhs;
@@ -802,7 +802,7 @@ namespace evoBasic{
             if(lexer->predict(Token::DOT)){
                 lexer->match(Token::DOT);
                 rhs = parseTerminal(follows);
-                lhs = new Binary(lhs,Binary::Dot,rhs);
+                lhs = new Dot(lhs,rhs);
             }
             else{
                 return lhs;
@@ -856,12 +856,12 @@ namespace evoBasic{
             callee->argument = parseArgsList(follows);
             ret = callee;
         }
-
-        if(lexer->predict(Token::LB)){
+        else if(lexer->predict(Token::LB)){
             lexer->match(Token::LB);
-            auto index = new Binary(ret,Binary::Index,parseLogic(combine(follows,{Token::RB})));
+            auto location_begin = ret->location;
+            ret = new Index(ret,parseLogic(combine(follows,{Token::RB})));
             lexer->match(Token::RB);
-            ret = index;
+            ret->location = new Location(location_begin,lexer->getToken()->getLocation());
         }
 
         ret->location = new Location(begin_location,lexer->getToken()->getLocation());

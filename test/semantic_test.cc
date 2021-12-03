@@ -169,3 +169,122 @@ TEST(TypeInference,TopoSort_Failed){
     }
     ASSERT_EQ(i1,expected1.size()+1);
 }
+
+TEST(DotExpr,Case1){
+    auto code = R"CODE(
+Type MyType
+    member as Integer
+End MyType
+Enum MyEnum
+    Member1
+End Enum
+Module MyModule
+    Class MyClass
+        Public Static Function MyStaticFunc(Byval a as MyEnum,b as Integer) As MyType
+
+        End Function
+    End Class
+End Module
+Sub Main()
+    let typeVar as MyType
+    let ans as integer
+    ans = MyModule.MyClass.MyStaticFunc(MyEnum.Member1,typeVar.member).member
+End Sub
+)CODE";
+}
+
+TEST(DotExpr,Case2){
+    auto code = R"CODE(
+Module MyModule
+    Type MyType
+        member as Integer
+    End MyType
+
+    Enum MyEnum
+        Member1
+    End Enum
+
+    Class MyClass
+        Public Static StaticEnumVar as MyEnum
+        Public Static Function GetNum() As Integer
+            Return 233
+        End Function
+    End Class
+
+    Sub Test(Byval clsArg as MyClass)
+        let a as MyModule.MyType,
+            b as MyModule.MyEnum = MyClass.StaticEnumVar,
+            c as Integer = MyModule.MyFunction().GetID() + clsArg.GetNum() + clsArg.Num
+    End Sub
+End Module
+)CODE";
+}
+
+TEST(DotExpr,Case3){
+    auto code = R"CODE(
+Type MyType
+    member as Integer
+End MyType
+Enum MyEnum
+    Member1
+End Enum
+Module MyModule
+    Class MyClass
+        Public Static Function MyStaticFunc(Byval a as MyEnum,b as Integer) As MyType
+
+        End Function
+    End Class
+End Module
+Sub Main()
+    let typeVar as MyType
+    let ans as integer
+    ans = MyModule.MyClass.MyStaticFunc(MyEnum.Member1,typeVar.member).member
+End Sub
+)CODE";
+}
+
+TEST(DotExpr,Case4){
+    auto code = R"CODE(
+Type MyType
+    member as Integer
+End MyType
+Enum MyEnum
+    Member1
+End Enum
+Module MyModule
+    Class MyClass
+        Public Static Function MyStaticFunc(Byval a as MyEnum,b as Integer) As MyType
+
+        End Function
+    End Class
+End Module
+Sub Main()
+    let typeVar as MyType
+    let ans as integer
+    ans = MyModule.MyClass.MyStaticFunc(MyEnum.Member1,typeVar.member).member
+End Sub
+)CODE";
+}
+
+TEST(DotExpr,Case5){
+    auto code = R"CODE(
+Type MyType
+    member as Integer
+End MyType
+Enum MyEnum
+    Member1
+End Enum
+Module MyModule
+    Class MyClass
+        Public Static Function MyStaticFunc(Byval a as MyEnum,b as Integer) As MyType
+
+        End Function
+    End Class
+End Module
+Sub Main()
+    let typeVar as MyType
+    let ans as integer
+    ans = MyModule.MyClass.MyStaticFunc(MyEnum.Member1,typeVar.member).member
+End Sub
+)CODE";
+}
