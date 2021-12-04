@@ -117,6 +117,7 @@ namespace evoBasic{
             case ast::Member::enum_:     return{}; //visitEnum((ast::Enum*)member_node,args);
             case ast::Member::dim_:      return{}; //return visitDim((ast::Dim*)member_node,args);
             case ast::Member::external_: return visitExternal((ast::External*)member_node,args);
+            case ast::Member::interface_:return{};
         }
         PANIC;
     }

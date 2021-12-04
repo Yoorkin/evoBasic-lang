@@ -29,6 +29,10 @@ namespace evoBasic{
         ast::Function *parseFunction(Follows follows);
         ast::External *parseExternal(Follows follows);
         ast::EnumMember *parseEnumMember(Follows follows);
+        ast::Interface *parseInterface(Follows follows);
+        ast::Function *parseFunctionInterface(Follows follows);
+        ast::Function *parseSubInterface(Follows follows);
+
 
         ast::Parameter *parseParameter(Follows follows);
         ast::expr::ID *parseID(Follows follows);
@@ -53,7 +57,6 @@ namespace evoBasic{
 
         ast::Annotation *parseAnnotation(Follows follows);
         ast::AnnotationUnit *parseAnnotationUnit(Follows follows);
-
 
         //callee\id\index
         ast::expr::Expression *parseUnit(Follows follows);

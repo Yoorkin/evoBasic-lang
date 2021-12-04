@@ -74,6 +74,19 @@ namespace evoBasic::ast{
         return ret;
     }
 
+
+    DebugInfo *Interface::debug() {
+        string text = format()<<"Interface "
+                              <<" "<<AccessFlagToString[(int)access];
+        auto ret = new DebugInfo{text,{name->debug()}};
+        Member *iter = function;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
+        return ret;
+    }
+
     DebugInfo *Import::debug() {
         return new DebugInfo{"Import",{annotation->debug()}};
     }
@@ -358,5 +371,6 @@ namespace evoBasic::ast{
     DebugInfo *expr::Assign::debug() {
         return new DebugInfo{"'='",{lhs->debug(),rhs->debug()}};
     }
+
 }
 

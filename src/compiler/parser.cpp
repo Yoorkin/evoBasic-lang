@@ -198,6 +198,9 @@ namespace evoBasic{
             case Token::module_:
                 member = parseModule(follows);
                 break;
+            case Token::interface_:
+                member = parseInterface(follows);
+                break;
             default:
                 Logger::error(lexer->getNextToken()->getLocation(),"unexpected token");
                 lexer->skipUntil(follows);
@@ -365,6 +368,62 @@ namespace evoBasic{
         member->location = new Location(begin_location,lexer->getToken()->getLocation());
         return member;
     }
+
+    ast::Interface *Parser::parseInterface(const set<Token::Enum> &follows) {
+        auto interface = new Interface;
+        lexer->match(Token::interface_);
+        interface->name = parseID(combine(follows,{Token::function_,Token::sub_,Token::END_INTERFACE}));
+        interface->location = interface->name->location;
+        Member *tail = nullptr;
+        while(!lexer->predict(Token::END_INTERFACE)){
+            Function *func = nullptr;
+            switch (lexer->getNextToken()->getKind()) {
+                case Token::sub_:
+                    func = parseSubInterface(follows);
+                    break;
+                case Token::function_:
+                    func = parseFunctionInterface(follows);
+                    break;
+            }
+            if(tail){
+                tail->next_sibling = func;
+                func->prv_sibling = tail;
+                tail = tail->next_sibling;
+            }
+            else{
+                tail = func;
+                interface->function = func;
+            }
+        }
+        lexer->match(Token::END_INTERFACE);
+        return interface;
+    }
+
+
+    ast::Function *Parser::parseFunctionInterface(const set<Token::Enum> &follows) {
+        auto func = new Function;
+        lexer->match(Token::function_);
+        func->name = parseID(follows);
+        func->location = func->name->location;
+        func->parameter = parseParameterList(combine(follows,{Token::as_}));
+        lexer->match(Token::as_);
+        func->return_annotation = parseAnnotation(follows);
+        func->method_flag = MethodFlag::Virtual;
+        return func;
+    }
+
+    ast::Function *Parser::parseSubInterface(const set<Token::Enum> &follows) {
+        auto func = new Function;
+        lexer->match(Token::sub_);
+        func->name = parseID(follows);
+        func->location = func->name->location;
+        func->parameter = parseParameterList(follows);
+        func->return_annotation = nullptr;
+        func->method_flag = MethodFlag::Virtual;
+        return func;
+    }
+
+
 
     ast::Parameter* Parser::parseParameterList(Follows follows){
         auto member_follows = combine(follows,{Token::RP, Token::COMMA});
@@ -1018,6 +1077,7 @@ namespace evoBasic{
 
     ast::Implement *Parser::parseImplement(const std::set<Token::Enum> &follows) {
         auto impl = new Implement;
+        lexer->match(Token::impl);
         impl->annotation = parseAnnotation(follows);
         impl->location = impl->annotation->location;
         return impl;
@@ -1032,7 +1092,6 @@ namespace evoBasic{
         ret->location = new Location(location_begin,lexer->getToken()->getLocation());
         return ret;
     }
-
 
     ast::Annotation *constructAnnotationAST(std::string code) {
         Logger::debugMode = false;

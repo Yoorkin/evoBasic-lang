@@ -1,5 +1,5 @@
 globalDecl ::= [accessFlag] {moduleMember};
-moduleDecl ::= "Module" ID {[accessFlag] moduleMember} "End" "Module";
+moduleDecl ::= "Module" ID {[accessFlag] moduleMember} "End Module";
 accessFlag ::= "Public"|"Private"|"Friend"|"Protected";
 methodFlag ::= "Static"|"Virtual"|"Override";
 moduleMember ::= functionDecl 
@@ -10,28 +10,43 @@ moduleMember ::= functionDecl
                 | classDecl
                 | moduleDecl
                 | interfaceDecl
+                | externalDecl
+                | importDecl
                 ;
 
-classDecl ::= "Class" ID [extendPart] [implPart] {classMember} "End" "Class";
-extendPart :: = "Extend" annotation; 
+classDecl ::= "Class" ID [extendPart] [implPart] { [accessFlag] classMember} "End Class";
+extendPart ::= "Extend" annotation;
 implPart ::= "Impl" annotation {"," annotation};
-classMember ::= [methodFlag] (functionDecl | subDecl) | dimDecl;
+classMember ::= [methodFlag] (functionDecl | subDecl)
+              | operatorDecl
+              | dimDecl
+              ;
 
-typeDecl ::= "Type" ID {typeList} "End" "Type";
+operatorDecl ::= "Operator" ID "(" [parameterList] ")" "As" annotation {statement} "End Operator";
+
+dimDecl ::= ["Dim"|"Const"] variableDecl {"," variableDecl};
+
+typeDecl ::= "Type" ID {typeList} "End Type";
 typeList ::= ID "As" annotation;
 
-enumDecl ::= "Enum" ID {enumList} "End" "Enum";
+enumDecl ::= "Enum" ID {enumList} "End Enum";
 enumList ::= ID ["=" Digit];
 
-interfaceDecl ::= "Interface" ID {functionInterface|subInterface} "End" "Interface";
+interfaceDecl ::= "Interface" ID {functionInterface|subInterface} "End Interface";
 functionInterface ::= "Function" ID "(" [parameterList] ")" "As" annotation;
 subInterface ::= "Sub" ID "(" [parameterList] ")";
 
-parameterList ::= parameter {"," parameter};
-parameter ::= [Optional|ParamArray] [Byval|Byref] ID "As" annotation;
+externalDecl ::= "Declare" externalFunc | externalSub;
+externalFunc ::= "Function" ["Lib" String] ["Alias" String] ID "(" [parameterList] ")" "As" annotation;
+externalSub ::= "Sub" ID ["Lib" String] ["Alias" String] "(" [parameterList] ")"
 
-functionDecl ::= functionInterface {statement} "End" "Function";
-subDecl ::= subInterface {statement} "End" "Sub";
+importDecl ::= "Import" annotation;
+
+parameterList ::= parameter {"," parameter};
+parameter ::= ["Optional"|"ParamArray"] ["Byval"|"Byref"] ID "As" annotation;
+
+functionDecl ::= functionInterface {statement} "End Function";
+subDecl ::= subInterface {statement} "End Sub";
 
 statement ::= forStmt
             | letStmt
@@ -49,11 +64,11 @@ variableDecl ::= ID ["As" annotation] ["=" expr];
 
 loopStmt ::= "While" expr {statement} "Wend";
 
-ifStmt ::= "If" expr "Then" {statement} {elseIfPart} [elsePart] "End" "If";
+ifStmt ::= "If" expr "Then" {statement} {elseIfPart} [elsePart] "End If";
 elseIfPart ::= "ElseIf" expr "Then" {statement};
 elsePart ::= "Else" {statement};
 
-selectStmt ::= "Select" "Case" expr {caseList} "End" "Select";
+selectStmt ::= "Select" "Case" expr {caseList} "End Select";
 caseList ::= "Case" expr {statement};
 
 controlStmt ::= "Return" expr
@@ -73,9 +88,12 @@ add ::= term ("+"|"-") add;
 
 term ::= factor ("*"|"/"|"\\") term;
 
-factor ::= unit ("=" expr | "As" annotation);
+factor ::= unary ("=" expr | "As" annotation {"As" annotation});
 
-unit ::= ["-"|"+"] terminal unit;
+unary ::= ("-"|"+") unary
+        | terminal "." unary
+        | terminal
+        ;
 
 terminal ::= Digit 
            | Decimal 
@@ -89,9 +107,14 @@ terminal ::= Digit
 argsBody ::= ["(" [argList] ")"] ["[" expr "]"]; 
 argList ::= expr {"," expr};
 
-annotation ::= annotationUnit {"." annotationUnit};
+annotation ::= annotationUnit {"." annotationUnit} ["[]"];
 annotationUnit ::= ID;
 
-
-
+Digit ::= {Number};
+Decimal ::= Digit ["." Digit];
+ID ::= {Letter};
+String ::= '"' {Letter} '"'
+Char ::= "'"(* ASCII Char *)"'";
+Number ::= 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 ;
+Letter ::= A-Z;
 

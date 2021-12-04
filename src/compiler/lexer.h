@@ -5,14 +5,17 @@
 #ifndef EVOBASIC2_LEXER_H
 #define EVOBASIC2_LEXER_H
 #include "token.h"
+#include "formator.h"
 #include <set>
 namespace evoBasic{
     class SyntaxException:public std::exception{
         std::string tmp;
     public:
         const Token& token;
-        explicit SyntaxException(const Token& token,Token::Enum expected):token(token),expected(expected){
-            tmp = (token.getLemexe() + " but expected "+ Token::enum_to_string[(int)expected]);
+        explicit SyntaxException(Token& token,Token::Enum expected):token(token),expected(expected){
+            auto l = token.getLocation();
+            tmp = format()<<token.getLemexe() << " but expected " << Token::enum_to_string[(int)expected]
+                          <<" in (" << l->getBeginY() <<","<<l->getBeginX()<<")";
         };
         Token::Enum expected;
         const char * what() const noexcept override{

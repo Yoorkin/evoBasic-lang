@@ -250,14 +250,13 @@ End Module
 }
 
 TEST(DotExpr,Case3){
-    GTEST_SKIP();
     auto code = R"CODE(
 Module MyModule
     Interface MyInterface
         Sub Test()
     End Interface
 End Module
-Class Foo Impl MyModule.Interface
+Class Foo Impl MyModule.MyInterface
     Public Sub Test()
 
     End Sub

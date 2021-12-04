@@ -44,6 +44,7 @@ namespace evoBasic::ast{
     struct Annotation;
     struct Generic;
     struct Implement;
+    struct Interface;
 
     namespace stmt{
         struct Statement;
@@ -106,7 +107,7 @@ namespace evoBasic::ast{
         bool is_static = false;
         enum MemberKind{
             error,function_,class_,module_,type_,enum_,dim_,
-            import_,external_
+            import_,external_,interface_
         }member_kind = error;
 
         Member *next_sibling = nullptr,*prv_sibling = nullptr;
@@ -179,6 +180,13 @@ namespace evoBasic::ast{
         Annotation *return_annotation = nullptr;
         DebugInfo *debug()override;
         type::ExternalFunction *function_symbol = nullptr;
+    };
+
+    struct Interface : Member {
+        Interface(){member_kind = interface_;}
+        expr::ID *name = nullptr;
+        Function *function = nullptr;
+        DebugInfo *debug()override;
     };
 
     struct EnumMember : Node {
