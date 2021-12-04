@@ -1,0 +1,97 @@
+globalDecl ::= [accessFlag] {moduleMember};
+moduleDecl ::= "Module" ID {[accessFlag] moduleMember} "End" "Module";
+accessFlag ::= "Public"|"Private"|"Friend"|"Protected";
+methodFlag ::= "Static"|"Virtual"|"Override";
+moduleMember ::= functionDecl 
+                | subDecl 
+                | typeDecl 
+                | enumDecl 
+                | dimDecl
+                | classDecl
+                | moduleDecl
+                | interfaceDecl
+                ;
+
+classDecl ::= "Class" ID [extendPart] [implPart] {classMember} "End" "Class";
+extendPart :: = "Extend" annotation; 
+implPart ::= "Impl" annotation {"," annotation};
+classMember ::= [methodFlag] (functionDecl | subDecl) | dimDecl;
+
+typeDecl ::= "Type" ID {typeList} "End" "Type";
+typeList ::= ID "As" annotation;
+
+enumDecl ::= "Enum" ID {enumList} "End" "Enum";
+enumList ::= ID ["=" Digit];
+
+interfaceDecl ::= "Interface" ID {functionInterface|subInterface} "End" "Interface";
+functionInterface ::= "Function" ID "(" [parameterList] ")" "As" annotation;
+subInterface ::= "Sub" ID "(" [parameterList] ")";
+
+parameterList ::= parameter {"," parameter};
+parameter ::= [Optional|ParamArray] [Byval|Byref] ID "As" annotation;
+
+functionDecl ::= functionInterface {statement} "End" "Function";
+subDecl ::= subInterface {statement} "End" "Sub";
+
+statement ::= forStmt
+            | letStmt
+            | loopStmt
+            | ifStmt
+            | selectStmt
+            | controlStmt
+            | exprStmt
+            ;
+
+forStmt ::= "For" expr "=" expr "To" expr ["Step" expr] {statement} "Next";
+
+letStmt ::= "Let" variableDecl {"," variableDecl};
+variableDecl ::= ID ["As" annotation] ["=" expr];
+
+loopStmt ::= "While" expr {statement} "Wend";
+
+ifStmt ::= "If" expr "Then" {statement} {elseIfPart} [elsePart] "End" "If";
+elseIfPart ::= "ElseIf" expr "Then" {statement};
+elsePart ::= "Else" {statement};
+
+selectStmt ::= "Select" "Case" expr {caseList} "End" "Select";
+caseList ::= "Case" expr {statement};
+
+controlStmt ::= "Return" expr
+              | "Continue"
+              | "Exit" ("For"|"While"|"Sub")
+              ;
+
+exprStmt ::= expr;
+
+expr ::= logicNot ("And"|"Or"|"Xor") expr;
+
+logicNot ::= {"Not"} cmp;
+
+cmp ::= add ("=="|"<>"|"<"|">"|"<="|"=<"|">=") cmp;
+
+add ::= term ("+"|"-") add;
+
+term ::= factor ("*"|"/"|"\\") term;
+
+factor ::= unit ("=" expr | "As" annotation);
+
+unit ::= ["-"|"+"] terminal unit;
+
+terminal ::= Digit 
+           | Decimal 
+           | String 
+           | Char
+           | "(" expr ")" 
+           | ID argsBody 
+           | "New" annotation "(" argsBody ")"
+           ;
+
+argsBody ::= ["(" [argList] ")"] ["[" expr "]"]; 
+argList ::= expr {"," expr};
+
+annotation ::= annotationUnit {"." annotationUnit};
+annotationUnit ::= ID;
+
+
+
+

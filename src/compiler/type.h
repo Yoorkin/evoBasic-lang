@@ -67,7 +67,7 @@ namespace evoBasic::type{
 
         SymbolKind getKind(){return kind;}
 
-        virtual Domain *getParent();
+        virtual Domain *getParent()const;
         virtual void setParent(Domain *parent);
 
         void setAccessFlag(AccessFlag flag);
@@ -85,7 +85,7 @@ namespace evoBasic::type{
 
         virtual std::string debug(int indent)=0;
 
-        bool isStatic();
+        virtual bool isStatic();
         void setStatic(bool value);
     };
 
@@ -117,7 +117,6 @@ namespace evoBasic::type{
         bool is_const = false;
         bool is_global = false;
         std::size_t offset = -1;
-        bool is_static = false;
     public:
         Variable();
         explicit Variable(SymbolKind kind);
@@ -129,8 +128,6 @@ namespace evoBasic::type{
         std::size_t getOffset();
         void setOffset(std::size_t value);
         virtual data::ptr getRealByteLength();
-        bool isStatic();
-        void setStatic(bool value);
     };
 
     //domain interface
@@ -195,7 +192,7 @@ namespace evoBasic::type{
     enum class FunctionFlag{Method=0,Static,Virtual,Override};
 
     class Function: public Domain{
-    private:
+    protected:
         std::vector<Parameter*> argsSignature;
         Prototype *retSignature = nullptr;
         std::size_t tmp_domain_count = 0;
@@ -204,7 +201,7 @@ namespace evoBasic::type{
         explicit Function();
 
         void add(Symbol *symbol)override;
-        std::vector<Parameter*>& getArgsSignature();
+        const std::vector<Parameter*>& getArgsSignature();
         Prototype *getRetSignature();
         void setRetSignature(Prototype *ptr);
 
@@ -228,12 +225,15 @@ namespace evoBasic::type{
     class UserFunction : public Function{
         ast::Function *function_node;
         FunctionFlag flag = FunctionFlag::Method;
+        Parameter *self = nullptr;
     public:
         UserFunction(const UserFunction&)=delete;
         explicit UserFunction(FunctionFlag flag,ast::Function *function_node);
         ast::Function *getFunctionNode();
         virtual FunctionFlag getFunctionFlag();
         void setFunctionFlag(FunctionFlag flag);
+        bool isStatic()override;
+        void setParent(Domain *parent)override;
         std::string debug(int indent)override;
     };
 
@@ -321,13 +321,16 @@ namespace evoBasic::type{
         std::string debug(int indent)override;
     };
 
-    class EnumMember : public Symbol{
+    class EnumMember : public Prototype{
         int index;
     public:
         EnumMember(const Enumeration&)=delete;
-        explicit EnumMember(int index): Symbol(SymbolKind::EnumMember),index(index){}
+        explicit EnumMember(int index): Prototype(SymbolKind::EnumMember),index(index){
+            setByteLength(vm::Data::ptr.getSize());
+        }
         int getIndex()const{return index;}
         std::string debug(int indent)override;
+        virtual bool equal(Prototype *ptr){PANIC;}
     };
 
     class Parameter : public Variable{

@@ -24,15 +24,16 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitArg(ast::expr::Callee::Argument *argument_node, TypeAnalyzerArgs args) {
-        auto function = args.dot_expression_context->as<type::Function*>();
+        NotNull(args.checking_function);
+        auto function = args.checking_function;
         if(args.checking_arg_index >= function->getArgsSignature().size())return {};
         auto param =  function->getArgsSignature()[args.checking_arg_index];
 
-        args.dot_expression_context = nullptr;
+        args.dot_prefix = nullptr;
         auto arg_type = any_cast<ExpressionType*>(visitExpression((*argument_node).expr, args));
         if(arg_type->value_kind == ExpressionType::error)return {};
 
-        auto arg_prototype = arg_type->prototype;
+        auto arg_prototype = arg_type->symbol->as<Prototype*>();
         auto param_prototype = param->getPrototype();
 
         auto report_type_error = [&](){
@@ -61,7 +62,7 @@ namespace evoBasic{
             switch ((*argument_node).pass_kind) {
                 case ast::expr::Callee::Argument::undefined:
                 case ast::expr::Callee::Argument::byval:
-                    if(!param->getPrototype()->equal(arg_type->prototype)){
+                    if(!param->getPrototype()->equal(arg_type->symbol->as<Prototype*>())){
                         if(!try_implicit_conversion())report_type_error();
                     }
                     break;
@@ -73,7 +74,7 @@ namespace evoBasic{
         else{
             switch ((*argument_node).pass_kind) {
                 case ast::expr::Callee::Argument::byval:
-                    if(!param->getPrototype()->equal(arg_type->prototype)){
+                    if(!param->getPrototype()->equal(arg_type->symbol->as<Prototype*>())){
                         if(!try_implicit_conversion())report_type_error();
                     }
                     (*argument_node).temp_address = new type::Variable;
@@ -87,7 +88,7 @@ namespace evoBasic{
                     args.user_function->addMemoryLayout((*argument_node).temp_address);
                     break;
                 case ast::expr::Callee::Argument::byref:
-                    if(!param->getPrototype()->equal(arg_type->prototype)){
+                    if(!param->getPrototype()->equal(arg_type->getPrototype())){
                         report_type_error();
                     }
                     break;
@@ -97,7 +98,7 @@ namespace evoBasic{
                                                                         << "Change parameter to Byval or explicit declare 'ByVal' here.\n"
                                                                         << "Syntax: exampleFunction(Byval <Expression>) ");
                     }
-                    else if(!param->getPrototype()->equal(arg_type->prototype)){
+                    else if(!param->getPrototype()->equal(arg_type->getPrototype())){
                         report_type_error();
                     }
                     break;
@@ -181,8 +182,7 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitLet(ast::stmt::Let *let_node, TypeAnalyzerArgs args) {
-        auto iter = (*let_node).variable;
-        while(iter){
+        for(auto iter = (*let_node).variable;iter!=nullptr;iter = iter->next_sibling){
             auto name = getID(iter->name);
             if(is_name_valid(name,iter->location,args.domain)){
                 type::Prototype *result_prototype = nullptr;
@@ -191,15 +191,15 @@ namespace evoBasic{
                     if(init_type->value_kind == ExpressionType::error)continue;
                     if(iter->annotation){
                         auto anno_prototype = any_cast<Prototype*>(visitAnnotation(iter->annotation,args));
-                        if(!init_type->prototype->equal(anno_prototype)){
-                            if(args.context->getConversionRules().isImplicitCastRuleExist(init_type->prototype,anno_prototype)){
-                                Logger::warning(iter->initial->location,format()<<"implicit conversion from '"<<init_type->prototype->getName()
+                        if(!init_type->getPrototype()->equal(anno_prototype)){
+                            if(args.context->getConversionRules().isImplicitCastRuleExist(init_type->getPrototype(),anno_prototype)){
+                                Logger::warning(iter->initial->location,format()<<"implicit conversion from '"<<init_type->getPrototype()->getName()
                                                                                 <<"' to '"<<anno_prototype->getName()<<"'");
                                 args.context->getConversionRules().insertCastAST(anno_prototype,&(iter->initial));
                             }
                             else {
                                 Logger::error(iter->initial->location, format() << "initialize expression type '"
-                                                                                << init_type->prototype->getName()
+                                                                                << init_type->getPrototype()->getName()
                                                                                 << "' is not equivalent to variable type '"
                                                                                 << anno_prototype->getName() << "'");
                                 continue;
@@ -208,12 +208,12 @@ namespace evoBasic{
                         result_prototype = anno_prototype;
                     }
                     else{
-                        result_prototype = init_type->prototype;
+                        result_prototype = init_type->getPrototype();
                     }
                 }
                 else if(iter->initial != nullptr){
                     auto init_type = any_cast<ExpressionType*>(visitExpression(iter->initial,args));
-                    result_prototype = init_type->prototype;
+                    result_prototype = init_type->getPrototype();
                 }
                 else if(iter->annotation != nullptr){
                     result_prototype = any_cast<Prototype*>(visitAnnotation(iter->annotation,args));
@@ -234,8 +234,6 @@ namespace evoBasic{
                 field->setPrototype(result_prototype);
                 args.domain->add(field);
             }
-
-            iter = iter->next_sibling;
         }
         return {};
     }
@@ -247,10 +245,10 @@ namespace evoBasic{
         while(iter){
             if(iter->condition){
                 auto case_type = any_cast<ExpressionType*>(visitExpression(iter->condition,args));
-                if(!condition_type->prototype->equal(case_type->prototype)){
+                if(!condition_type->getPrototype()->equal(case_type->getPrototype())){
                     Logger::error(iter->location,format()<<"case condition type '"
-                                                         <<case_type->prototype->getName()<<"' is not equivalent to select expression type '"
-                                                         <<condition_type->prototype->getName()<<"'");
+                                                         <<case_type->getPrototype()->getName()<<"' is not equivalent to select expression type '"
+                                                         <<condition_type->getPrototype()->getName()<<"'");
                 }
             }
             visitStatementList(iter->statement,args);
@@ -261,7 +259,7 @@ namespace evoBasic{
 
     std::any TypeAnalyzer::visitLoop(ast::stmt::Loop *loop_node, TypeAnalyzerArgs args) {
         auto condition_type = any_cast<ExpressionType*>(visitExpression((*loop_node).condition,args));
-        if(!condition_type->prototype->equal(args.context->getBuiltIn().getPrimitive(vm::Data::boolean))){
+        if(!condition_type->getPrototype()->equal(args.context->getBuiltIn().getPrimitive(vm::Data::boolean))){
             Logger::error((*loop_node).condition->location,"expression type of loop condition must be Boolean");
         }
         visitStatementList((*loop_node).statement,args);
@@ -273,9 +271,9 @@ namespace evoBasic{
         while(iter){
             if(iter->condition){
                 auto case_type = any_cast<ExpressionType*>(visitExpression(iter->condition,args));
-                if(!case_type->prototype->equal(args.context->getBuiltIn().getPrimitive(vm::Data::boolean))){
+                if(!case_type->getPrototype()->equal(args.context->getBuiltIn().getPrimitive(vm::Data::boolean))){
                     Logger::error(iter->location,format()<<"expression type of if condition must be boolean but here is '"
-                                                         <<case_type->prototype->getName()<<"'");
+                                                         <<case_type->getPrototype()->getName()<<"'");
                 }
             }
             visitStatementList(iter->statement,args);
@@ -295,22 +293,22 @@ namespace evoBasic{
             auto begin_type = any_cast<ExpressionType*>(visitExpression((*forstmt_node).begin,args)),
                     end_type = any_cast<ExpressionType*>(visitExpression((*forstmt_node).end,args));
 
-            if(!begin_type->prototype->equal(iterator_type->prototype)){
+            if(!begin_type->getPrototype()->equal(iterator_type->getPrototype())){
                 Logger::error((*forstmt_node).begin->location,format()<<"Begin expression type '"
-                                                                       <<begin_type->prototype->getName()<<"' is not equivalent to iterator type '"
-                                                                       <<iterator_type->prototype->getName()<<"'");
+                                                                       <<begin_type->getPrototype()->getName()<<"' is not equivalent to iterator type '"
+                                                                       <<iterator_type->getPrototype()->getName()<<"'");
             }
-            if(!end_type->prototype->equal(iterator_type->prototype)){
+            if(!end_type->getPrototype()->equal(iterator_type->getPrototype())){
                 Logger::error((*forstmt_node).begin->location,format()<<"End expression type '"
-                                                                       <<end_type->prototype->getName()<< "' is not equivalent to iterator type '"
-                                                                       <<iterator_type->prototype->getName()<<"'");
+                                                                       <<end_type->getPrototype()->getName()<< "' is not equivalent to iterator type '"
+                                                                       <<iterator_type->getPrototype()->getName()<<"'");
             }
             if((*forstmt_node).step){
                 auto step_type = any_cast<ExpressionType*>(visitExpression((*forstmt_node).step,args));
-                if(!step_type->prototype->equal(iterator_type->prototype)){
+                if(!step_type->getPrototype()->equal(iterator_type->getPrototype())){
                     Logger::error((*forstmt_node).begin->location,format()<<"Step expression type '"
-                                                                           <<step_type->prototype->getName()<<"' is not equivalent to iterator type '"
-                                                                           <<iterator_type->prototype->getName()<<"'");
+                                                                           <<step_type->getPrototype()->getName()<<"' is not equivalent to iterator type '"
+                                                                           <<iterator_type->getPrototype()->getName()<<"'");
                 }
             }
         }
@@ -324,15 +322,15 @@ namespace evoBasic{
         if(type->value_kind == ExpressionType::error)return {};
 
         auto dst_prototype = args.user_function->getRetSignature();
-        if(!dst_prototype->equal(type->prototype)){
-            if(args.context->getConversionRules().isImplicitCastRuleExist(type->prototype,dst_prototype)){
-                Logger::warning(ret_node->expr->location, format() << "implicit conversion from '" << type->prototype->getName()
+        if(!dst_prototype->equal(type->getPrototype())){
+            if(args.context->getConversionRules().isImplicitCastRuleExist(type->getPrototype(),dst_prototype)){
+                Logger::warning(ret_node->expr->location, format() << "implicit conversion from '" << type->getPrototype()->getName()
                                                                       << "' to '" << dst_prototype->getName() << "'");
                 args.context->getConversionRules().insertCastAST(dst_prototype,&ret_node->expr);
             }
             else{
                 Logger::error(ret_node->location,format()<<"cannot implicit convert '"
-                                                           <<type->prototype->mangling('.')
+                                                           <<type->getPrototype()->mangling('.')
                                                            <<"' to Integer");
             }
         }
@@ -356,13 +354,14 @@ namespace evoBasic{
             case exp::string_:      return visitString((String*)expr_node,args);
             case exp::char_:        return visitChar((Char*)expr_node,args);
             case exp::parentheses_: return visitParentheses((Parentheses*)expr_node,args);
-            case exp::callee_:      return visitCallee((Callee*)expr_node,args);
             case exp::boolean_:     return visitBoolean((Boolean*)expr_node,args);
-            case exp::ID_:          return visitID((ID*)expr_node,args);
             case exp::new_:         return visitNew((New*)expr_node,args);
+            case exp::assign_:      return visitAssign((Assign*)expr_node,args);
             case exp::index_:       return visitIndex((Index*)expr_node,args);
             case exp::dot_:         return visitDot((Dot*)expr_node,args);
-            case exp::assign_:      return visitAssign((Assign*)expr_node,args);
+            case exp::callee_:      return visitCallee((Callee*)expr_node,args);
+
+            case exp::ID_:          return visitID((ID*)expr_node,args);
         }
         PANIC;
     }
@@ -404,7 +403,7 @@ namespace evoBasic{
 
         auto boolean_prototype = args.context->getBuiltIn().getPrimitive(vm::Data::i8);
         auto is_boolean = [&](ExpressionType *type,Location *location)->bool{
-            if(!type->prototype->equal(boolean_prototype)){
+            if(!type->getPrototype()->equal(boolean_prototype)){
                 Logger::error(location,"expression type must be Boolean");
                 return false;
             }
@@ -436,7 +435,7 @@ namespace evoBasic{
             case Op::GT:
             case Op::LT:{
                 if(!check_binary_op_valid(binary_node->location,args.context->getConversionRules(),
-                                          lhs_type->prototype,rhs_type->prototype,&binary_node->lhs,&binary_node->rhs))
+                                          lhs_type->getPrototype(),rhs_type->getPrototype(),&binary_node->lhs,&binary_node->rhs))
                     return ExpressionType::Error;
                 return binary_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue);
             }
@@ -446,9 +445,9 @@ namespace evoBasic{
             case Op::DIV:
             case Op::FDIV:{
                 if(!check_binary_op_valid(binary_node->location,args.context->getConversionRules(),
-                                          lhs_type->prototype,rhs_type->prototype,&binary_node->lhs,&binary_node->rhs))
+                                          lhs_type->getPrototype(),rhs_type->getPrototype(),&binary_node->lhs,&binary_node->rhs))
                     return ExpressionType::Error;
-                return binary_node->type = new ExpressionType(lhs_type->prototype,ExpressionType::rvalue);
+                return binary_node->type = new ExpressionType(lhs_type->getPrototype(),ExpressionType::rvalue);
             }
             default:
                 PANIC;
@@ -457,12 +456,8 @@ namespace evoBasic{
     
     std::any TypeAnalyzer::visitDot(ast::expr::Dot *dot_node, TypeAnalyzerArgs args) {
         auto lhs_type = any_cast<ExpressionType*>(visitExpression(dot_node->lhs,args));
-        args.dot_expression_context = lhs_type->prototype;
+        args.dot_prefix = lhs_type;
         auto rhs_type = any_cast<ExpressionType*>(visitExpression(dot_node->rhs,args));
-
-        if(lhs_type->is_static xor rhs_type->is_static){
-            Logger::error(dot_node->rhs->location,"cannot find object");
-        }
 
         return dot_node->type = rhs_type;
     }
@@ -471,14 +466,14 @@ namespace evoBasic{
         try{
             auto name = getID(id_node);
             Symbol *target = nullptr;
-            if(!args.dot_expression_context){
+            if(!args.dot_prefix){
                 target = args.domain->lookUp(name);
                 if(!target) throw SymbolNotFound(id_node->location,nullptr,name);
             }
             else{
-                auto domain = args.dot_expression_context->as<Domain*>();
+                auto domain = args.dot_prefix->getPrototype()->as<Domain*>();
                 if(!(domain && (target = domain->find(name)))){
-                    throw SymbolNotFound(id_node->location,args.dot_expression_context,name);
+                    throw SymbolNotFound(id_node->location,args.dot_prefix->getPrototype(),name);
                 }
             }
 
@@ -487,9 +482,20 @@ namespace evoBasic{
             switch (target->getKind()) {
                 case type::SymbolKind::Variable:
                 case type::SymbolKind::Argument:
+                    if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,target->isStatic());
                     return new ExpressionType(target->as<type::Variable*>()->getPrototype(),ExpressionType::lvalue,target->isStatic());
+                case type::SymbolKind::Function:
+                    if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,target->isStatic());
+                    return new ExpressionType(target,ExpressionType::path,true);
+                case type::SymbolKind::Module:
+                case type::SymbolKind::Class:
+                case type::SymbolKind::Enum:
+                    if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,true);
+                    return new ExpressionType(target,ExpressionType::path,true);
+                case type::SymbolKind::EnumMember:
+                    return new ExpressionType(target->getParent(),ExpressionType::rvalue, true);
                 default:
-                    return new ExpressionType(target->as<Prototype*>(),ExpressionType::path,true);
+                    PANIC;
             }
         }
         catch (SymbolNotFound& e){
@@ -516,7 +522,7 @@ namespace evoBasic{
         }
 
         check_binary_op_valid(assign_node->location,args.context->getConversionRules(),
-                              lhs_type->prototype,rhs_type->prototype,&assign_node->lhs,&assign_node->rhs);
+                              lhs_type->getPrototype(),rhs_type->getPrototype(),&assign_node->lhs,&assign_node->rhs);
 
         return assign_node->type = lhs_type;
     }
@@ -526,10 +532,10 @@ namespace evoBasic{
         auto value_type = any_cast<ExpressionType*>(visitExpression(index_node->value,args));
 
         Prototype *dst_prototype = nullptr,*ret_prototype = nullptr;
-        switch(target_type->prototype->getKind()){
+        switch(target_type->getPrototype()->getKind()){
             case SymbolKind::Array:
                 dst_prototype = args.context->getBuiltIn().getPrimitive(vm::Data::i32);
-                ret_prototype = target_type->prototype->as<Array*>()->getElementPrototype();
+                ret_prototype = target_type->getPrototype()->as<Array*>()->getElementPrototype();
                 break;
             case SymbolKind::Class:{
                 //TODO index operator overload
@@ -537,15 +543,15 @@ namespace evoBasic{
             }
         }
 
-        if(!dst_prototype->equal(value_type->prototype)){
-            if(args.context->getConversionRules().isImplicitCastRuleExist(value_type->prototype,dst_prototype)){
-                Logger::warning(index_node->value->location, format() << "implicit conversion from '" << value_type->prototype->getName()
+        if(!dst_prototype->equal(value_type->getPrototype())){
+            if(args.context->getConversionRules().isImplicitCastRuleExist(value_type->getPrototype(),dst_prototype)){
+                Logger::warning(index_node->value->location, format() << "implicit conversion from '" << value_type->getPrototype()->getName()
                                                                      << "' to '" << dst_prototype->getName() << "'");
                 args.context->getConversionRules().insertCastAST(dst_prototype,&index_node->value);
             }
             else{
                 Logger::error(index_node->location,format()<<"cannot implicit convert '"
-                                                           <<value_type->prototype->mangling('.')
+                                                           <<value_type->getPrototype()->mangling('.')
                                                            <<"' to Integer");
             }
         }
@@ -560,10 +566,10 @@ namespace evoBasic{
             return target_type;
         }
 
-        auto func = target_type->prototype->as<type::Function*>();
+        auto func = target_type->getPrototype()->as<type::Function*>();
 
         if(!func){
-            Logger::error(callee_node->name->location,format()<<"'"<<target_type->prototype->getName()<<"' is not a callable target");
+            Logger::error(callee_node->name->location,format()<<"'"<<target_type->getPrototype()->getName()<<"' is not a callable target");
             return ExpressionType::Error;
         }
 
@@ -595,12 +601,12 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitExprStmt(ast::stmt::ExprStmt *expr_stmt_node, TypeAnalyzerArgs args) {
-        args.dot_expression_context = nullptr;
+        args.dot_prefix = nullptr;
         return visitExpression(expr_stmt_node->expr,args);
     }
 
     std::any TypeAnalyzer::visitParentheses(ast::expr::Parentheses *parentheses_node, TypeAnalyzerArgs args) {
-        args.dot_expression_context = nullptr;
+        args.dot_prefix = nullptr;
         return visitExpression(parentheses_node->expr,args);
     }
 
@@ -695,19 +701,19 @@ namespace evoBasic{
     std::any TypeAnalyzer::visitAnnotation(ast::Annotation *annotation_node, TypeAnalyzerArgs args) {
         auto iter = (*annotation_node).unit;
         args.need_lookup = true;
-        args.dot_expression_context = args.domain;
+        args.dot_prefix = new ExpressionType(args.domain,ExpressionType::rvalue,false);
         auto symbol = visitAnnotationUnit(iter,args);
         iter = iter->next_sibling;
-        args.dot_expression_context = any_cast<Symbol*>(symbol);
+        args.dot_prefix->symbol = any_cast<Symbol*>(symbol);
 
         args.need_lookup = false;
         while(iter!=nullptr){
             symbol = visitAnnotationUnit(iter,args);
-            args.dot_expression_context = any_cast<Symbol*>(symbol);
+            args.dot_prefix->symbol = any_cast<Symbol*>(symbol);
             iter=iter->next_sibling;
         }
 
-        auto element = args.dot_expression_context->as<Prototype*>();
+        auto element = args.dot_prefix->getPrototype()->as<Prototype*>();
         auto ret_prototype = element;
 
         if((*annotation_node).array_size){
@@ -724,16 +730,24 @@ namespace evoBasic{
         auto name = getID((*unit_node).name);
         Symbol *symbol = nullptr;
         if(args.need_lookup){
-            symbol = args.dot_expression_context->as<Domain*>()->lookUp(name);
+            symbol = args.dot_prefix->symbol->as<Domain*>()->lookUp(name);
         }
         else{
-            symbol = args.dot_expression_context->as<Domain*>()->find(name);
+            symbol = args.dot_prefix->symbol->as<Domain*>()->find(name);
         }
 
         if(!symbol){
-            throw SymbolNotFound((*unit_node).name->location,args.dot_expression_context,name);
+            throw SymbolNotFound((*unit_node).name->location,args.dot_prefix->symbol,name);
         }
         return symbol;
+    }
+
+    void TypeAnalyzer::check_static_access(Location *code_location, ExpressionType *lhs, bool is_rhs_static) {
+        if(lhs->is_static xor is_rhs_static){
+            auto lhs_state = lhs->is_static ? "Static" : "Non-static";
+            auto rhs_state = is_rhs_static ? "Static" : "Non-static";
+            Logger::error(code_location,format()<<"cannot find object. lhs is "<<lhs_state<<" but rhs is "<<rhs_state);
+        }
     }
 
 }

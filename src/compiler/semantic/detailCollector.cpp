@@ -83,6 +83,7 @@ namespace evoBasic{
             if(is_name_valid(member_name,iter->location,args.domain)){
                 auto member = new type::EnumMember(index);
                 member->setName(member_name);
+                member->setAccessFlag(AccessFlag::Public);
                 member->setLocation(iter->location);
                 args.domain->add(member);
                 index++;
@@ -182,6 +183,7 @@ namespace evoBasic{
                     break;
             }
             auto function = new type::UserFunction(flag, *function_node);
+            function->setStatic((**function_node).is_static);
             function->setLocation((**function_node).name->location);
             function->setName(name);
             function->setAccessFlag((**function_node).access);
@@ -191,16 +193,6 @@ namespace evoBasic{
             if((**function_node).return_annotation){
                 auto prototype = any_cast<Prototype*>(visitAnnotation(&(**function_node).return_annotation,args));
                 function->setRetSignature(prototype);
-            }
-
-            switch (function->getFunctionFlag()) {
-                case type::FunctionFlag::Virtual:
-                case type::FunctionFlag::Method:
-                    if(args.parent_class_or_module && args.parent_class_or_module->getKind() == SymbolKind::Class){
-                        auto self = new type::Parameter("self", args.parent_class_or_module, true, false);
-                        function->add(self);
-                    }
-                    break;
             }
             
             args.domain->add(function);

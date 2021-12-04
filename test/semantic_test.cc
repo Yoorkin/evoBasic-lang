@@ -2,6 +2,9 @@
 #include <memory>
 #include "semantic/semantic.h"
 #include "type.h"
+#include "lexer.h"
+#include "parser.h"
+#include "logger.h"
 
 using namespace evoBasic;
 using namespace evoBasic::type;
@@ -170,16 +173,35 @@ TEST(TypeInference,TopoSort_Failed){
     ASSERT_EQ(i1,expected1.size()+1);
 }
 
+void IS_CODE_NO_ERROR(string code){
+    Logger::errorCount = 0;
+    stringstream stream;
+    Logger::redirect(&stream);
+    Logger::debugMode = false;
+    Lexer lexer(new StringSource(code));
+    Parser parser(&lexer);
+    auto ast = parser.parseGlobal();
+    Logger::debugMode = true;
+    Context context;
+    Semantic::collectSymbol(ast,&context);
+    Semantic::collectDetail(ast,&context);
+    Semantic::typeCheck(ast,&context);
+    Logger::dev(debugAST(ast));
+    Logger::dev(context.getGlobal()->debug(0));
+    ASSERT_TRUE(Logger::errorCount == 0)<<stream.str();
+}
+
+
 TEST(DotExpr,Case1){
     auto code = R"CODE(
 Type MyType
     member as Integer
-End MyType
+End Type
 Enum MyEnum
     Member1
 End Enum
 Module MyModule
-    Class MyClass
+    Public Class MyClass
         Public Static Function MyStaticFunc(Byval a as MyEnum,b as Integer) As MyType
 
         End Function
@@ -191,100 +213,96 @@ Sub Main()
     ans = MyModule.MyClass.MyStaticFunc(MyEnum.Member1,typeVar.member).member
 End Sub
 )CODE";
+    IS_CODE_NO_ERROR(code);
 }
 
 TEST(DotExpr,Case2){
     auto code = R"CODE(
 Module MyModule
-    Type MyType
+    Public Type MyType
         member as Integer
-    End MyType
+    End Type
 
-    Enum MyEnum
+    Public Enum MyEnum
         Member1
     End Enum
 
-    Class MyClass
+    Public Class MyClass
         Public Static StaticEnumVar as MyEnum
-        Public Static Function GetNum() As Integer
+        Public Num as Integer
+        Public Function GetNum() As Integer
             Return 233
         End Function
     End Class
 
-    Sub Test(Byval clsArg as MyClass)
+    Public Function MyFunction() as MyClass
+
+    End Function
+
+    Public Sub Test(Byval clsArg as MyClass)
         let a as MyModule.MyType,
             b as MyModule.MyEnum = MyClass.StaticEnumVar,
-            c as Integer = MyModule.MyFunction().GetID() + clsArg.GetNum() + clsArg.Num
+            c as Integer = MyModule.MyFunction().GetNum() + clsArg.GetNum() + clsArg.Num
     End Sub
 End Module
 )CODE";
+    IS_CODE_NO_ERROR(code);
 }
 
 TEST(DotExpr,Case3){
+    GTEST_SKIP();
     auto code = R"CODE(
-Type MyType
-    member as Integer
-End MyType
-Enum MyEnum
-    Member1
-End Enum
 Module MyModule
-    Class MyClass
-        Public Static Function MyStaticFunc(Byval a as MyEnum,b as Integer) As MyType
-
-        End Function
-    End Class
+    Interface MyInterface
+        Sub Test()
+    End Interface
 End Module
-Sub Main()
-    let typeVar as MyType
-    let ans as integer
-    ans = MyModule.MyClass.MyStaticFunc(MyEnum.Member1,typeVar.member).member
-End Sub
+Class Foo Impl MyModule.Interface
+    Public Sub Test()
+
+    End Sub
+End Class
 )CODE";
+    IS_CODE_NO_ERROR(code);
 }
 
 TEST(DotExpr,Case4){
     auto code = R"CODE(
-Type MyType
-    member as Integer
-End MyType
-Enum MyEnum
-    Member1
-End Enum
 Module MyModule
-    Class MyClass
-        Public Static Function MyStaticFunc(Byval a as MyEnum,b as Integer) As MyType
-
-        End Function
-    End Class
+    dim myClassVar as MyClass
 End Module
+Class MyClass
+    Public num as Integer
+    Public Function MyNonStaticFunc(Byval a as integer,b as integer) as MyClass[4]
+
+    End Function
+End Class
 Sub Main()
-    let typeVar as MyType
-    let ans as integer
-    ans = MyModule.MyClass.MyStaticFunc(MyEnum.Member1,typeVar.member).member
+    let a as MyClass,b as Integer[3],c as integer
+    c = a.MyNonStaticFunc(b[1],a.num)[2].num
 End Sub
 )CODE";
+    IS_CODE_NO_ERROR(code);
 }
 
 TEST(DotExpr,Case5){
     auto code = R"CODE(
-Type MyType
-    member as Integer
-End MyType
-Enum MyEnum
-    Member1
-End Enum
-Module MyModule
-    Class MyClass
-        Public Static Function MyStaticFunc(Byval a as MyEnum,b as Integer) As MyType
-
-        End Function
-    End Class
-End Module
-Sub Main()
-    let typeVar as MyType
-    let ans as integer
-    ans = MyModule.MyClass.MyStaticFunc(MyEnum.Member1,typeVar.member).member
-End Sub
+Class MyClass
+    Public array as Integer[4],id as integer
+    Public Function getID() as integer
+        return id
+    End Function
+    Public Function GetNum() As Integer
+        Return 233
+    End Function
+    Public Function MyFunc(Byval a as integer) as Integer
+        return a
+    End Function
+    Public Sub InClassSub(Byval clsArgs as MyClass[10],Byref b as MyClass)
+        Self.id = Self.MyFunc(clsArgs[5].getNum())
+        let local = b.getID() + b.id + b.array[1]
+    End Sub
+End Class
 )CODE";
+    IS_CODE_NO_ERROR(code);
 }

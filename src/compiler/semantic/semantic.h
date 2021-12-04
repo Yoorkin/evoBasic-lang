@@ -24,7 +24,7 @@ namespace evoBasic{
 
 
     struct ExpressionType{
-        type::Prototype *prototype = nullptr;
+        type::Symbol *symbol = nullptr;
         /*
          *   ========= Dot Expression =======
          *   lhs\rhs    Static   Non-Static
@@ -40,10 +40,16 @@ namespace evoBasic{
         bool is_static = false;
         enum ValueKind {lvalue,rvalue,path,error} value_kind;
         ExpressionType()=default;
-        ExpressionType(type::Prototype *prototype,ValueKind kind,bool is_static = false){
+        ExpressionType(type::Symbol *symbol,ValueKind kind,bool is_static = false){
+            NotNull(symbol);
             this->value_kind = kind;
-            this->prototype = prototype;
+            this->symbol = symbol;
             this->is_static = is_static;
+        }
+        type::Prototype *getPrototype(){
+            auto tmp = symbol->as<type::Prototype*>();
+            NotNull(tmp);
+            return tmp;
         }
         static ExpressionType *Error;
     };

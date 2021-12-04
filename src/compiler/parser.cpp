@@ -356,11 +356,13 @@ namespace evoBasic{
     ast::EnumMember *Parser::parseEnumMember(Follows follows){
         auto member = new EnumMember;
         member->name = parseID(combine(follows,{Token::ASSIGN}));
+        auto begin_location = member->name->location;
         if(lexer->predict(Token::ASSIGN)){
             lexer->match(Token::ASSIGN);
             member->value = parseDigit(combine(follows,{Token::ID}));
         }
         else member->value = nullptr;
+        member->location = new Location(begin_location,lexer->getToken()->getLocation());
         return member;
     }
 
@@ -854,9 +856,11 @@ namespace evoBasic{
             auto callee = new Callee;
             callee->name = (ID*)ret;
             callee->argument = parseArgsList(follows);
+            callee->location = new Location(ret->location,lexer->getToken()->getLocation());
             ret = callee;
         }
-        else if(lexer->predict(Token::LB)){
+
+        if(lexer->predict(Token::LB)){
             lexer->match(Token::LB);
             auto location_begin = ret->location;
             ret = new Index(ret,parseLogic(combine(follows,{Token::RB})));

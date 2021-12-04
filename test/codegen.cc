@@ -15,6 +15,7 @@ using namespace evoBasic::vm;
 
 
 TEST(CodeGen,PassByValPrimitive){
+    GTEST_SKIP();
     auto ir = compile(R"code(
         Function Test(Byval a as integer,Byval b as byte,Byval c as long) as long
 
@@ -42,6 +43,7 @@ TEST(CodeGen,PassByValPrimitive){
 }
 
 TEST(CodeGen,PassByValPrimitive_And_Plus_100_50){
+    GTEST_SKIP();
     auto ir = compile(R"code(
         Function Test(Byval a as integer,Byval b as integer) as long
             b = 100 + 50
@@ -72,6 +74,7 @@ TEST(CodeGen,PassByValPrimitive_And_Plus_100_50){
 
 
 TEST(CodeGen,PassByValPrimitive_And_Load){
+    GTEST_SKIP();
     auto ir = compile(R"code(
         Function Test(Byval a as integer,Byval b as integer) as long
             b = a + 50
@@ -117,6 +120,7 @@ TEST(CodeGen,PassByValPrimitive_And_Load){
 }
 
 TEST(CodeGen,PassByValType){
+    GTEST_SKIP();
     auto ir = compile(R"code(
         Type MyType  //size 8
             m1 as integer
@@ -147,6 +151,7 @@ TEST(CodeGen,PassByValType){
 }
 
 TEST(CodeGen,PassByValType_Assign_Value){
+    GTEST_SKIP();
     auto ir = compile(R"code(
         Type MyType  //size 8
             m1 as integer
@@ -194,6 +199,7 @@ TEST(CodeGen,PassByValType_Assign_Value){
 }
 
 TEST(CodeGen,PassByValTypeArray_Load_And_Store){
+    GTEST_SKIP();
     auto ir = compile(R"code(
         Type MyType  //size 8
             m1 as integer

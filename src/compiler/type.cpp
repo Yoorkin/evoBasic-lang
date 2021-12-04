@@ -66,7 +66,7 @@ namespace evoBasic::type{
     Parameter::Parameter(std::string name,Prototype *prototype, bool isByval, bool isOptional)
             : Variable(SymbolKind::Argument), is_byval(isByval), is_optional(isOptional){
         setName(move(name));
-        setPrototype(prototype);
+        if(prototype)setPrototype(prototype);
     }
 
     bool Parameter::isByval() {
@@ -131,8 +131,10 @@ namespace evoBasic::type{
     void Function::add(Symbol *symbol){
         switch(symbol->getKind()){
             case SymbolKind::Argument:
-                argsSignature.push_back(symbol->as<Parameter*>());
-                addMemoryLayout(symbol->as<Variable*>());
+                if(symbol->as<Parameter*>()->getName()!="self"){
+                    argsSignature.push_back(symbol->as<Parameter*>());
+                    addMemoryLayout(symbol->as<Variable*>());
+                }
                 break;
             case SymbolKind::Variable:
                 addMemoryLayout(symbol->as<Variable*>());
@@ -145,14 +147,25 @@ namespace evoBasic::type{
         Domain::add(symbol);
     }
 
-    std::vector<Parameter*> &Function::getArgsSignature() {
+    const std::vector<Parameter*> &Function::getArgsSignature() {
         return argsSignature;
     }
 
     Function::Function() : Domain(SymbolKind::Function){}
 
     UserFunction::UserFunction(FunctionFlag flag,ast::Function *function_node)
-        :function_node(function_node),flag(flag){}
+        :function_node(function_node),flag(flag){
+        switch (flag) {
+            case FunctionFlag::Method:
+            case FunctionFlag::Virtual:
+            case FunctionFlag::Override:
+                self = new Parameter("self",nullptr, true,false);
+                UserFunction::add(self);
+                break;
+            case FunctionFlag::Static:
+                break;
+        }
+    }
 
     ast::Function* UserFunction::getFunctionNode() {
         return this->function_node;
@@ -187,6 +200,23 @@ namespace evoBasic::type{
 
     void UserFunction::setFunctionFlag(FunctionFlag flag) {
         this->flag = flag;
+    }
+
+    bool UserFunction::isStatic() {
+        if(Symbol::isStatic())return true;
+        switch (flag) {
+            case FunctionFlag::Virtual:
+            case FunctionFlag::Override:
+            case FunctionFlag::Method: return false;
+            case FunctionFlag::Static: return true;
+        }
+    }
+
+    void UserFunction::setParent(Domain *parent) {
+        Symbol::setParent(parent);
+        if(self){
+            self->setPrototype(parent);
+        }
     }
 
     ExternalFunction::ExternalFunction(std::string library, std::string name)
@@ -227,7 +257,7 @@ namespace evoBasic::type{
         this->name=std::move(str);
     }
 
-    Domain *Symbol::getParent() {
+    Domain *Symbol::getParent() const {
         return parent;
     }
 
@@ -535,14 +565,6 @@ namespace evoBasic::type{
                 return vm::Data::ptr.getSize();
         }
         PANIC;
-    }
-
-    bool Variable::isStatic() {
-        return is_static;
-    }
-
-    void Variable::setStatic(bool value) {
-        is_static = value;
     }
 
 

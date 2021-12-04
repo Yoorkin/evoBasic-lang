@@ -14,16 +14,16 @@ namespace evoBasic{
 
     void Logger::error(string message) {
         errorCount++;
-        cout << "error: " << message << endl;
+        *out << "error: " << message << endl;
     }
 
     void Logger::warning(string message){
         warningCount++;
-        cout << "warning: " << message << endl;
+        *out << "warning: " << message << endl;
     }
 
     void Logger::dev(string message){
-        if(debugMode)cout<<message;
+        if(debugMode)*out<<message;
     }
 
     ostream* Logger::out = &std::cout;

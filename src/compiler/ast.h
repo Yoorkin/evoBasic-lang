@@ -372,6 +372,7 @@ namespace evoBasic::ast{
         struct Assign : Expression{
             Assign(Expression *lhs,Expression *rhs){
                 expression_kind = assign_;
+                this->location = new Location(lhs->location,rhs->location);
                 this->lhs = lhs;
                 this->rhs = rhs;
             }

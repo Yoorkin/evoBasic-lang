@@ -14,7 +14,7 @@ namespace evoBasic{
     struct TypeAnalyzerArgs{
         Context *context = nullptr;
         type::Domain *domain = nullptr;
-        type::Symbol *dot_expression_context = nullptr;
+        ExpressionType *dot_prefix = nullptr;
         type::Domain *current_class_or_module = nullptr;
         type::UserFunction *user_function = nullptr;
         type::Function *checking_function = nullptr;
@@ -57,6 +57,7 @@ namespace evoBasic{
                                    type::Prototype *lhs,type::Prototype *rhs,ast::expr::Expression **lhs_node,ast::expr::Expression **rhs_node);
         void check_access(Location *code_location,type::Symbol *target,type::Domain *current,type::Domain *current_class_or_module);
         void check_callee(Location *location,ast::expr::Argument *argument,type::Function *target, TypeAnalyzerArgs args);
+        void check_static_access(Location *code_location,ExpressionType *lhs,bool is_rhs_static);
         std::any visitDigit(ast::expr::Digit *digit_node, TypeAnalyzerArgs args) override;
         std::any visitDecimal(ast::expr::Decimal *decimal, TypeAnalyzerArgs args) override;
         std::any visitBoolean(ast::expr::Boolean *bl_node, TypeAnalyzerArgs args) override;
