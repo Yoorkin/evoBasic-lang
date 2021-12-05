@@ -503,11 +503,17 @@ namespace evoBasic{
 
     ast::Parameter *Parser::parseParameter(Follows follows){
         auto param = new Parameter;
-        if(lexer->predict(Token::optional_)){
-            lexer->match(Token::optional_);
-            param->is_optional = true;
+
+        switch (lexer->getNextToken()->getKind()) {
+            case Token::optional_:
+                lexer->match(Token::optional_);
+                param->is_optional = true;
+                break;
+            case Token::paramArray_:
+                lexer->match(Token::paramArray_);
+                param->is_param_array = true;
+                break;
         }
-        else param->is_optional = false;
 
         switch (lexer->getNextToken()->getKind()) {
             case Token::byval_:
@@ -836,6 +842,9 @@ namespace evoBasic{
                     //ASSIGN 语法树向右生长
                     return new Assign(lhs,parseLogic(addition_follows));
                     break;
+                case Token::COLON:
+                    lexer->match(Token::COLON);
+                    return new Colon((ID*)lhs, parseLogic(addition_follows));
                 default:
                     return lhs;
             }
@@ -958,6 +967,7 @@ namespace evoBasic{
     ast::expr::Callee::Argument *Parser::parseArg(Follows follows) {
         auto arg = new Callee::Argument;
         auto begin_location = lexer->getNextToken()->getLocation();
+
         if(lexer->predict(Token::byval_)){
             lexer->match(Token::byval_);
             arg->pass_kind = ast::expr::Callee::Argument::byval;

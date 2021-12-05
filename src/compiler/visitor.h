@@ -42,6 +42,7 @@ namespace evoBasic{
         virtual std::any visitDot(ast::expr::Dot *dot_node, ARGS args){PANIC;}
         virtual std::any visitAssign(ast::expr::Assign *assign_node, ARGS args){PANIC;}
         virtual std::any visitCast(ast::expr::Cast *cast_node,ARGS args){PANIC;}
+        virtual std::any visitColon(ast::expr::Colon *colon_node,ARGS args){PANIC;}
 
         virtual std::any visitCallee(ast::expr::Callee *callee_node, ARGS args){PANIC;}
         virtual std::any visitArg(ast::expr::Callee::Argument *arg_node, ARGS args){PANIC;}

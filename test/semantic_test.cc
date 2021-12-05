@@ -191,6 +191,29 @@ void IS_CODE_NO_ERROR(string code){
     ASSERT_TRUE(Logger::errorCount == 0)<<stream.str();
 }
 
+TEST(SelfRefference,GetSelfImplicit){
+    auto code = R"CODE(
+Class MyClass
+    Dim num as integer
+    Function Get() as Integer
+        return num
+    End Function
+End Class
+)CODE";
+    IS_CODE_NO_ERROR(code);
+}
+TEST(SelfRefference,GetSelfExplicit){
+    auto code = R"CODE(
+Class MyClass
+    Dim num as integer
+    Function Get() as Integer
+        return Self.num
+    End Function
+End Class
+)CODE";
+    IS_CODE_NO_ERROR(code);
+}
+
 
 TEST(DotExpr,Case1){
     auto code = R"CODE(

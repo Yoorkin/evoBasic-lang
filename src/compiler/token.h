@@ -55,7 +55,7 @@ namespace evoBasic{
     class Token{
     public:
         enum Enum{
-            Error = 0,ID,DIGIT,DECIMAL,STRING,CHAR,DOT,COMMA,
+            Error = 0,ID,DIGIT,DECIMAL,STRING,CHAR,DOT,COMMA,COLON,
             LE,GE,EQ,LT,GT,NE,LP,RP,LB,RB,
             MUL,DIV,FDIV,MINUS,ADD,ASSIGN,EOF_,
             /* reserved key word */
@@ -63,7 +63,7 @@ namespace evoBasic{
             function_,sub_,byval_,byref_,optional_,as_,let_,end_,enum_,type_,
             select_,case_,for_,to_,step_,while_,wend_,if_,then_,elseif_,else_,
             and_,or_,xor_,not_,return_,continue_,exit_,next_,false_,true_,
-            import_,declare_,lib_,alias_,operator_,impl,extend_,interface_,new_,const_,
+            import_,declare_,lib_,alias_,operator_,impl,extend_,interface_,new_,const_,paramArray_,
             /* end domain token */
             END_IF,END_FUNCTION,END_SUB,END_MODULE,END_CLASS,END_TYPE,END_ENUM,END_SELECT,END_INIT,END_OPERATOR,END_INTERFACE,
         };

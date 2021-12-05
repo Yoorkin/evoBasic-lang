@@ -26,8 +26,32 @@ namespace evoBasic{
     std::any TypeAnalyzer::visitArg(ast::expr::Callee::Argument *argument_node, TypeAnalyzerArgs args) {
         NotNull(args.checking_function);
         auto function = args.checking_function;
-        if(args.checking_arg_index >= function->getArgsSignature().size())return {};
-        auto param =  function->getArgsSignature()[args.checking_arg_index];
+        type::Parameter *param = nullptr;
+        if(argument_node->expr->expression_kind == ast::expr::Expression::colon_){
+            // parameter initialization
+            auto colon_node = (Colon*)(argument_node->expr);
+            if(colon_node->lhs->expression_kind != ast::expr::Expression::ID_){
+                Logger::error(colon_node->lhs->location,"parameter initialization expected a parameter name here");
+                return {};
+            }
+            auto init_name = getID((ID*)colon_node->lhs);
+            auto opt_index = args.checking_function->findOptionIndex(init_name);
+            if(!opt_index.has_value()){
+                Logger::error(colon_node->lhs->location,format()<<"option '"<<init_name<<"' in function '"<<args.user_function->getName()<<"' not found");
+                return {};
+            }
+            param = args.checking_function->getArgsOptions()[opt_index.value()];
+        }
+        else{
+            // regular parameter
+            if(args.checking_arg_index >= function->getArgsSignature().size()){
+                if(function->getParamArray())param = function->getParamArray(); // paramArray
+                else return {};
+            }
+            else param = function->getArgsSignature()[args.checking_arg_index];
+        }
+
+
 
         args.dot_prefix = nullptr;
         auto arg_type = any_cast<ExpressionType*>(visitExpression((*argument_node).expr, args));
@@ -363,6 +387,7 @@ namespace evoBasic{
             case exp::callee_:      return visitCallee((Callee*)expr_node,args);
 
             case exp::ID_:          return visitID((ID*)expr_node,args);
+            case exp::colon_:       return visitColon((Colon*)expr_node,args);
         }
         PANIC;
     }
@@ -457,6 +482,15 @@ namespace evoBasic{
     
     std::any TypeAnalyzer::visitDot(ast::expr::Dot *dot_node, TypeAnalyzerArgs args) {
         auto lhs_type = any_cast<ExpressionType*>(visitExpression(dot_node->lhs,args));
+
+        switch (lhs_type->value_kind) {
+            case ExpressionType::error:
+                return lhs_type;
+            case ExpressionType::void_:
+                Logger::error(dot_node->location,"invalid expression");
+                return ExpressionType::Error;
+        }
+
         args.dot_prefix = lhs_type;
         auto rhs_type = any_cast<ExpressionType*>(visitExpression(dot_node->rhs,args));
 
@@ -532,6 +566,14 @@ namespace evoBasic{
         auto target_type = any_cast<ExpressionType*>(visitExpression(index_node->target,args));
         auto value_type = any_cast<ExpressionType*>(visitExpression(index_node->value,args));
 
+        switch (target_type->value_kind) {
+            case ExpressionType::error:
+                return target_type;
+            case ExpressionType::void_:
+                Logger::error(index_node->location,"invalid expression");
+                return ExpressionType::Error;
+        }
+
         Prototype *dst_prototype = nullptr,*ret_prototype = nullptr;
         switch(target_type->getPrototype()->getKind()){
             case SymbolKind::Array:
@@ -577,7 +619,13 @@ namespace evoBasic{
         check_callee(callee_node->location,callee_node->argument,func,args);
 
         auto ret = func->getRetSignature();
-        return callee_node->type = new ExpressionType(ret->as<type::Prototype*>(),ExpressionType::rvalue);
+        if(ret){
+            return callee_node->type = new ExpressionType(ret->as<type::Prototype*>(),ExpressionType::rvalue);
+        }
+        else{
+            return callee_node->type = ExpressionType::Void;
+        }
+
     }
 
 
@@ -670,13 +718,24 @@ namespace evoBasic{
     }
 
     void TypeAnalyzer::check_callee(Location *location, Argument *argument, type::Function *target, TypeAnalyzerArgs args){
-        auto args_count = 0;
+        std::size_t args_count = 0;
         auto params_count = target->getArgsSignature().size();
 
         auto arg = argument;
+        bool opt_flag = false;
         while(arg){
+            if(arg->expr->expression_kind != ast::expr::Expression::colon_){
+                if(opt_flag){
+                    Logger::error(arg->location,"regular argument is not allowed after optional argument");
+                }
+                args_count++;
+            }
+            else opt_flag = true;
             arg = arg->next_sibling;
-            args_count++;
+        }
+
+        if(target->getParamArray() && args_count > params_count){
+            args_count = params_count;
         }
 
         if(args_count > params_count){
@@ -748,6 +807,20 @@ namespace evoBasic{
             auto lhs_state = lhs->is_static ? "Static" : "Non-static";
             auto rhs_state = is_rhs_static ? "Static" : "Non-static";
             Logger::error(code_location,format()<<"cannot find object. lhs is "<<lhs_state<<" but rhs is "<<rhs_state);
+        }
+    }
+
+    std::any TypeAnalyzer::visitColon(ast::expr::Colon *colon_node, TypeAnalyzerArgs args) {
+        if(colon_node->lhs->expression_kind != ast::expr::Expression::ID_){
+            Logger::error(colon_node->location,"lhs of parameter initialization must be an id");
+            return ExpressionType::Error;
+        }
+        if(!args.checking_function){
+            Logger::error(colon_node->location,"a parameter initialization is allowed only in function or sub");
+            return ExpressionType::Error;
+        }
+        else{
+            return visitExpression(colon_node->rhs,args);
         }
     }
 

@@ -64,7 +64,6 @@
 29. [Deref-Array].Variable
 30. [Deref-Array].Invoke
 
-
 |测试用例|伪代码|覆盖等价类|
 |--|--|--|
 |1|`MyModule.MyClass.MyStaticFunc(MyEnum.Member1,MyTypeVar.Field1).RetTypeField`|1,8,9,11,14,16|
@@ -72,4 +71,12 @@
 |3|`Class Foo implement MyModule.MyInterface`|3|
 |4|`MyModule.MyClassVar.MyNonStaticFunc(myLocalArrayVar[1],MyClassVar.Field1)[5].myField`|6,12,13,15,17,24,25,26,29|
 |5|`Sub InClassSub(Byval clsArgs as MyClass[10],ByRef b as MyClass) Self.id = Self.MyFunc(MyClass[5].getNum()) let local = b.getID() + b.id + b.array[1] End Sub`|20,21,22,23,27,28,30|
+
+### 无效等价类
+
+1. Static.NonStatic-Variable
+1. Static.NonStatic-Function
+2. NonStatic.Static-Variable
+3. NonStatic.Static-Function
+
 

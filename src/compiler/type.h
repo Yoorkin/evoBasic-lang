@@ -15,6 +15,7 @@
 #include <exception>
 #include <sstream>
 #include <memory>
+#include <optional>
 #include "ast.h"
 #include "token.h"
 #include "bytecode.h"
@@ -193,8 +194,11 @@ namespace evoBasic::type{
 
     class Function: public Domain{
     protected:
-        std::vector<Parameter*> argsSignature;
-        Prototype *retSignature = nullptr;
+        std::vector<Parameter*> args_signature;
+        std::vector<Parameter*> args_options;
+        std::map<std::string,int> option_map;
+        Prototype *ret_signature = nullptr;
+        Parameter *param_array = nullptr;
         std::size_t tmp_domain_count = 0;
     public:
         Function(const Function&)=delete;
@@ -202,6 +206,11 @@ namespace evoBasic::type{
 
         void add(Symbol *symbol)override;
         const std::vector<Parameter*>& getArgsSignature();
+        const std::vector<Parameter*>& getArgsOptions();
+        Parameter *getParamArray();
+
+        std::optional<int> findOptionIndex(const std::string &name);
+
         Prototype *getRetSignature();
         void setRetSignature(Prototype *ptr);
 
@@ -334,12 +343,13 @@ namespace evoBasic::type{
     };
 
     class Parameter : public Variable{
-        bool is_byval,is_optional;
+        bool is_byval,is_optional,is_param_array;
     public:
-        Parameter(std::string name, Prototype *prototype, bool isByval, bool isOptional);
+        Parameter(std::string name, Prototype *prototype, bool isByval, bool isOptional, bool isParamArray = false);
         std::string debug(int indent)override;
         bool isByval();
         bool isOptional();
+        bool isParamArray();
         data::ptr getRealByteLength()override;
     };
 

@@ -88,7 +88,7 @@ add ::= term ("+"|"-") add;
 
 term ::= factor ("*"|"/"|"\\") term;
 
-factor ::= unary ("=" expr | "As" annotation {"As" annotation});
+factor ::= unary (":" expr | "=" expr | "As" annotation {"As" annotation});
 
 unary ::= ("-"|"+") unary
         | terminal "." unary
@@ -100,12 +100,13 @@ terminal ::= Digit
            | String 
            | Char
            | "(" expr ")" 
-           | ID argsBody 
+           | ID argsBody
            | "New" annotation "(" argsBody ")"
            ;
 
-argsBody ::= ["(" [argList] ")"] ["[" expr "]"]; 
-argList ::= expr {"," expr};
+argsBody ::= ["(" [argList] ")"] ["[" expr "]"];
+argList ::= argument {"," argument};
+argument ::= ["Byval"|"Byref"] expr;
 
 annotation ::= annotationUnit {"." annotationUnit} ["[]"];
 annotationUnit ::= ID;

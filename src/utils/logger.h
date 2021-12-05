@@ -31,7 +31,7 @@ namespace evoBasic{
         static void warning(std::string message);
         static void dev(std::string message);
 
-        static void code(const Location *location);
+        static void code(const Location *location,bool is_error = false);
         static void error(const Location *location,const std::string& message);
         static void warning(const Location *location,const std::string& message);
         static void panic(const std::list<std::pair<std::string,Location*>>& callstack,const Location *location,const std::string& message);

@@ -63,9 +63,10 @@ namespace evoBasic::type{
         Domain::add(symbol);
     }
 
-    Parameter::Parameter(std::string name,Prototype *prototype, bool isByval, bool isOptional)
-            : Variable(SymbolKind::Argument), is_byval(isByval), is_optional(isOptional){
+    Parameter::Parameter(std::string name,Prototype *prototype, bool isByval, bool isOptional ,bool isParamArray)
+            : Variable(SymbolKind::Argument), is_byval(isByval), is_optional(isOptional),is_param_array(isParamArray){
         setName(move(name));
+        if(isParamArray)is_byval = true;
         if(prototype)setPrototype(prototype);
     }
 
@@ -75,6 +76,10 @@ namespace evoBasic::type{
 
     bool Parameter::isOptional() {
         return is_optional;
+    }
+
+    bool Parameter::isParamArray() {
+        return is_param_array;
     }
 
     std::string Parameter::debug(int indent) {
@@ -95,12 +100,12 @@ namespace evoBasic::type{
     }
 
     Prototype *Function::getRetSignature() {
-        return this->retSignature;
+        return this->ret_signature;
     }
 
     void Function::setRetSignature(Prototype *ptr){
         NotNull(ptr);
-        retSignature = ptr;
+        ret_signature = ptr;
     }
 
 
@@ -108,13 +113,13 @@ namespace evoBasic::type{
         stringstream str;
         for(int i=0;i<indent;i++)str<<indent_unit;
         str<<this->getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Function(";
-        for(const auto& arg:this->argsSignature){
+        for(const auto& arg:this->args_signature){
             str<<arg->debug(0);
-            if(&arg!=&argsSignature.back())str<<',';
+            if(&arg!=&args_signature.back())str << ',';
         }
         str<<')';
-        if(retSignature)
-            str<<" As "<<retSignature->getName();
+        if(ret_signature)
+            str << " As " << ret_signature->getName();
         str<<"{\n";
         for(auto p : *this){
             p->debug(indent+1);
@@ -132,8 +137,18 @@ namespace evoBasic::type{
         switch(symbol->getKind()){
             case SymbolKind::Argument:
                 if(symbol->as<Parameter*>()->getName()!="self"){
-                    argsSignature.push_back(symbol->as<Parameter*>());
-                    addMemoryLayout(symbol->as<Variable*>());
+                    auto param = symbol->as<Parameter*>();
+                    if(param->isOptional()){
+                        args_options.push_back(param);
+                        option_map.insert({param->getName(),args_options.size()-1});
+                    }
+                    else if(param->isParamArray()){
+                        param_array = param;
+                    }
+                    else{
+                        args_signature.push_back(param);
+                    }
+                    addMemoryLayout(param);
                 }
                 break;
             case SymbolKind::Variable:
@@ -148,10 +163,24 @@ namespace evoBasic::type{
     }
 
     const std::vector<Parameter*> &Function::getArgsSignature() {
-        return argsSignature;
+        return args_signature;
     }
 
     Function::Function() : Domain(SymbolKind::Function){}
+
+    const std::vector<Parameter *> &Function::getArgsOptions() {
+        return args_options;
+    }
+
+    optional<int> Function::findOptionIndex(const std::string &name) {
+        auto target = option_map.find(name);
+        if(target == option_map.end())return {};
+        return target->second;
+    }
+
+    Parameter *Function::getParamArray() {
+        return param_array;
+    }
 
     UserFunction::UserFunction(FunctionFlag flag,ast::Function *function_node)
         :function_node(function_node),flag(flag){

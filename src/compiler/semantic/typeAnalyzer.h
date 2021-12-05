@@ -47,6 +47,7 @@ namespace evoBasic{
         std::any visitDot(ast::expr::Dot *dot_node, TypeAnalyzerArgs args) override;
         std::any visitIndex(ast::expr::Index *index_node, TypeAnalyzerArgs args) override;
         std::any visitAssign(ast::expr::Assign *assign_node, TypeAnalyzerArgs args) override;
+        std::any visitColon(ast::expr::Colon *colon_node, TypeAnalyzerArgs args) override;
         std::any visitCallee(ast::expr::Callee *callee_node, TypeAnalyzerArgs args) override;
         std::any visitArg(ast::expr::Callee::Argument *arg_node, TypeAnalyzerArgs args) override;
         std::any visitNew(ast::expr::New *new_node, TypeAnalyzerArgs args) override;

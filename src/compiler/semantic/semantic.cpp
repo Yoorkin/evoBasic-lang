@@ -18,6 +18,7 @@ namespace evoBasic{
 
 
     ExpressionType *ExpressionType::Error = new ExpressionType(new type::Error,error);
+    ExpressionType *ExpressionType::Void = new ExpressionType(new type::Error,void_);
 
     void Semantic::collectSymbol(AST *ast, Context *context) {
         SymbolCollector collector;

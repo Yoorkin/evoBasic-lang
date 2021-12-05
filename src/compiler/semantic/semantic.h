@@ -38,7 +38,7 @@ namespace evoBasic{
          *
          */
         bool is_static = false;
-        enum ValueKind {lvalue,rvalue,path,error} value_kind;
+        enum ValueKind {lvalue,rvalue,path,error,void_} value_kind;
         ExpressionType()=default;
         ExpressionType(type::Symbol *symbol,ValueKind kind,bool is_static = false){
             NotNull(symbol);
@@ -51,7 +51,7 @@ namespace evoBasic{
             NotNull(tmp);
             return tmp;
         }
-        static ExpressionType *Error;
+        static ExpressionType *Error,*Void;
     };
 
     class SymbolNotFound : std::exception{

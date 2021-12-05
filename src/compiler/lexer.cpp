@@ -171,6 +171,7 @@ namespace evoBasic{
                     else if(c == ',')        endState(true,Token::COMMA);
                     else if(c == '[')        endState(true,Token::LB);
                     else if(c == ']')        endState(true,Token::RB);
+                    else if(c == ':')        endState(true,Token::COLON);
                     else if(c == -1)         endState(false,Token::EOF_);
                     else error();
                     break;

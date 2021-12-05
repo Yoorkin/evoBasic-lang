@@ -237,7 +237,7 @@ namespace evoBasic{
         auto name = getID((**parameter_node).name);
         auto prototype = any_cast<Prototype*>(visitAnnotation(&(**parameter_node).annotation,args));
         NotNull(prototype);
-        auto arg = new type::Parameter(name, prototype, (**parameter_node).is_byval, (**parameter_node).is_optional);
+        auto arg = new type::Parameter(name, prototype, (**parameter_node).is_byval, (**parameter_node).is_optional,(**parameter_node).is_param_array);
         if((**parameter_node).is_byval){
             switch (prototype->getKind()) {
                 case type::SymbolKind::Record:

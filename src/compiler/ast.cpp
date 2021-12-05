@@ -372,5 +372,8 @@ namespace evoBasic::ast{
         return new DebugInfo{"'='",{lhs->debug(),rhs->debug()}};
     }
 
+    DebugInfo *expr::Colon::debug() {
+        return new DebugInfo{"Colon",{lhs->debug(),rhs->debug()}};
+    }
 }
 

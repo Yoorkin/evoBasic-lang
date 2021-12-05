@@ -218,6 +218,7 @@ namespace evoBasic::ast{
     struct Parameter : Node{
         bool is_byval = false;
         bool is_optional = false;
+        bool is_param_array = false;
         expr::ID *name = nullptr;
         Annotation *annotation = nullptr;
         DebugInfo *debug()override;
@@ -318,10 +319,23 @@ namespace evoBasic::ast{
         struct Expression : Node{
             enum ExpressionKind{
                 error_ = 0,binary_,unary_,parentheses_,ID_,cast_,
-                digit_,decimal_,string_,char_,boolean_,callee_,new_,index_,dot_,assign_
+                digit_,decimal_,string_,char_,boolean_,callee_,new_,
+                index_,dot_,assign_,colon_
             }expression_kind = error_;
             DebugInfo *debug()override;
             ExpressionType *type = nullptr;
+        };
+
+        struct Colon : Expression{
+            Colon(Expression *lhs,Expression *rhs){
+                expression_kind = colon_;
+                this->location = new Location(lhs->location,rhs->location);
+                this->lhs = lhs;
+                this->rhs = rhs;
+            }
+            Expression *lhs = nullptr;
+            Expression *rhs = nullptr;
+            DebugInfo *debug()override;
         };
 
         struct Binary : Expression{
@@ -483,6 +497,7 @@ namespace evoBasic::ast{
             data::boolean value = false;
             DebugInfo *debug()override;
         };
+
     }
 
 }
