@@ -596,6 +596,10 @@ namespace evoBasic::type{
         return is_abstract_class;
     }
 
+    Constructor *Class::getConstructor() {
+        return constructor;
+    }
+
 
     void Record::add(Symbol *symbol) {
         auto field = symbol->as<Variable*>();
@@ -829,7 +833,7 @@ namespace evoBasic::type{
         return FunctionKind::Constructor;
     }
 
-    Constructor::Constructor(ast::Function *function_node) : function_node(function_node) {}
+    Constructor::Constructor(ast::Constructor *node) : constructor_node(node) {}
 
     VirtualTable::VirtualTable(VirtualTable *base)
         : slot(base->slot),slot_map(base->slot_map),base(base) {}

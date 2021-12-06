@@ -14,8 +14,8 @@ namespace evoBasic{
         const Token& token;
         explicit SyntaxException(Token& token,Token::Enum expected):token(token),expected(expected){
             auto l = token.getLocation();
-            tmp = format()<<token.getLemexe() << " but expected " << Token::enum_to_string[(int)expected]
-                          <<" in (" << l->getBeginY() <<","<<l->getBeginX()<<")";
+            tmp = format() << token.getLexeme() << " but expected " << Token::enum_to_string[(int)expected]
+                           << " in (" << l->getBeginY() << "," << l->getBeginX() << ")";
         };
         Token::Enum expected;
         const char * what() const noexcept override{

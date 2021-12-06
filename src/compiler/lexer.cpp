@@ -46,7 +46,8 @@ namespace evoBasic{
                 {Token::select_,   Token::END_SELECT},
                 {Token::type_,     Token::END_TYPE},
                 {Token::operator_, Token::END_OPERATOR},
-                {Token::interface_,Token::END_INTERFACE}
+                {Token::interface_,Token::END_INTERFACE},
+                {Token::new_,      Token::END_NEW}
         };
         Token *token = nullptr,*next = LL();
         do{
@@ -56,7 +57,7 @@ namespace evoBasic{
                 auto trans = merge.find(next->getKind());
                 if(trans != merge.end()){
                     Location location(token->getLocation(),next->getLocation());
-                    auto tmp = new Token(location,trans->second,token->getLemexe() +' '+next->getLemexe());
+                    auto tmp = new Token(location,trans->second, token->getLexeme() + ' ' + next->getLexeme());
                     delete token;
                     delete next;
                     token = tmp;

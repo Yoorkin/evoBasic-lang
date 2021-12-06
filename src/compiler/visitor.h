@@ -20,7 +20,7 @@ namespace evoBasic{
         virtual std::any visitVariable(ast::Variable *var_node,ARGS args){PANIC;}
         virtual std::any visitFunction(ast::Function *func_node,ARGS args){PANIC;}
         virtual std::any visitExternal(ast::External *ext_node,ARGS args){PANIC;}
-        virtual std::any visitInit(ast::Init *init_node,ARGS args){PANIC;}
+        virtual std::any visitConstructor(ast::Constructor *constructor_node, ARGS args){PANIC;}
         virtual std::any visitOperator(ast::Operator *op_node,ARGS args){PANIC;}
         virtual std::any visitEnum(ast::Enum *em_node,ARGS args){PANIC;}
         virtual std::any visitType(ast::Type *ty_node,ARGS args){PANIC;}
@@ -79,7 +79,7 @@ namespace evoBasic{
         virtual std::any visitVariable(ast::Variable **var_node,ARGS args){PANIC;}
         virtual std::any visitFunction(ast::Function **func_node,ARGS args){PANIC;}
         virtual std::any visitExternal(ast::External **ext_node,ARGS args){PANIC;}
-        virtual std::any visitInit(ast::Init **init_node,ARGS args){PANIC;}
+        virtual std::any visitConstructor(ast::Constructor **constructor_node, ARGS args){PANIC;}
         virtual std::any visitOperator(ast::Operator **op_node,ARGS args){PANIC;}
         virtual std::any visitEnum(ast::Enum **em_node,ARGS args){PANIC;}
         virtual std::any visitType(ast::Type **ty_node,ARGS args){PANIC;}

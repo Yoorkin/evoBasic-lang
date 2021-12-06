@@ -25,6 +25,7 @@ namespace evoBasic{
         std::any visitVariable(ast::Variable **variable_node, DefaultArgs args) override;
         std::any visitFunction(ast::Function **function_node, DefaultArgs args) override;
         std::any visitExternal(ast::External **external_node, DefaultArgs args) override;
+        std::any visitConstructor(ast::Constructor **constructor_node, DefaultArgs args) override;
         std::any visitParameter(ast::Parameter **parameter_node, DefaultArgs args) override;
         std::any visitMember(ast::Member **member_node, DefaultArgs args) override;
 

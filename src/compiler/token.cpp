@@ -160,7 +160,7 @@ namespace evoBasic{
         "Import","Declare","Lib","Alias","Operator","Impl","Extend","Interface","New","Const","ParamArray",
             /* end domain token */
         "End If","End Function","End Sub","End Module","End Class","End type","End Enum",
-        "End Select","End Init","End Operator","End Interface"
+        "End Select","End New","End Operator","End Interface"
     };
 
     Token::Token(Location location, Enum kind, std::string lexeme)
@@ -170,7 +170,7 @@ namespace evoBasic{
         return &location_;
     }
 
-    const std::string &Token::getLemexe() const {
+    const std::string &Token::getLexeme() const {
         return lexeme_;
     }
 

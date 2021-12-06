@@ -65,7 +65,7 @@ namespace evoBasic{
             and_,or_,xor_,not_,return_,continue_,exit_,next_,false_,true_,
             import_,declare_,lib_,alias_,operator_,impl,extend_,interface_,new_,const_,paramArray_,
             /* end domain token */
-            END_IF,END_FUNCTION,END_SUB,END_MODULE,END_CLASS,END_TYPE,END_ENUM,END_SELECT,END_INIT,END_OPERATOR,END_INTERFACE,
+            END_IF,END_FUNCTION,END_SUB,END_MODULE,END_CLASS,END_TYPE,END_ENUM,END_SELECT,END_NEW,END_OPERATOR,END_INTERFACE,
         };
         static std::map<std::string,Enum> reserved_words;
         static std::vector<std::string> enum_to_string;
@@ -77,7 +77,7 @@ namespace evoBasic{
     public:
         Token(Location location,Enum kind,std::string lexeme);
         Location* getLocation();
-        const std::string& getLemexe()const;
+        const std::string& getLexeme()const;
         Enum getKind();
         void setKind(Token::Enum kind);
         std::string toString();

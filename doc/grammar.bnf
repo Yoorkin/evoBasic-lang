@@ -23,7 +23,7 @@ classMember ::= [methodFlag] (functionDecl | subDecl)
               | dimDecl
               ;
 
-constructorDecl ::= "Sub" "New" "(" [parameterList] ")" {statement} "End Sub";
+constructorDecl ::= "New" "(" [parameterList] ")" {statement} "End New";
 
 operatorDecl ::= "Operator" ID "(" [parameterList] ")" "As" annotation {statement} "End Operator";
 
@@ -46,7 +46,7 @@ externalSub ::= "Sub" ID ["Lib" String] ["Alias" String] "(" [parameterList] ")"
 importDecl ::= "Import" annotation;
 
 parameterList ::= parameter {"," parameter};
-parameter ::= ["Optional"|"ParamArray"] ["Byval"|"Byref"] ID "As" annotation;
+parameter ::= ["Optional"|"ParamArray"] ["Byval"|"Byref"] ID "As" annotation ["=" expr];
 
 functionDecl ::= functionInterface {statement} "End Function";
 subDecl ::= subInterface {statement} "End Sub";

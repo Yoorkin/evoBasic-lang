@@ -220,13 +220,7 @@ namespace evoBasic{
                     break;
             }
 
-            if((**function_node).is_constructor){
-                function = new type::Constructor(*function_node);
-            }
-            else{
-                function = new type::UserFunction(flag, *function_node);
-            }
-
+            function = new type::UserFunction(flag, *function_node);
             function->setStatic((**function_node).is_static);
             function->setLocation((**function_node).name->location);
             function->setName(name);
@@ -274,7 +268,28 @@ namespace evoBasic{
                 visitParameter(&parameter,args);
             }
         }
-        return nullptr;
+        return {};
+    }
+
+    std::any DetailCollector::visitConstructor(ast::Constructor **constructor_node, DefaultArgs args) {
+        switch (args.parent_class_or_module->getKind()) {
+            case SymbolKind::Module:
+                Logger::error((**constructor_node).location,"constructor is only allowed in class");
+                break;
+            case SymbolKind::Class:{
+                auto cls = args.parent_class_or_module->as<type::Class*>();
+                if(cls->getConstructor()){
+                    Logger::error({(**constructor_node).location,cls->getConstructor()->getLocation()},
+                                  format()<<"constructor for '"<<cls->mangling('.')<<"' has defined");
+                }
+                else{
+                    auto constructor = new type::Constructor(*constructor_node);
+                    constructor->setLocation((**constructor_node).location);
+                    cls->setConstructor(constructor);
+                }
+            }
+        }
+        return {};
     }
 
     std::any DetailCollector::visitParameter(ast::Parameter **parameter_node, DefaultArgs args) {
@@ -282,6 +297,10 @@ namespace evoBasic{
         auto prototype = any_cast<Prototype*>(visitAnnotation(&(**parameter_node).annotation,args));
         NotNull(prototype);
         auto arg = new type::Parameter(name, prototype, (**parameter_node).is_byval, (**parameter_node).is_optional,(**parameter_node).is_param_array);
+        if(!(**parameter_node).is_optional && (**parameter_node).initial){
+            Logger::error((**parameter_node).location,"cannot set default value for non-optional parameter");
+        }
+
         if((**parameter_node).is_byval){
             switch (prototype->getKind()) {
                 case type::SymbolKind::Record:
@@ -305,9 +324,11 @@ namespace evoBasic{
             case ast::Member::dim_:      return visitDim((ast::Dim**)member_node,args);
             case ast::Member::external_: return visitExternal((ast::External**)member_node,args);
             case ast::Member::interface_:return visitInterface((ast::Interface**)member_node,args);
+            case ast::Member::constructor_:return visitConstructor((ast::Constructor**)member_node,args);
         }
         return {};
     }
+
 
 
 }

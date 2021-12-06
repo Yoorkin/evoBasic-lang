@@ -28,6 +28,7 @@ namespace evoBasic{
         std::any visitModule(ast::Module *mod_node, TypeAnalyzerArgs args) override;
         std::any visitClass(ast::Class *cls_node, TypeAnalyzerArgs args) override;
         std::any visitFunction(ast::Function *func_node, TypeAnalyzerArgs args) override;
+        std::any visitConstructor(ast::Constructor *constructor_node, TypeAnalyzerArgs args) override;
         std::any visitMember(ast::Member *member_node, TypeAnalyzerArgs args) override;
         std::any visitStatement(ast::stmt::Statement *stmt_node, TypeAnalyzerArgs args) override;
 

@@ -236,9 +236,9 @@ namespace evoBasic::type{
     };
 
     class Constructor : public Function{
-        ast::Function *function_node{};
+        ast::Constructor *constructor_node = nullptr;
     public:
-        explicit Constructor(ast::Function *function_node);
+        explicit Constructor(ast::Constructor *node);
         FunctionKind getFunctionKind()override;
     };
 
@@ -303,6 +303,7 @@ namespace evoBasic::type{
         void setExtend(Class *base);
         Class *getExtend();
 
+        Constructor *getConstructor();
         void setConstructor(Constructor *constructor);
 
         void addImpl(Interface *interface);

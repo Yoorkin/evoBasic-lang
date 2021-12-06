@@ -118,7 +118,8 @@ namespace evoBasic::ast{
                               <<" "<<AccessFlagToString[(int)access]
                               <<flag[(int)method_flag]
                               <<(is_static?" Static":"");
-        auto ret = new DebugInfo{text,{name->debug()}};
+        auto ret = new DebugInfo{text};
+        if(name)ret->childs.push_back(name->debug());
         auto iter = parameter;
         while(iter){
             ret->childs.push_back(iter->debug());
@@ -181,7 +182,9 @@ namespace evoBasic::ast{
 
         if(is_optional)text += " Optional";
 
-        return new DebugInfo{text,{name->debug(),annotation->debug()}};
+        auto ret = new DebugInfo{text,{name->debug(),annotation->debug()}};
+        if(initial)ret->childs.push_back(initial->debug());
+        return ret;
     }
 
     DebugInfo *stmt::Let::debug() {
@@ -374,6 +377,16 @@ namespace evoBasic::ast{
 
     DebugInfo *expr::Colon::debug() {
         return new DebugInfo{"Colon",{lhs->debug(),rhs->debug()}};
+    }
+
+    DebugInfo *Constructor::debug() {
+        auto ret = new DebugInfo{"Constructor"};
+        auto iter = parameter;
+        while(iter){
+            ret->childs.push_back(iter->debug());
+            iter = iter->next_sibling;
+        }
+        return ret;
     }
 }
 

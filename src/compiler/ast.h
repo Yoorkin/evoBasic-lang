@@ -17,6 +17,7 @@ namespace evoBasic{
         class Function;
         class UserFunction;
         class ExternalFunction;
+        class Constructor;
         class Enumeration;
         class EnumMember;
         class Interface;
@@ -37,7 +38,7 @@ namespace evoBasic::ast{
     struct Variable;
     struct Function;
     struct External;
-    struct Init;
+    struct Constructor;
     struct Operator;
     struct Enum;
     struct Type;
@@ -108,7 +109,7 @@ namespace evoBasic::ast{
         bool is_static = false;
         enum MemberKind{
             error,function_,class_,module_,type_,enum_,dim_,
-            import_,external_,interface_
+            import_,external_,interface_,constructor_
         }member_kind = error;
 
         Member *next_sibling = nullptr,*prv_sibling = nullptr;
@@ -171,7 +172,14 @@ namespace evoBasic::ast{
         stmt::Statement* statement = nullptr;
         DebugInfo *debug()override;
         type::Function *function_symbol = nullptr;
-        bool is_constructor = false;
+    };
+
+    struct Constructor : Member{
+        Constructor(){member_kind = MemberKind::constructor_;}
+        Parameter *parameter = nullptr;
+        stmt::Statement* statement = nullptr;
+        type::Constructor *constructor_symbol = nullptr;
+        DebugInfo *debug()override;
     };
 
     struct External : Member{
@@ -224,6 +232,7 @@ namespace evoBasic::ast{
         bool is_param_array = false;
         expr::ID *name = nullptr;
         Annotation *annotation = nullptr;
+        expr::Expression *initial = nullptr;
         DebugInfo *debug()override;
         Parameter *next_sibling = nullptr,*prv_sibling = nullptr;
         type::Parameter *parameter_symbol = nullptr;

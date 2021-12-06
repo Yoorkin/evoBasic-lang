@@ -28,6 +28,7 @@ namespace evoBasic{
         ast::Variable *parseVariable(Follows follows);
         ast::Function *parseFunction(Follows follows);
         ast::External *parseExternal(Follows follows);
+        ast::Constructor *parseConstructor(Follows follows);
         ast::EnumMember *parseEnumMember(Follows follows);
         ast::Interface *parseInterface(Follows follows);
         ast::Function *parseFunctionInterface(Follows follows);

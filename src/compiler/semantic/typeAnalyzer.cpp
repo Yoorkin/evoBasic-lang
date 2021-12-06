@@ -142,6 +142,7 @@ namespace evoBasic{
             case ast::Member::dim_:      return{}; //return visitDim((ast::Dim*)member_node,args);
             case ast::Member::external_: return visitExternal((ast::External*)member_node,args);
             case ast::Member::interface_:return{};
+            case ast::Member::constructor_:return visitConstructor((ast::Constructor*)member_node,args);
         }
         PANIC;
     }
@@ -199,6 +200,19 @@ namespace evoBasic{
         args.domain = args.function = function;
 
         auto iter = (*function_node).statement;
+        while(iter){
+            visitStatement(iter,args);
+            iter = iter->next_sibling;
+        }
+        return {};
+    }
+
+
+    std::any TypeAnalyzer::visitConstructor(ast::Constructor *constructor_node, TypeAnalyzerArgs args) {
+        auto function = (*constructor_node).constructor_symbol;
+        args.domain = args.function = function;
+
+        auto iter = (*constructor_node).statement;
         while(iter){
             visitStatement(iter,args);
             iter = iter->next_sibling;
@@ -642,13 +656,13 @@ namespace evoBasic{
             Logger::error(new_node->location,"cannot instantiate abstract class");
         }
 
-        auto init = cls->find("init")->as<UserFunction*>();
-        if(!init){
-            Logger::error(new_node->location,format()<<"cannot find initializer in '"<<cls->mangling('.')<<"'");
+        auto constructor = cls->getConstructor();
+        if(!constructor){
+            Logger::error(new_node->location,format()<<"constructor for '"<<cls->mangling('.')<<"' is undefined");
             return ExpressionType::Error;
         }
 
-        check_callee(new_node->location,new_node->argument,init,args);
+        check_callee(new_node->location,new_node->argument,constructor,args);
 
         return new ExpressionType(cls,ExpressionType::rvalue);
     }
@@ -827,5 +841,6 @@ namespace evoBasic{
             return visitExpression(colon_node->rhs,args);
         }
     }
+
 
 }

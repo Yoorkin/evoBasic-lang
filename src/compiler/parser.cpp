@@ -181,6 +181,9 @@ namespace evoBasic{
             case Token::declare_:
                 member = parseExternal(follows);
                 break;
+            case Token::new_:
+                member = parseConstructor(follows);
+                break;
             case Token::type_:
                 member = parseType(follows);
                 break;
@@ -300,12 +303,8 @@ namespace evoBasic{
 
         if(lexer->predict(Token::sub_)){
             lexer->match(Token::sub_);
-            if(lexer->predict(Token::new_)){
-                func->is_constructor = true;
-            }
-            else{
-                func->name = parseID(stmt_follows);
-            }
+
+            func->name = parseID(stmt_follows);
             func->location = func->name->location;
             func->parameter = parseParameterList(stmt_follows);
             func->return_annotation = nullptr;
@@ -360,6 +359,20 @@ namespace evoBasic{
             ext->return_annotation = nullptr;
         }
         return ext;
+    }
+
+
+    ast::Constructor *Parser::parseConstructor(const set<Token::Enum> &follows) {
+        auto stmt_follows = combine(follows,{Token::END_NEW});
+        auto constructor = new Constructor;
+
+        lexer->match(Token::new_);
+        constructor->location = lexer->getToken()->getLocation();
+        constructor->parameter = parseParameterList(follows);
+
+        constructor->statement = parseStmtList(stmt_follows);
+        lexer->match(Token::END_NEW,follows,"expected 'End New'");
+        return constructor;
     }
 
     ast::EnumMember *Parser::parseEnumMember(Follows follows){
@@ -536,6 +549,12 @@ namespace evoBasic{
         param->location = param->name->location;
         lexer->match(Token::as_);
         param->annotation = parseAnnotation(follows);
+
+        if(lexer->predict(Token::ASSIGN)){
+            lexer->match(Token::ASSIGN);
+            param->initial = parseLogic(combine(follows,{Token::COMMA}));
+        }
+
         return param;
     }
 
@@ -543,7 +562,7 @@ namespace evoBasic{
         lexer->match(Token::ID);
         auto id = new ID;
         id->location = lexer->getToken()->getLocation();
-        id->lexeme = lexer->getToken()->getLemexe();
+        id->lexeme = lexer->getToken()->getLexeme();
         return id;
     }
 
@@ -992,7 +1011,7 @@ namespace evoBasic{
             lexer->match(Token::DIGIT);
             auto digit = new expr::Digit;
             digit->location = lexer->getToken()->getLocation();
-            digit->value = stoi(lexer->getToken()->getLemexe());
+            digit->value = stoi(lexer->getToken()->getLexeme());
             return digit;
         }
         else{
@@ -1005,7 +1024,7 @@ namespace evoBasic{
         lexer->match(Token::DECIMAL);
         auto decimal = new expr::Decimal;
         decimal->location = lexer->getToken()->getLocation();
-        decimal->value = stod(lexer->getToken()->getLemexe());
+        decimal->value = stod(lexer->getToken()->getLexeme());
         return decimal;
     }
 
@@ -1013,7 +1032,7 @@ namespace evoBasic{
         lexer->match(Token::STRING);
         auto str = new expr::String;
         str->location = lexer->getToken()->getLocation();
-        auto &lexeme = lexer->getToken()->getLemexe();
+        auto &lexeme = lexer->getToken()->getLexeme();
         str->value = lexeme.substr(1,lexeme.size()-2);
         return str;
     }
@@ -1022,8 +1041,8 @@ namespace evoBasic{
         lexer->match(Token::CHAR);
         auto ch = new expr::Char;
         ch->location = lexer->getToken()->getLocation();
-        auto &lexeme = lexer->getToken()->getLemexe();
-        ch->value = lexer->getToken()->getLemexe()[1];
+        auto &lexeme = lexer->getToken()->getLexeme();
+        ch->value = lexer->getToken()->getLexeme()[1];
         return ch;
     }
 
