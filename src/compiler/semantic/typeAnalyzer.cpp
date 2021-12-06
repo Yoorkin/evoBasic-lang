@@ -37,7 +37,7 @@ namespace evoBasic{
             auto init_name = getID((ID*)colon_node->lhs);
             auto opt_index = args.checking_function->findOptionIndex(init_name);
             if(!opt_index.has_value()){
-                Logger::error(colon_node->lhs->location,format() << "option '" << init_name << "' in function '" << args.function->getName() << "' not found");
+                Logger::error(colon_node->lhs->location,format() << "option '" << init_name << "' in function '" << args.checking_function->getName() << "' not found");
                 return {};
             }
             param = args.checking_function->getArgsOptions()[opt_index.value()];
@@ -636,6 +636,10 @@ namespace evoBasic{
         if(!cls){
             Logger::error(new_node->location,"type is not a Class");
             return ExpressionType::Error;
+        }
+
+        if(cls->isAbstract()){
+            Logger::error(new_node->location,"cannot instantiate abstract class");
         }
 
         auto init = cls->find("init")->as<UserFunction*>();

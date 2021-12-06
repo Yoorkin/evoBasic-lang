@@ -283,12 +283,14 @@ namespace evoBasic::type{
     class Class : public Record {
     protected:
         Class *base_class = nullptr;
-        using Signature = std::string;
-        std::map<std::string,Interface*> impl_interface;
+
         std::multimap<Operator::Kind,Operator> operator_overload;
         std::set<std::string> operator_signature;
         Constructor *constructor = nullptr;
         VirtualTable *vtable = nullptr;
+        std::map<std::string,VirtualTable*> impl_vtables;
+        std::map<std::string,Interface*> impl_interface;
+        bool is_abstract_class = true;
     public:
         Class(const Class&)=delete;
         explicit Class();
@@ -316,6 +318,7 @@ namespace evoBasic::type{
         std::string debug(int indent)override;
         Symbol *find(const std::string& name)override;
 
+        bool isAbstract();
     };
 
     class Interface : public Domain{
@@ -326,6 +329,7 @@ namespace evoBasic::type{
 
         bool equal(Prototype *ptr)final{PANIC;}
         std::string debug(int indent)final;
+        VirtualTable *getVTable();
     };
 
     namespace primitive{

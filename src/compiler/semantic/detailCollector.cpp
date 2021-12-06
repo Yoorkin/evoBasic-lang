@@ -248,7 +248,7 @@ namespace evoBasic{
                 visitParameter(&parameter,args);
             }
 
-            if(name == "main" && args.domain->equal(args.context->getGlobal())){
+            if(name == "main" && args.parent_class_or_module->equal(args.context->getGlobal())){
                 args.context->setEntrance(function);
             }
         }

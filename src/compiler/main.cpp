@@ -101,13 +101,16 @@ int main(int argc,char *argv[]) {
 
         Semantic::collectSymbol(ast,context);
         Semantic::collectDetail(ast,context);
-        Semantic::typeCheck(ast,context);
-
-        Logger::dev(debugAST(ast));
-        Logger::dev(context->getGlobal()->debug(0));
     }
 
     Semantic::solveInheritDependencies(context);
+
+    for(auto ast : asts){
+        Semantic::typeCheck(ast,context);
+        Logger::dev(debugAST(ast));
+    }
+
+    Logger::dev(context->getGlobal()->debug(0));
 
     if(Logger::errorCount == 0){
         for(auto ast : asts){

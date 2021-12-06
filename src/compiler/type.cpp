@@ -101,9 +101,9 @@ namespace evoBasic::type{
     }
 
     bool Parameter::equal(Parameter *ptr) {
-        if(ptr->is_byval!=isByval())return false;
-        if(ptr->is_param_array!=isParamArray())return false;
-        if(ptr->is_optional!=isParamArray())return false;
+        if(ptr->isByval()!=isByval())return false;
+        if(ptr->isParamArray()!=isParamArray())return false;
+        if(ptr->isOptional()!=isOptional())return false;
         if(!ptr->getPrototype()->equal(getPrototype()))return false;
         return true;
     }
@@ -145,6 +145,16 @@ namespace evoBasic::type{
             if(param_count!=function_param_count)return false;
             for(int i=0;i<param_count;i++){
                 if(!getArgsSignature()[i]->equal(function->getArgsSignature()[i]))return false;
+            }
+            auto opt_count = this->getArgsOptions().size();
+            auto function_opt_count = function->getArgsOptions().size();
+            if(opt_count != function_opt_count)return false;
+            for(int i=0;i<opt_count;i++){
+                auto opt = getArgsOptions()[i];
+                auto function_opt_index = function->findOptionIndex(opt->getName());
+                if(!function_opt_index.has_value())return false;
+                auto function_opt = function->getArgsOptions()[function_opt_index.value()];
+                if(!opt->equal(function_opt))return false;
             }
             return true;
         }
@@ -507,10 +517,26 @@ namespace evoBasic::type{
         // generate vtable
         if(getExtend()){
             vtable = new VirtualTable(getExtend()->vtable);
+            this->impl_vtables.insert(getExtend()->impl_vtables.begin(),getExtend()->impl_vtables.end());
         }
         else{
             vtable = new VirtualTable();
         }
+
+        for(auto [name,interface]:impl_interface){
+            impl_vtables.insert({name,new VirtualTable(interface->getVTable())});
+        }
+
+        auto try_fill_slot = [](UserFunction *function,VirtualTable *table)->bool{
+            auto slot = table->findSlot(function->getName());
+            if(slot.has_value()){
+                table->fill(slot.value(),function);
+                return true;
+            }
+            else{
+                return false;
+            }
+        };
 
         for(auto member : *this){
             auto function = member->as<Function*>();
@@ -530,12 +556,20 @@ namespace evoBasic::type{
                                 break;
                             }
                             case FunctionFlag::Override:{
-                                auto slot = vtable->findSlot(function->getName());
-                                if(slot.has_value()){
-                                    vtable->fill(slot.value(),user_function);
+                                auto succeed = false;
+                                if(try_fill_slot(user_function,vtable)){
+                                    succeed = true;
                                 }
-                                else{
-                                    Logger::error(user_function->getLocation(),"method does not override a method from supertype");
+                                else {
+                                    for(auto [interface_name,interface_vtable]:impl_vtables){
+                                        if(try_fill_slot(user_function,interface_vtable)){
+                                            succeed = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if(!succeed){
+                                    Logger::error(user_function->getLocation(),"method does not override a method from base class or interface");
                                 }
                                 break;
                             }
@@ -550,6 +584,16 @@ namespace evoBasic::type{
                     break;
             }
         }
+
+        is_abstract_class = false;
+        if(!vtable->hasEmptySlot())is_abstract_class = true;
+        for(auto [_,table]:impl_vtables){
+            if(!table->hasEmptySlot())is_abstract_class = true;
+        }
+    }
+
+    bool Class::isAbstract() {
+        return is_abstract_class;
     }
 
 
@@ -718,6 +762,10 @@ namespace evoBasic::type{
         vtable = new VirtualTable();
     }
 
+    VirtualTable *Interface::getVTable() {
+        return vtable;
+    }
+
     Array::Array(Prototype *element,data::u32 size)
         : Class(SymbolKind::Array),element_type(element),size_(size){
         setName(format()<<element->getName()<<"["<<size<<"]");
@@ -808,7 +856,11 @@ namespace evoBasic::type{
     void VirtualTable::fill(int slot, UserFunction *function) {
         auto target = this->slot[slot].first;
         if(!target->equal(function)){
-            Logger::error({function->getLocation(),target->getLocation()},"override method have different parameters");
+            Logger::error({function->getLocation(),target->getLocation()},
+                                format()<<"override method '"
+                                <<target->mangling('.')<<"' and '"
+                                <<function->mangling('.')
+                                <<"' have different parameters");
         }
         else this->slot[slot].second = function;
     }
