@@ -156,6 +156,14 @@ namespace evoBasic::type{
                 auto function_opt = function->getArgsOptions()[function_opt_index.value()];
                 if(!opt->equal(function_opt))return false;
             }
+
+            if(getRetSignature() && function->getRetSignature()){
+                if(!getRetSignature()->equal(function->getRetSignature()))return false;
+            }
+            else if(getRetSignature()==nullptr xor function->getRetSignature()==nullptr){
+                return false;
+            }
+
             return true;
         }
         else return false;
@@ -864,7 +872,7 @@ namespace evoBasic::type{
                                 format()<<"override method '"
                                 <<target->mangling('.')<<"' and '"
                                 <<function->mangling('.')
-                                <<"' have different parameters");
+                                <<"' have different parameters or return type");
         }
         else this->slot[slot].second = function;
     }

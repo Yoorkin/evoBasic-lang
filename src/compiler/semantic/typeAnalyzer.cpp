@@ -374,11 +374,6 @@ namespace evoBasic{
             }
         }
 
-//        if(!type->prototype->equal(args.function->getRetSignature())){
-//            Logger::error((*ret_node).location,format()<<"Return type '"
-//                                                        <<type->prototype->getName()<<"' is not equivalent to Function signature '"
-//                                                        <<args.function->getRetSignature()->getName()<<"'");
-//        }
         return {};
     }
     
