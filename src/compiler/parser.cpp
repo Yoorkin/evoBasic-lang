@@ -300,7 +300,12 @@ namespace evoBasic{
 
         if(lexer->predict(Token::sub_)){
             lexer->match(Token::sub_);
-            func->name = parseID(stmt_follows);
+            if(lexer->predict(Token::new_)){
+                func->is_constructor = true;
+            }
+            else{
+                func->name = parseID(stmt_follows);
+            }
             func->location = func->name->location;
             func->parameter = parseParameterList(stmt_follows);
             func->return_annotation = nullptr;
@@ -319,6 +324,7 @@ namespace evoBasic{
         }
         return func;
     }
+
     ast::External *Parser::parseExternal(Follows follows){
         auto ext = new External;
         lexer->match(Token::declare_);

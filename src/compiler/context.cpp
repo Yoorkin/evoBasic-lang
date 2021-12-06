@@ -196,12 +196,12 @@ namespace evoBasic{
     }
 
 
-    UserFunction *Context::getEntrance() {
+    Function *Context::getEntrance() {
         NotNull(entrance);
         return entrance;
     }
 
-    void Context::setEntrance(UserFunction *function) {
+    void Context::setEntrance(Function *function) {
         NotNull(function);
         entrance = function;
     }

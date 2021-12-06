@@ -70,6 +70,17 @@ namespace evoBasic{
         return cls->as<type::Symbol*>();
     }
 
+
+    std::any SymbolCollector::visitInterface(ast::Interface *interface_node, SymbolCollectorArgs args) {
+        auto interface = new type::Interface;
+        interface->setName(getID(interface_node->name));
+        interface->setAccessFlag(interface_node->access);
+        interface->setStatic(interface_node->is_static);
+        interface->setLocation(interface_node->location);
+        interface_node->interface_symbol = interface;
+        return interface->as<type::Symbol*>();
+    }
+
     std::any SymbolCollector::visitEnum(ast::Enum *em_node, SymbolCollectorArgs args) {
         NotNull(em_node);
         if(em_node->has_error)return {};
@@ -137,8 +148,10 @@ namespace evoBasic{
             case ast::Member::type_:     return visitType((ast::Type*)member_node,args);
             case ast::Member::enum_:     return visitEnum((ast::Enum*)member_node,args);
             case ast::Member::dim_:      return visitDim((ast::Dim*)member_node,args);
+            case ast::Member::interface_:return visitInterface((ast::Interface*)member_node,args);
         }
         return {};
     }
+
 
 }

@@ -13,6 +13,7 @@ namespace evoBasic{
         virtual std::any visitGlobal(ast::Global *global_node,ARGS args){PANIC;}
         virtual std::any visitClass(ast::Class *cls_node,ARGS args){PANIC;}
         virtual std::any visitModule(ast::Module *mod_node,ARGS args){PANIC;}
+        virtual std::any visitInterface(ast::Interface *interface_node,ARGS args){PANIC;}
 
         virtual std::any visitImport(ast::Import *imp_node,ARGS args){PANIC;}
         virtual std::any visitDim(ast::Dim *dim_node,ARGS args){PANIC;}
@@ -71,6 +72,7 @@ namespace evoBasic{
         virtual std::any visitGlobal(ast::Global **global_node,ARGS args){PANIC;}
         virtual std::any visitClass(ast::Class **cls_node,ARGS args){PANIC;}
         virtual std::any visitModule(ast::Module **mod_node,ARGS args){PANIC;}
+        virtual std::any visitInterface(ast::Interface **interface_node,ARGS args){PANIC;}
 
         virtual std::any visitImport(ast::Import **imp_node,ARGS args){PANIC;}
         virtual std::any visitDim(ast::Dim **dim_node,ARGS args){PANIC;}

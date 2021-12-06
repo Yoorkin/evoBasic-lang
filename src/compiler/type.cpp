@@ -9,6 +9,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include "logger.h"
 
 using namespace std;
 namespace evoBasic::type{
@@ -182,6 +183,10 @@ namespace evoBasic::type{
         return param_array;
     }
 
+    FunctionKind Function::getFunctionKind() {
+        return FunctionKind::Function;
+    }
+
     UserFunction::UserFunction(FunctionFlag flag,ast::Function *function_node)
         :function_node(function_node),flag(flag){
         switch (flag) {
@@ -248,12 +253,19 @@ namespace evoBasic::type{
         }
     }
 
+    FunctionKind UserFunction::getFunctionKind() {
+        return FunctionKind::UserFunction;
+    }
+
     ExternalFunction::ExternalFunction(std::string library, std::string name)
         : library(std::move(library)),name(std::move(name)){}
 
+    FunctionKind ExternalFunction::getFunctionKind() {
+        return FunctionKind::External;
+    }
 
 
-    TemporaryDomain::TemporaryDomain(type::Domain *parent,UserFunction *function)
+    TemporaryDomain::TemporaryDomain(type::Domain *parent,Function *function)
             : Domain(SymbolKind::TmpDomain),parent_function(function){
         setParent(parent);
     }
@@ -419,17 +431,17 @@ namespace evoBasic::type{
         this->base_class = base;
     }
 
-    void Class::setConstructor(Function *constructor) {
+    void Class::setConstructor(Constructor *constructor) {
         NotNull(constructor);
         this->constructor = constructor;
     }
 
-    void Class::addImplementation(Interface *interface) {
+    void Class::addImpl(Interface *interface) {
         this->impl_interface.insert({interface->mangling(),interface});
     }
 
-    Interface *Class::getImplementation(std::string mangling) {
-        auto target = impl_interface.find(mangling);
+    Interface *Class::getImpl(std::string mangling_name) {
+        auto target = impl_interface.find(mangling_name);
         if(target == impl_interface.end())return nullptr;
         return target->second;
     }
@@ -439,8 +451,13 @@ namespace evoBasic::type{
     void Class::add(Symbol *symbol) {
         if(symbol->getKind() == SymbolKind::Variable)
             Record::add(symbol);
-        else
-            Domain::add(symbol);
+        else if(auto function = symbol->as<Function*>()){
+            if(function->getFunctionKind() == FunctionKind::Constructor){
+                this->constructor = function->as<Constructor*>();
+            }
+            else Domain::add(symbol);
+        }
+        else Domain::add(symbol);
     }
 
     Class *Class::getExtend() {
@@ -465,6 +482,54 @@ namespace evoBasic::type{
         Prototype::setByteLength(size);
     }
 
+    const std::map<std::string, Interface *> &Class::getImplMap() {
+        return impl_interface;
+    }
+
+    void Class::generateClassInfo() {
+        // generate vtable
+        auto base = getExtend()->vtable;
+        NotNull(base);
+        vtable = new VirtualTable(*base);
+        for(auto member : *this){
+            auto function = member->as<Function*>();
+            if(!function)continue;
+            switch(function->getFunctionKind()){
+                case FunctionKind::Function:{
+                    vtable->addSlot(function);
+                    break;
+                }
+                case FunctionKind::UserFunction:{
+                    if(auto user_function = function->as<UserFunction*>()){
+                        switch (user_function->getFunctionFlag()) {
+                            case FunctionFlag::Virtual:{
+                                vtable->addSlot(function);
+                                auto slot = vtable->findSlot(function->getName()).value();
+                                vtable->fill(slot,user_function);
+                                break;
+                            }
+                            case FunctionFlag::Override:{
+                                auto slot = vtable->findSlot(function->getName());
+                                if(slot.has_value()){
+                                    vtable->fill(slot.value(),user_function);
+                                }
+                                else{
+                                    Logger::error(user_function->getLocation(),"method does not override a method from supertype");
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                }
+                case FunctionKind::Operator:
+                    // todo: operator overload support
+                    break;
+                case FunctionKind::Constructor:
+                    break;
+            }
+        }
+    }
 
 
     void Record::add(Symbol *symbol) {
@@ -681,5 +746,43 @@ namespace evoBasic::type{
 
     Operator::Kind Operator::getOperatorKind() {
         return kind;
+    }
+
+    FunctionKind Operator::getFunctionKind() {
+        return FunctionKind::Operator;
+    }
+
+    FunctionKind Constructor::getFunctionKind() {
+        return FunctionKind::Constructor;
+    }
+
+    Constructor::Constructor(ast::Function *function_node) : function_node(function_node) {}
+
+    VirtualTable::VirtualTable(VirtualTable *base)
+        : slot(base->slot),slot_map(base->slot_map),base(base) {}
+
+    void VirtualTable::addSlot(Function *function) {
+        slot.emplace_back(function,nullptr);
+    }
+
+    std::optional<int> VirtualTable::findSlot(const string& name) {
+        auto target = slot_map.find(name);
+        if(target == slot_map.end())return {};
+        return target->second;
+    }
+
+    void VirtualTable::fill(int slot, UserFunction *function) {
+        auto target = this->slot[slot].first;
+        if(!target->equal(function)){
+            Logger::error({function->getLocation(),target->getLocation()},"override method have different parameters");
+        }
+        else this->slot[slot].second = function;
+    }
+
+    bool VirtualTable::hasEmptySlot() {
+        for(auto [_,content] : slot){
+            if(!content)return false;
+        }
+        return true;
     }
 }

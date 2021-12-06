@@ -19,6 +19,7 @@ namespace evoBasic{
         static void collectDetail(AST *ast,Context *context);
         static void typeCheck(AST *ast,Context *context);
         static bool solveTypeInferenceDependencies(Context *context);
+        static bool solveInheritDependencies(Context *context);
         static bool solveByteLengthDependencies(Context *context);
     };
 

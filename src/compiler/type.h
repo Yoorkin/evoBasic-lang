@@ -192,6 +192,8 @@ namespace evoBasic::type{
 
     enum class FunctionFlag{Method=0,Static,Virtual,Override};
 
+    enum class FunctionKind{Function,UserFunction,Operator,External,Constructor};
+
     class Function: public Domain{
     protected:
         std::vector<Parameter*> args_signature;
@@ -207,15 +209,16 @@ namespace evoBasic::type{
         void add(Symbol *symbol)override;
         const std::vector<Parameter*>& getArgsSignature();
         const std::vector<Parameter*>& getArgsOptions();
-        Parameter *getParamArray();
-
         std::optional<int> findOptionIndex(const std::string &name);
+        Parameter *getParamArray();
 
         Prototype *getRetSignature();
         void setRetSignature(Prototype *ptr);
 
         std::string debug(int indent)override;
         bool equal(Prototype *ptr)override;
+
+        virtual FunctionKind getFunctionKind();
     };
 
     class Operator : public Function{
@@ -229,6 +232,14 @@ namespace evoBasic::type{
         Kind getOperatorKind();
         std::string getName()override;
         void setName(std::string)override;
+        FunctionKind getFunctionKind()override;
+    };
+
+    class Constructor : public Function{
+        ast::Function *function_node{};
+    public:
+        explicit Constructor(ast::Function *function_node);
+        FunctionKind getFunctionKind()override;
     };
 
     class UserFunction : public Function{
@@ -237,13 +248,14 @@ namespace evoBasic::type{
         Parameter *self = nullptr;
     public:
         UserFunction(const UserFunction&)=delete;
-        explicit UserFunction(FunctionFlag flag,ast::Function *function_node);
+        UserFunction(FunctionFlag flag,ast::Function *function_node);
         ast::Function *getFunctionNode();
         virtual FunctionFlag getFunctionFlag();
         void setFunctionFlag(FunctionFlag flag);
         bool isStatic()override;
         void setParent(Domain *parent)override;
         std::string debug(int indent)override;
+        FunctionKind getFunctionKind()override;
     };
 
 
@@ -252,15 +264,31 @@ namespace evoBasic::type{
     public:
         ExternalFunction(const ExternalFunction&)=delete;
         explicit ExternalFunction(std::string library,std::string name);
+        FunctionKind getFunctionKind()override;
+    };
+
+    class VirtualTable{
+        VirtualTable *base = nullptr;
+        std::vector<std::pair<Function*,UserFunction*>> slot;
+        std::map<std::string,int> slot_map;
+    public:
+        explicit VirtualTable(VirtualTable *base);
+        explicit VirtualTable() = default;
+        void addSlot(Function *function);
+        std::optional<int> findSlot(const std::string& name);
+        void fill(int slot,UserFunction *function);
+        bool hasEmptySlot();
     };
 
     class Class : public Record {
     protected:
         Class *base_class = nullptr;
+        using Signature = std::string;
         std::map<std::string,Interface*> impl_interface;
         std::multimap<Operator::Kind,Operator> operator_overload;
         std::set<std::string> operator_signature;
-        Function *constructor = nullptr;
+        Constructor *constructor = nullptr;
+        VirtualTable *vtable = nullptr;
     public:
         Class(const Class&)=delete;
         explicit Class();
@@ -273,13 +301,16 @@ namespace evoBasic::type{
         void setExtend(Class *base);
         Class *getExtend();
 
-        void setConstructor(Function *constructor);
+        void setConstructor(Constructor *constructor);
 
-        void addImplementation(Interface *interface);
-        Interface* getImplementation(std::string mangling_name);
+        void addImpl(Interface *interface);
+        Interface* getImpl(std::string mangling_name);
+
+        const std::map<std::string,Interface*>& getImplMap();
 
         //Operator *findOperator(Operator::Kind kind,)
 
+        void generateClassInfo();
         void updateMemoryLayout()override;
 
         std::string debug(int indent)override;
@@ -367,9 +398,9 @@ namespace evoBasic::type{
 
 
     class TemporaryDomain : public Domain {
-        UserFunction *parent_function;
+        Function *parent_function;
     public:
-        explicit TemporaryDomain(type::Domain *parent,UserFunction *function);
+        explicit TemporaryDomain(type::Domain *parent,Function *function);
         void add(type::Symbol *symbol)override;
         bool equal(Prototype *ptr)override{PANIC;};
         std::string debug(int indent)override;

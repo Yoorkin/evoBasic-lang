@@ -103,5 +103,12 @@ namespace evoBasic{
         code(pos);
     }
 
+    void Logger::error(std::initializer_list<const Location *> location, const string &message) {
+        Logger::errorCount++;
+        *out << RED << "error: " << message << NC << endl;
+        for(auto pos:location)
+            code(pos,true);
+    }
+
 }
 

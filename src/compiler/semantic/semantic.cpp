@@ -74,31 +74,8 @@ namespace evoBasic{
         return false;
     }
 
-
-//    std::any visitID(ast::expr::ID *id_node, BaseArgs args){
-//        auto name = getID(id_node);
-//
-//        if(!args.dot_expression_context){
-//            auto target = args.domain->lookUp(name)->as_shared<Prototype>();
-//            if(!target){
-//                Logger::error(id_node->location,"object not find");
-//                return ExpressionType::Error;
-//            }
-//            return new ExpressionType(target,ExpressionType::lvalue);
-//        }
-//        else{
-//            auto domain = args.dot_expression_context->as_shared<Domain>();
-//            shared_ptr<Prototype> target;
-//            if(domain && (target = domain->find(name)->as_shared<Prototype>())){
-//                return new ExpressionType(target,ExpressionType::lvalue);
-//            }
-//            else{
-//                Logger::error(id_node->location,"object not find");
-//                return ExpressionType::Error;
-//            }
-//        }
-//    }
-
-
+    bool Semantic::solveInheritDependencies(Context *context) {
+        return false;
+    }
 
 }

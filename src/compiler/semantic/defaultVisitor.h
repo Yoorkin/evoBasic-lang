@@ -11,7 +11,7 @@ namespace evoBasic{
 
     struct DefaultArgs{
         Context *context = nullptr;
-        type::UserFunction *user_function = nullptr;
+        type::Function *function = nullptr;
         type::Domain *domain = nullptr;
         type::Symbol *dot_expression_context = nullptr;
         bool is_dot_expression_context_static = false;

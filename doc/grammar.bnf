@@ -19,8 +19,11 @@ extendPart ::= "Extend" annotation;
 implPart ::= "Impl" annotation {"," annotation};
 classMember ::= [methodFlag] (functionDecl | subDecl)
               | operatorDecl
+              | constructorDecl
               | dimDecl
               ;
+
+constructorDecl ::= "Sub" "New" "(" [parameterList] ")" {statement} "End Sub";
 
 operatorDecl ::= "Operator" ID "(" [parameterList] ")" "As" annotation {statement} "End Operator";
 

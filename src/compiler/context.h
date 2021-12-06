@@ -62,16 +62,18 @@ namespace evoBasic{
 
     class Context{
         type::Module *global = nullptr;
-        type::UserFunction *entrance = nullptr;
+        type::Function *entrance = nullptr;
         BuiltIn builtin;
         ConversionRules conversion_rules;
     public:
         Dependencies<type::Domain*> byteLengthDependencies;
+        Dependencies<type::Domain*> inheritDependencies;
+
         Context(const Context&)=delete;
         Context();
         type::Module *getGlobal();
-        type::UserFunction *getEntrance();
-        void setEntrance(type::UserFunction *function);
+        type::Function *getEntrance();
+        void setEntrance(type::Function *function);
 
         const BuiltIn& getBuiltIn();
         ConversionRules& getConversionRules();

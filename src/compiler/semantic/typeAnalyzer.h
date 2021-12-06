@@ -16,7 +16,7 @@ namespace evoBasic{
         type::Domain *domain = nullptr;
         ExpressionType *dot_prefix = nullptr;
         type::Domain *current_class_or_module = nullptr;
-        type::UserFunction *user_function = nullptr;
+        type::Function *function = nullptr;
         type::Function *checking_function = nullptr;
         int checking_arg_index = 0;
         bool need_lookup = false;

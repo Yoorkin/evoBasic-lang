@@ -15,7 +15,7 @@ namespace evoBasic{
 
 
     void TypeAnalyzer::visitStatementList(ast::stmt::Statement *stmt_list, TypeAnalyzerArgs args) {
-        args.domain = new type::TemporaryDomain(args.domain,args.user_function);
+        args.domain = new type::TemporaryDomain(args.domain,args.function);
         auto iter = stmt_list;
         while(iter){
             visitStatement(iter,args);
@@ -37,7 +37,7 @@ namespace evoBasic{
             auto init_name = getID((ID*)colon_node->lhs);
             auto opt_index = args.checking_function->findOptionIndex(init_name);
             if(!opt_index.has_value()){
-                Logger::error(colon_node->lhs->location,format()<<"option '"<<init_name<<"' in function '"<<args.user_function->getName()<<"' not found");
+                Logger::error(colon_node->lhs->location,format() << "option '" << init_name << "' in function '" << args.function->getName() << "' not found");
                 return {};
             }
             param = args.checking_function->getArgsOptions()[opt_index.value()];
@@ -106,10 +106,10 @@ namespace evoBasic{
                     switch (param->getPrototype()->getKind()) {
                         case SymbolKind::Record:
                         case SymbolKind::Array:
-                            args.context->byteLengthDependencies.addDependent(args.user_function,param->getPrototype()->as<Domain*>());
+                            args.context->byteLengthDependencies.addDependent(args.function, param->getPrototype()->as<Domain*>());
                             break;
                     }
-                    args.user_function->addMemoryLayout((*argument_node).temp_address);
+                    args.function->addMemoryLayout((*argument_node).temp_address);
                     break;
                 case ast::expr::Callee::Argument::byref:
                     if(!param->getPrototype()->equal(arg_type->getPrototype())){
@@ -196,7 +196,7 @@ namespace evoBasic{
 
     std::any TypeAnalyzer::visitFunction(ast::Function *function_node, TypeAnalyzerArgs args) {
         auto function = (*function_node).function_symbol;
-        args.domain = args.user_function = function;
+        args.domain = args.function = function;
 
         auto iter = (*function_node).statement;
         while(iter){
@@ -251,7 +251,7 @@ namespace evoBasic{
                 switch (result_prototype->getKind()) {
                     case type::SymbolKind::Record:
                     case type::SymbolKind::Array:
-                        args.context->byteLengthDependencies.addDependent(args.user_function,result_prototype->as<Domain*>());
+                        args.context->byteLengthDependencies.addDependent(args.function, result_prototype->as<Domain*>());
                 }
 
                 auto field = new type::Variable;
@@ -346,7 +346,7 @@ namespace evoBasic{
         auto type = any_cast<ExpressionType*>(visitExpression((*ret_node).expr,args));
         if(type->value_kind == ExpressionType::error)return {};
 
-        auto dst_prototype = args.user_function->getRetSignature();
+        auto dst_prototype = args.function->getRetSignature();
         if(!dst_prototype->equal(type->getPrototype())){
             if(args.context->getConversionRules().isImplicitCastRuleExist(type->getPrototype(),dst_prototype)){
                 Logger::warning(ret_node->expr->location, format() << "implicit conversion from '" << type->getPrototype()->getName()
@@ -360,10 +360,10 @@ namespace evoBasic{
             }
         }
 
-//        if(!type->prototype->equal(args.user_function->getRetSignature())){
+//        if(!type->prototype->equal(args.function->getRetSignature())){
 //            Logger::error((*ret_node).location,format()<<"Return type '"
 //                                                        <<type->prototype->getName()<<"' is not equivalent to Function signature '"
-//                                                        <<args.user_function->getRetSignature()->getName()<<"'");
+//                                                        <<args.function->getRetSignature()->getName()<<"'");
 //        }
         return {};
     }

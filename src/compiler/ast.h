@@ -19,6 +19,7 @@ namespace evoBasic{
         class ExternalFunction;
         class Enumeration;
         class EnumMember;
+        class Interface;
         class Record;
         class Parameter;
     }
@@ -169,7 +170,8 @@ namespace evoBasic::ast{
         Annotation *return_annotation = nullptr;
         stmt::Statement* statement = nullptr;
         DebugInfo *debug()override;
-        type::UserFunction *function_symbol = nullptr;
+        type::Function *function_symbol = nullptr;
+        bool is_constructor = false;
     };
 
     struct External : Member{
@@ -186,6 +188,7 @@ namespace evoBasic::ast{
         Interface(){member_kind = interface_;}
         expr::ID *name = nullptr;
         Function *function = nullptr;
+        type::Interface *interface_symbol = nullptr;
         DebugInfo *debug()override;
     };
 

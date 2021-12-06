@@ -32,6 +32,15 @@ namespace evoBasic{
         return {};
     }
 
+    std::any DetailCollector::visitInterface(ast::Interface **interface_node, DefaultArgs args) {
+        NotNull(*interface_node);
+        args.domain = args.parent_class_or_module = (**interface_node).interface_symbol;
+        for(auto iter = (Member*)(**interface_node).function;iter!=nullptr;iter=iter->next_sibling){
+            visitMember(&iter,args);
+        }
+        return {};
+    }
+
     std::any DetailCollector::visitClass(ast::Class **class_node, DefaultArgs args) {
         NotNull(*class_node);
         auto class_symbol =  (**class_node).class_symbol;
@@ -63,6 +72,7 @@ namespace evoBasic{
 
         return {};
     }
+
 
     bool DetailCollector::is_extend_valid(type::Class *class_symbol,type::Class *base_class){
         for(auto extend = base_class;extend!=nullptr;extend = extend->getExtend()){
@@ -152,9 +162,16 @@ namespace evoBasic{
     }
 
     std::any DetailCollector::visitFunction(ast::Function **function_node, DefaultArgs args) {
-        auto name = getID((**function_node).name);
+        string name;
+        if((**function_node).name){
+            name = getID((**function_node).name);
+        }
+
         if(is_name_valid(name,(**function_node).name->location,args.domain)){
+            type::Function *function = nullptr;
+
             type::FunctionFlag flag = FunctionFlag::Static;
+
             if((**function_node).is_static){
                 flag = type::FunctionFlag::Static;
                 if(args.domain->getKind() != type::SymbolKind::Class){
@@ -182,7 +199,14 @@ namespace evoBasic{
                     }
                     break;
             }
-            auto function = new type::UserFunction(flag, *function_node);
+
+            if((**function_node).is_constructor){
+                function = new type::Constructor(*function_node);
+            }
+            else{
+                function = new type::UserFunction(flag, *function_node);
+            }
+
             function->setStatic((**function_node).is_static);
             function->setLocation((**function_node).name->location);
             function->setName(name);
@@ -198,7 +222,7 @@ namespace evoBasic{
             args.domain->add(function);
             (**function_node).function_symbol = function;
             
-            args.user_function = function;
+            args.function = function;
             args.domain = function;
             for(ast::Parameter *parameter=(**function_node).parameter;parameter!=nullptr;parameter=parameter->next_sibling){
                 visitParameter(&parameter,args);
@@ -242,7 +266,7 @@ namespace evoBasic{
             switch (prototype->getKind()) {
                 case type::SymbolKind::Record:
                 case type::SymbolKind::Array:
-                    args.context->byteLengthDependencies.addDependent(args.user_function,prototype->as<Domain*>());
+                    args.context->byteLengthDependencies.addDependent(args.function, prototype->as<Domain*>());
             }
         }
         if(is_name_valid(name,(**parameter_node).name->location,args.domain)){
@@ -260,44 +284,10 @@ namespace evoBasic{
             case ast::Member::enum_:     return visitEnum((ast::Enum**)member_node,args);
             case ast::Member::dim_:      return visitDim((ast::Dim**)member_node,args);
             case ast::Member::external_: return visitExternal((ast::External**)member_node,args);
+            case ast::Member::interface_:return visitInterface((ast::Interface**)member_node,args);
         }
         return {};
     }
 
-//    std::any DetailCollector::visitBinary(ast::expr::Binary **binary_node, DefaultArgs args) {
-//        switch ((**binary_node).op) {
-//            case ast::expr::Binary::Dot:{
-//                auto lhs_type = any_cast<ExpressionType*>(visitExpression(&(**binary_node).lhs,args));
-//                if(lhs_type->value_kind == ExpressionType::error)return lhs_type;
-//
-//                auto rhs_name = getID((ID*)(**binary_node).rhs);
-//                auto domain = lhs_type->prototype->as<Domain*>();
-//                Prototype *target;
-//                if(domain && (target = domain->find(rhs_name)->as<Prototype*>())){
-//                    return new ExpressionType(target,ExpressionType::path);
-//                }
-//                else{
-//                    Logger::error((**binary_node).location,"object not find");
-//                    return ExpressionType::Error;
-//                }
-//                break;
-//            }
-//            default:
-//                Logger::error((**binary_node).location,"invalid expression");
-//                return ExpressionType::Error;
-//        }
-//    }
-//
-//    std::any DetailCollector::visitID(ast::expr::ID **id_node, DefaultArgs args) {
-//        auto name = getID(*id_node);
-//        auto target = args.domain->lookUp(name)->as<Prototype*>();
-//
-//        if(!target){
-//            Logger::error((**id_node).location,"object not find");
-//            return ExpressionType::Error;
-//        }
-//
-//        return new ExpressionType(target,ExpressionType::path);
-//    }
 
 }
