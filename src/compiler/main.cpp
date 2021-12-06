@@ -107,10 +107,11 @@ int main(int argc,char *argv[]) {
         Logger::dev(context->getGlobal()->debug(0));
     }
 
+    Semantic::solveInheritDependencies(context);
+
     if(Logger::errorCount == 0){
         for(auto ast : asts){
             Semantic::solveByteLengthDependencies(context);
-
             IRGen gen;
 
             auto ir = gen.gen(ast,context);

@@ -207,8 +207,8 @@ namespace evoBasic::type{
         explicit Function();
 
         void add(Symbol *symbol)override;
-        const std::vector<Parameter*>& getArgsSignature();
-        const std::vector<Parameter*>& getArgsOptions();
+        std::vector<Parameter*>& getArgsSignature();
+        std::vector<Parameter*>& getArgsOptions();
         std::optional<int> findOptionIndex(const std::string &name);
         Parameter *getParamArray();
 
@@ -319,12 +319,12 @@ namespace evoBasic::type{
     };
 
     class Interface : public Domain{
+        VirtualTable *vtable = nullptr;
     public:
-        explicit Interface():Domain(SymbolKind::Interface){}
+        explicit Interface();
         void add(Symbol *symbol)final;
 
         bool equal(Prototype *ptr)final{PANIC;}
-
         std::string debug(int indent)final;
     };
 
@@ -382,6 +382,7 @@ namespace evoBasic::type{
         bool isOptional();
         bool isParamArray();
         data::ptr getRealByteLength()override;
+        bool equal(Parameter* ptr);
     };
 
     class Array : public Class{

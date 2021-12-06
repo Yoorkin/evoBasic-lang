@@ -61,9 +61,18 @@ namespace evoBasic{
         if(is_extend_valid(class_symbol,base_class)){
             class_symbol->setExtend(base_class);
             args.context->byteLengthDependencies.addDependent(class_symbol,base_class);
+            args.context->inheritDependencies.addDependent(class_symbol,base_class);
         }
         else{
             Logger::error((**class_node).extend->location,"inheritance is recursive");
+        }
+
+        for(auto impl=(**class_node).impl; impl!=nullptr; impl=impl->next_sibling){
+            auto symbol = visitAnnotation(&impl->annotation,args);
+            if(symbol.has_value()){
+                auto interface = any_cast<Prototype*>(symbol)->as<type::Interface*>();
+                class_symbol->addImpl(interface);
+            }
         }
 
         for(auto iter = (**class_node).member;iter!=nullptr;iter=iter->next_sibling){
@@ -174,23 +183,34 @@ namespace evoBasic{
 
             if((**function_node).is_static){
                 flag = type::FunctionFlag::Static;
-                if(args.domain->getKind() != type::SymbolKind::Class){
+                if(args.domain->getKind() == type::SymbolKind::Module){
                     Logger::error((**function_node).location,"Function in Module cannot be marked by 'Static'");
                 }
             }
 
             switch((**function_node).method_flag){
                 case MethodFlag::Virtual:
-                case MethodFlag::Override:
                     if((**function_node).is_static){
-                        Logger::error((**function_node).location,"Static Method cannot be marked by 'Virtual' or 'Override'");
+                        Logger::error((**function_node).location,"Static Method cannot be marked by 'Virtual'");
                     }
 
-                    if(args.domain->getKind() == type::SymbolKind::Class){
+                    if(args.domain->getKind() == SymbolKind::Class){
                         flag = type::FunctionFlag::Virtual;
                     }
-                    else{
-                        Logger::error((**function_node).location,"Function in Module cannot be marked by 'Virtual' or 'Override'");
+                    else if(args.domain->getKind() == SymbolKind::Module){
+                        Logger::error((**function_node).location,"Function in Module cannot be marked by 'Virtual'");
+                    }
+                    break;
+                case MethodFlag::Override:
+                    if((**function_node).is_static){
+                        Logger::error((**function_node).location,"Static Method cannot be marked by 'Override'");
+                    }
+
+                    if(args.domain->getKind() == SymbolKind::Class){
+                        flag = type::FunctionFlag::Override;
+                    }
+                    else if(args.domain->getKind() == SymbolKind::Module){
+                        Logger::error((**function_node).location,"Function in Module cannot be marked by 'Override'");
                     }
                     break;
                 case MethodFlag::None:

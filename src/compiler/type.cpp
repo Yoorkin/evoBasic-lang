@@ -100,6 +100,14 @@ namespace evoBasic::type{
         }
     }
 
+    bool Parameter::equal(Parameter *ptr) {
+        if(ptr->is_byval!=isByval())return false;
+        if(ptr->is_param_array!=isParamArray())return false;
+        if(ptr->is_optional!=isParamArray())return false;
+        if(!ptr->getPrototype()->equal(getPrototype()))return false;
+        return true;
+    }
+
     Prototype *Function::getRetSignature() {
         return this->ret_signature;
     }
@@ -131,7 +139,16 @@ namespace evoBasic::type{
     }
 
     bool Function::equal(Prototype *ptr) {
-        return false;
+        if(auto function = ptr->as<Function*>()){
+            auto param_count = this->getArgsSignature().size();
+            auto function_param_count = function->getArgsSignature().size();
+            if(param_count!=function_param_count)return false;
+            for(int i=0;i<param_count;i++){
+                if(!getArgsSignature()[i]->equal(function->getArgsSignature()[i]))return false;
+            }
+            return true;
+        }
+        else return false;
     }
 
     void Function::add(Symbol *symbol){
@@ -163,13 +180,13 @@ namespace evoBasic::type{
         Domain::add(symbol);
     }
 
-    const std::vector<Parameter*> &Function::getArgsSignature() {
+    std::vector<Parameter*> &Function::getArgsSignature() {
         return args_signature;
     }
 
     Function::Function() : Domain(SymbolKind::Function){}
 
-    const std::vector<Parameter *> &Function::getArgsOptions() {
+    std::vector<Parameter *> &Function::getArgsOptions() {
         return args_options;
     }
 
@@ -488,9 +505,13 @@ namespace evoBasic::type{
 
     void Class::generateClassInfo() {
         // generate vtable
-        auto base = getExtend()->vtable;
-        NotNull(base);
-        vtable = new VirtualTable(*base);
+        if(getExtend()){
+            vtable = new VirtualTable(getExtend()->vtable);
+        }
+        else{
+            vtable = new VirtualTable();
+        }
+
         for(auto member : *this){
             auto function = member->as<Function*>();
             if(!function)continue;
@@ -677,6 +698,7 @@ namespace evoBasic::type{
 
     void Interface::add(Symbol *symbol) {
         ASSERT(symbol->getKind() != SymbolKind::Function,"symbol is not a function");
+        vtable->addSlot(symbol->as<Function*>());
         Domain::add(symbol);
     }
 
@@ -692,6 +714,9 @@ namespace evoBasic::type{
         return str.str();
     }
 
+    Interface::Interface() : Domain(SymbolKind::Interface){
+        vtable = new VirtualTable();
+    }
 
     Array::Array(Prototype *element,data::u32 size)
         : Class(SymbolKind::Array),element_type(element),size_(size){
@@ -762,7 +787,16 @@ namespace evoBasic::type{
         : slot(base->slot),slot_map(base->slot_map),base(base) {}
 
     void VirtualTable::addSlot(Function *function) {
-        slot.emplace_back(function,nullptr);
+        auto conflict = slot_map.find(function->getName());
+        if(conflict==slot_map.end()){
+            slot.emplace_back(function,nullptr);
+            slot_map.insert({function->getName(),slot.size()-1});
+        }
+        else{
+            auto tmp = slot[conflict->second].first;
+            Logger::error({tmp->getLocation(),function->getLocation()},format()<<"naming conflict with '"
+                                        <<tmp->mangling('.')<<"' and '"<<function->mangling('.')<<"'");
+        }
     }
 
     std::optional<int> VirtualTable::findSlot(const string& name) {

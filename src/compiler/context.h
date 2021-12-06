@@ -67,7 +67,7 @@ namespace evoBasic{
         ConversionRules conversion_rules;
     public:
         Dependencies<type::Domain*> byteLengthDependencies;
-        Dependencies<type::Domain*> inheritDependencies;
+        Dependencies<type::Class*> inheritDependencies;
 
         Context(const Context&)=delete;
         Context();

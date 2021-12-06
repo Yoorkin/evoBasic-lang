@@ -1110,12 +1110,13 @@ namespace evoBasic{
     }
 
     ast::Annotation *constructAnnotationAST(std::string code) {
+        auto tmp = Logger::debugMode;
         Logger::debugMode = false;
         auto source = new StringSource(std::move(code));
         Lexer lexer(source);
         Parser parser(&lexer);
         auto ast = parser.parseAnnotation({Token::EOF_});
-        Logger::debugMode = true;
+        Logger::debugMode = tmp;
         return ast;
     }
 

@@ -56,6 +56,7 @@ namespace evoBasic{
                 Logger::dev(format()<<" -> "<<domain->mangling()<<"{"<<domain->getByteLength()<<"}");
             }
             Logger::dev("\n");
+            return true;
         }
         else{
             format msg;
@@ -69,13 +70,29 @@ namespace evoBasic{
                 msg<<"\n";
             }
             Logger::error(msg);
+            return false;
         }
-
-        return false;
     }
 
     bool Semantic::solveInheritDependencies(Context *context) {
-        return false;
+        list<string> order;
+        if(context->inheritDependencies.solve()){
+            for(auto &cls : context->inheritDependencies.getTopologicalOrder()){
+                cls->generateClassInfo();
+                order.push_back(cls->mangling('.'));
+            }
+            Logger::dev("inherit topo order: ");
+            for(auto name:order){
+                Logger::dev(" -> ");
+                Logger::dev(name);
+            }
+            Logger::dev("\n");
+            return true;
+        }
+        else{
+            PANIC;
+            return false;
+        }
     }
 
 }
