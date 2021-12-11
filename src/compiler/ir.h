@@ -11,6 +11,8 @@
 #include <ostream>
 #include <memory>
 #include <variant>
+#include <sstream>
+#include <any>
 #include "data.h"
 #include "bytecode.h"
 namespace evoBasic::ir{
@@ -112,12 +114,26 @@ namespace evoBasic::ir{
         data::ptr getByteLength()override;
     };
 
+    class Constant : public IRBase{
+        data::ptr address;
+        vm::Data data;
+        std::any value;
+        friend IR;
+        Constant(vm::Data kind,std::any value);
+    public:
+        data::ptr getAddress();
+        void setAddress(data::ptr address);
+        bool equal(Constant *rhs);
+    };
+
+
     class IR{
         std::map<std::string,Block*> function_block;
         std::map<std::string,int> label_name_count;
 
-        std::vector<Meta*> meta;
+        std::stringstream meta_stream;
         std::vector<Block*> blocks;
+        std::vector<Constant*> constant_pool;
     public:
 
         Block* findFunctionBlock(std::string name){
@@ -126,8 +142,10 @@ namespace evoBasic::ir{
             return target->second;
         }
 
-        void addMeta(Meta *meta);
+        std::stringstream &getMetadataStream();
         void addBlock(Block *block);
+
+        Constant *createConst(vm::Data kind,std::any value);
 
         void toString(std::ostream &stream);
         void toHex(std::ostream &stream);
@@ -135,7 +153,7 @@ namespace evoBasic::ir{
 
     class Block : public IRBase{
         std::string label_;
-        std::vector<Instruction*> instructons;
+        std::vector<Instruction*> instructions;
     public:
         explicit Block(std::string label);
         void toString(std::ostream &stream)override;
@@ -169,96 +187,22 @@ namespace evoBasic::ir{
         Block &Invoke(std::string signature);
         Block &Intrinsic(data::ptr id);
         Block &External(std::string signature);
-        Block &Push(vm::Data data,ConstBase *const_value);
+        Block &Push(Constant *constant);
         Block &Pop(vm::Data data);
         Block &Ret();
         Block &Cast(vm::Data src,vm::Data dst);
         Block &Dup(vm::Data data);
-        Block &Stm(data::u32 size);
-        Block &StmR(data::u32 size);
-        Block &Ldm(data::u32 size);
-        Block &Psm(data::u32 size,const char *memory);
-        Block &Dpm(data::u32 size);
+        Block &Stm(data::size size);
+        Block &StmR(data::size size);
+        Block &Ldm(data::size size);
+        Block &Psm(Constant *constant);
+        Block &Dpm(data::size size);
         Block &PushFrameBase();
         Block &PushGlobalBase();
+        Block &PushConstBase();
         Block &RcInc();
         Block &RcDec();
     };
-
-
-
-
-
-    class Meta : public IRBase{
-    public:
-        enum Enum{unknown,function,pair,mark,record,enum_meta,depend}meta_kind = Enum::unknown;
-        void toHex(std::ostream &stream)override;
-    };
-
-    class Type : public Meta{};
-
-    //i32 i64 void
-    class Mark : public Type{
-        bool is_ref = false;
-        bool is_array = false;
-        std::string name_;
-    public:
-        Mark(std::string name,bool isRef,bool isArray);
-        void toString(std::ostream &stream)override;
-    };
-
-    //name : type
-    class Pair : public Meta{
-        std::string name_;
-        Type *type_;
-    public:
-        std::string getName(){return name_;}
-        Type *getType(){return type_;}
-        Pair(std::string name,Type *type);
-        void toString(std::ostream &stream)override;
-    };
-
-    //sampleFunc : Function(param1:i32,param2:boolean)->void = u32_segment_address
-    //sampleExt : External(param1:i32)->i32 = library_name
-    class Function : public Type{
-        std::list<Pair*> params;
-        Type *ret_type = nullptr;
-        bool external = false;
-        std::string library_name;
-        Block *block = nullptr;
-    public:
-        Function(std::list<Pair*> params,Type *ret,std::string library);
-        Function(std::list<Pair*> params,Type *ret,Block *block);
-        void toString(std::ostream &stream)override;
-        data::ptr getAddress()override;
-        Block *getBlock();
-    };
-
-    //sampleStruct : Record{x:i32,y:i32}
-    class Record : public Type{
-        std::list<Pair*> members_;
-    public:
-        explicit Record(std::list<Pair*> members);
-        void toString(std::ostream &stream)override;
-    };
-
-    class Enum : public Type{
-        std::list<std::pair<std::string,int>> members_;
-    public:
-        explicit Enum(std::list<std::pair<std::string,int>> members);
-        void toString(std::ostream &stream)override;
-    };
-
-    class Depend : public Type{
-        std::string file_;
-    public:
-        explicit Depend(std::string file);
-        void toString(std::ostream &stream)override;
-    };
-
-
-
-
 }
 
 #endif //EVOBASIC2_IR_H

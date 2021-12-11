@@ -6,5 +6,5 @@ set(CMAKE_CXX_STANDARD 20)
 file(GLOB VM_SOURCE ${CMAKE_SOURCE_DIR}/src/vm/*.cpp)
 include_directories(${CMAKE_SOURCE_DIR}/src/vm/ src/utils)
 
-add_executable(evm ${VM_SOURCE} ${UTILS_SOURCE})
+add_executable(evm ${VM_SOURCE} ${UTILS_SOURCE} intrinsic.cpp)
 target_include_directories(evm PRIVATE ${VM_INCLUDE} ${UTILS_INCLUDE})

@@ -103,12 +103,23 @@ namespace evoBasic::vm{
     class Bytecode{
     public:
         enum Value{
-            Entrance,MetaSegment,ConstSegment,CodeSegment,
-            Define,Jmp,Jif,EQ,NE,LT,GT,LE,GE,Add,Sub,Mul,Div,FDiv,Neg,And,Or,Xor,Not,Load,Store,Invoke,Push,Pop,Ret,Cast,Dup,
-            Stm,Ldm,Psm,
+            CompilerVersion,
+            MetaSegment,
+            Class,Module,Enum,Type,Interface,StructEnd,
+            Ext,EnumMember,Impl,
+            Field,Function,Constructor,Decl,Lib,
+            RegularParam,OptParam,ParamAry,Array,NonArray,
+            Byval,ByRef,PubAcs,PriAcs,ProAcs,Alias,
+            RefLocalTy,RefExtTy,RefPmtTy,Depend,
+            ConstSegment,CodeSegment,
             PushFrameBase, /* push current stack frame address */
             PushGlobalBase, /* push global address */
-            Nop,StoreR,StmR,Intrinsic,External,RcInc,RcDec
+            PushConstBase, /* push constant pool address */
+            Invoke,Intrinsic,External,
+            Jmp,Jif,EQ,NE,LT,GT,LE,GE,Add,Sub,Mul,Div,
+            FDiv,Neg,And,Or,Xor,Not,Load,Store,
+            Push,Pop,Ret,Cast,Dup,Stm,Ldm,Psm,
+            Nop,StoreR,StmR,RcInc,RcDec
         };
     private:
         static std::vector<std::string> to_string;
@@ -129,7 +140,7 @@ namespace evoBasic::vm{
     class Data{
     public:
         enum Value{
-            void_=0,boolean,i8,i16,i32,i64,f32,f64,u8,u16,u32,u64
+            void_=0,boolean,i8,i16,i32,i64,f32,f64,u8,u16,u32,u64,raw_string,memory
         };
     private:
         Value value_;

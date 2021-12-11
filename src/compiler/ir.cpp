@@ -10,15 +10,6 @@
 using namespace std;
 namespace evoBasic::ir{
 
-    void IR::addMeta(Meta *meta_) {
-        this->meta.push_back(meta_);
-        if(meta_->meta_kind == Meta::pair){
-            auto pair = (Pair*)meta_;
-            if(pair->getType()->meta_kind == Meta::function)
-                function_block.insert({pair->getName(),((Function*)pair->getType())->getBlock()});
-        }
-    }
-
     void IR::addBlock(Block *block) {
         auto label = block->getLabel();
         auto conflict = label_name_count[label];
@@ -103,105 +94,13 @@ namespace evoBasic::ir{
         }
     }
 
-
-    Mark::Mark(std::string name, bool isRef, bool isArray)
-            : name_(std::move(name)),is_ref(isRef),is_array(isArray){
-        meta_kind = mark;
+    std::stringstream &IR::getMetadataStream() {
+        return meta_stream;
     }
 
-    void Mark::toString(ostream &stream) {
-        if(is_ref)stream<<"ref ";
-        if(is_array)stream<<"mem ";
-        stream<<name_;
+    Constant *IR::getRawStrConstant(string str) {
+
     }
-
-
-    Pair::Pair(std::string name, Type *type)
-            : name_(std::move(name)),type_(type) {
-        meta_kind = pair;
-    }
-
-    void Pair::toString(ostream &stream) {
-        stream<<name_<<':';
-        type_->toString(stream);
-    }
-
-
-    Function::Function(std::list<Pair *> params, Type *ret, std::string library)
-            : params(std::move(params)),ret_type(ret),library_name(std::move(library)),external(true){
-        meta_kind = function;
-    }
-
-    Function::Function(std::list<Pair*> params,Type *ret,Block *block)
-            : params(std::move(params)),ret_type(ret),block(block),external(false){
-        meta_kind = function;
-    }
-
-    data::ptr Function::getAddress() {
-        ASSERT(external,"invalid operation");
-        return block->getAddress();
-    }
-
-    void Function::toString(ostream &stream) {
-        stream<<"Function(";
-        for(auto& p:params){
-            p->toString(stream);
-            if(&p != &params.back())stream << ',';
-        }
-        stream<<")->";
-        if(ret_type)
-            ret_type->toString(stream);
-        else stream<<"void";
-    }
-
-    Block *Function::getBlock() {
-        NotNull(block);
-        return block;
-    }
-
-
-    Record::Record(std::list<Pair*> members) : members_(std::move(members)){
-        meta_kind = record;
-    }
-
-    void Record::toString(ostream &stream) {
-        stream<<"Record{";
-        for(auto &m:members_){
-            m->toString(stream);
-            if(m != members_.back())stream << ',';
-        }
-        stream<<"}";
-    }
-
-
-    Enum::Enum(std::list<std::pair<std::string,int>> members) : members_(std::move(members)){
-        meta_kind = enum_meta;
-    }
-
-    void Enum::toString(ostream &stream) {
-        stream<<"Enum{";
-        for(const auto& m:members_){
-            stream<<m.first<<'='<<to_string(m.second);
-            if(&m != &members_.back())stream<<',';
-        }
-        stream<<'}';
-    }
-
-
-    Depend::Depend(std::string file) : file_(std::move(file)){
-        meta_kind = depend;
-    }
-
-    void Depend::toString(ostream &stream) {
-        stream<<"Include("<<file_<<")";
-    }
-
-
-    void Meta::toHex(ostream &stream) {
-        toString(stream);
-    }
-
-
 
 
     data::ptr Instruction::getByteLength() {
@@ -345,7 +244,7 @@ namespace evoBasic::ir{
 
 
     std::vector<Instruction *> Block::getInstructions() {
-        return instructons;
+        return instructions;
     }
 
     std::string Block::getLabel() {
@@ -357,188 +256,188 @@ namespace evoBasic::ir{
     }
 
     Block &Block::Jmp(Block *block) {
-        instructons.push_back(new Instruction(vm::Bytecode::Jmp,Instruction::JumpProp{block}));
+        instructions.push_back(new Instruction(vm::Bytecode::Jmp, Instruction::JumpProp{block}));
         return *this;
     }
 
     Block &Block::Jif(Block *block) {
-        instructons.push_back(new Instruction(vm::Bytecode::Jif,Instruction::JumpProp{block}));
+        instructions.push_back(new Instruction(vm::Bytecode::Jif, Instruction::JumpProp{block}));
         return *this;
     }
 
     Block &Block::EQ(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::EQ,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::EQ, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::NE(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::NE,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::NE, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::LT(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::LT,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::LT, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::GT(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::GT,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::GT, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::LE(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::LE,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::LE, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::GE(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::GE,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::GE, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::Add(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::Add,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::Add, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::Sub(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::Sub,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::Sub, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::Mul(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::Mul,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::Mul, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::Div(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::Div,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::Div, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::FDiv(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::FDiv,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::FDiv, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::Neg(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::Neg,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::Neg, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::And() {
-        instructons.push_back(new Instruction(vm::Bytecode::And));
+        instructions.push_back(new Instruction(vm::Bytecode::And));
         return *this;
     }
 
     Block &Block::Or() {
-        instructons.push_back(new Instruction(vm::Bytecode::Or));
+        instructions.push_back(new Instruction(vm::Bytecode::Or));
         return *this;
     }
 
     Block &Block::Xor() {
-        instructons.push_back(new Instruction(vm::Bytecode::Xor));
+        instructions.push_back(new Instruction(vm::Bytecode::Xor));
         return *this;
     }
 
     Block &Block::Not() {
-        instructons.push_back(new Instruction(vm::Bytecode::Not));
+        instructions.push_back(new Instruction(vm::Bytecode::Not));
         return *this;
     }
 
     Block &Block::Load(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::Load,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::Load, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::Store(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::Store,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::Store, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::StoreR(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::StoreR,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::StoreR, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::Invoke(std::string signature) {
-        instructons.push_back(new Instruction(vm::Bytecode::Invoke,Instruction::InvokeProp{nullptr,signature}));
+        instructions.push_back(new Instruction(vm::Bytecode::Invoke, Instruction::InvokeProp{nullptr, signature}));
         return *this;
     }
 
     Block &Block::Intrinsic(data::ptr id) {
-        instructons.push_back(new Instruction(vm::Bytecode::Intrinsic,Instruction::IntrinsicProp{id}));
+        instructions.push_back(new Instruction(vm::Bytecode::Intrinsic, Instruction::IntrinsicProp{id}));
         return *this;
     }
 
     Block &Block::External(std::string signature) {
-        instructons.push_back(new Instruction(vm::Bytecode::External,Instruction::ExternalProp{signature}));
+        instructions.push_back(new Instruction(vm::Bytecode::External, Instruction::ExternalProp{signature}));
         return *this;
     }
 
     Block &Block::Push(vm::Data data, ConstBase *const_value) {
-        instructons.push_back(new Instruction(vm::Bytecode::Push,Instruction::PushProp{data,const_value}));
+        instructions.push_back(new Instruction(vm::Bytecode::Push, Instruction::PushProp{data, const_value}));
         return *this;
     }
 
     Block &Block::Pop(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::Pop,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::Pop, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::Ret() {
-        instructons.push_back(new Instruction(vm::Bytecode::Ret));
+        instructions.push_back(new Instruction(vm::Bytecode::Ret));
         return *this;
     }
 
     Block &Block::Cast(vm::Data src, vm::Data dst) {
-        instructons.push_back(new Instruction(vm::Bytecode::Cast,Instruction::CastProp{src,dst}));
+        instructions.push_back(new Instruction(vm::Bytecode::Cast, Instruction::CastProp{src, dst}));
         return *this;
     }
 
     Block &Block::Dup(vm::Data data) {
-        instructons.push_back(new Instruction(vm::Bytecode::Dup,Instruction::TypeProp{data}));
+        instructions.push_back(new Instruction(vm::Bytecode::Dup, Instruction::TypeProp{data}));
         return *this;
     }
 
     Block &Block::Stm(data::u32 size) {
-        instructons.push_back(new Instruction(vm::Bytecode::Stm,Instruction::MemProp{size}));
+        instructions.push_back(new Instruction(vm::Bytecode::Stm, Instruction::MemProp{size}));
         return *this;
     }
 
     Block &Block::StmR(data::u32 size) {
-        instructons.push_back(new Instruction(vm::Bytecode::StmR,Instruction::MemProp{size}));
+        instructions.push_back(new Instruction(vm::Bytecode::StmR, Instruction::MemProp{size}));
         return *this;
     }
 
 
     Block &Block::Ldm(data::u32 size) {
-        instructons.push_back(new Instruction(vm::Bytecode::Ldm,Instruction::MemProp{size}));
+        instructions.push_back(new Instruction(vm::Bytecode::Ldm, Instruction::MemProp{size}));
         return *this;
     }
 
     Block &Block::Psm(data::u32 size,const char *memory) {
-        instructons.push_back(new Instruction(vm::Bytecode::Psm,Instruction::PsmProp{size, memory}));
+        instructions.push_back(new Instruction(vm::Bytecode::Psm, Instruction::PsmProp{size, memory}));
         return *this;
     }
 
     Block &Block::PushFrameBase() {
-        instructons.push_back(new Instruction(vm::Bytecode::PushFrameBase));
+        instructions.push_back(new Instruction(vm::Bytecode::PushFrameBase));
         return *this;
     }
 
     Block &Block::PushGlobalBase() {
-        instructons.push_back(new Instruction(vm::Bytecode::PushGlobalBase));
+        instructions.push_back(new Instruction(vm::Bytecode::PushGlobalBase));
         return *this;
     }
 
     Block &Block::RcInc() {
-        instructons.push_back(new Instruction(vm::Bytecode::RcInc));
+        instructions.push_back(new Instruction(vm::Bytecode::RcInc));
         return *this;
     }
 
     Block &Block::RcDec() {
-        instructons.push_back(new Instruction(vm::Bytecode::RcDec));
+        instructions.push_back(new Instruction(vm::Bytecode::RcDec));
         return *this;
     }
 
@@ -548,26 +447,26 @@ namespace evoBasic::ir{
 
     void Block::toString(ostream &stream) {
         stream<<"<"<<label_<<">\n";
-        for(auto &inst:instructons) {
+        for(auto &inst:instructions) {
             inst->toString(stream);
             stream<<"\n";
         }
     }
 
     void Block::toHex(ostream &stream) {
-        for(auto &inst:instructons)
+        for(auto &inst:instructions)
             inst->toHex(stream);
     }
 
     data::ptr Block::getByteLength() {
         int ans = 0;
-        for(auto &inst : instructons)
+        for(auto &inst : instructions)
             ans += inst->getByteLength();
         return ans;
     }
 
     data::ptr Block::getAddress() {
-        return this->instructons[0]->getAddress();
+        return this->instructions[0]->getAddress();
     }
 
 

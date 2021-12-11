@@ -17,6 +17,11 @@ namespace evoBasic::type{
     vector AccessFlagString = {"Public","Private","Friend","Protected"};
     vector FunctionFlagString = {"Method","Static","Virtual","Override"};
 
+
+    void write_ptr(stringstream &stream,data::ptr ptr){
+        stream.write((const char*)&ptr,vm::Data::ptr.getSize());
+    }
+    
     void strToLowerByRef(string& str){
         transform(str.begin(),str.end(),str.begin(),[](unsigned char c){ return std::tolower(c); });
     }
@@ -379,6 +384,14 @@ namespace evoBasic::type{
         is_static = value;
     }
 
+    bool Symbol::isExtern() {
+        return is_extern;
+    }
+
+    void Symbol::generateMetaBytecode(ir::IR *out) {
+        PANIC;
+    }
+
 
     Symbol *Domain::lookUp(const string &name) {
         Domain *ptr = static_cast<Domain*>(this);
@@ -446,6 +459,17 @@ namespace evoBasic::type{
         for(int i=0;i<indent;i++)str<<indent_unit;
         str<<"}\n";
         return str.str();
+    }
+
+    void Module::generateMetaBytecode(ir::IR *out) {
+        auto &stream = out->getMetadataStream();
+        stream << vm::Bytecode(vm::Bytecode::Module).toHex();
+        auto name = out->createConst(vm::Data::raw_string,getName());
+        write_ptr(stream,name->getAddress());
+        for(auto child:*this) {
+            child->generateMetaBytecode(out);
+        }
+        stream << vm::Bytecode(vm::Bytecode::StructEnd).toHex();
     }
 
 
@@ -608,6 +632,31 @@ namespace evoBasic::type{
         return constructor;
     }
 
+    void Class::generateMetaBytecode(ir::IR *out) {
+        NotNull(getExtend());
+        using namespace vm;
+
+        auto name = out->createConst(Data::raw_string,getName());
+        auto extend_name = out->createConst(Data::raw_string,getExtend()->getName());
+        auto &stream = out->getMetadataStream();
+        
+        stream << Bytecode(Bytecode::Module).toHex();
+        write_ptr(stream,name->getAddress());
+        stream << Bytecode(Bytecode::Ext).toHex();
+        write_ptr(stream,extend_name->getAddress());
+
+        for(auto [interface_name,_] : getImplMap()){
+            stream << Bytecode(Bytecode::Impl).toHex();
+            auto interface_name_const = out->createConst(Data::raw_string,interface_name);
+            write_ptr(stream,interface_name_const->getAddress());
+        }
+        
+        for(auto child:*this) {
+            child->generateMetaBytecode(out);
+        }
+        stream << vm::Bytecode(vm::Bytecode::StructEnd).toHex();
+    }
+
 
     void Record::add(Symbol *symbol) {
         auto field = symbol->as<Variable*>();
@@ -738,6 +787,24 @@ namespace evoBasic::type{
         PANIC;
     }
 
+    void Variable::generateMetaBytecode(ir::IR *out) {
+        using namespace vm;
+        auto &stream = out->getMetadataStream();
+        stream << Bytecode(Bytecode::Field).toHex();
+        auto name = out->createConst(vm::Data::raw_string,getName());
+        write_ptr(stream,name->getAddress());
+        switch (getPrototype()->getKind()) {
+            case SymbolKind::Primitive:
+                stream << Bytecode(Bytecode::RefPmtTy).toHex()
+                       << getPrototype()->as<Primitive*>()->getDataKind().toHex();
+                break;
+            default:
+                stream << Bytecode(isExtern() ? Bytecode::RefExtTy : Bytecode::RefLocalTy).toHex();
+                write_ptr(stream,out->createConst(vm::Data::raw_string,getPrototype()->getName())->getAddress());
+                break;
+        }
+    }
+
 
     std::string EnumMember::debug(int indent) {
         stringstream str;
@@ -776,6 +843,21 @@ namespace evoBasic::type{
 
     VirtualTable *Interface::getVTable() {
         return vtable;
+    }
+
+    void Interface::generateMetaBytecode(ir::IR *out) {
+        using namespace vm;
+
+        auto name = out->createConst(Data::raw_string,getName());
+        auto &stream = out->getMetadataStream();
+
+        stream << Bytecode(Bytecode::Interface).toHex();
+        write_ptr(stream,name->getAddress());
+
+        for(auto child:*this) {
+            child->generateMetaBytecode(out);
+        }
+        stream << vm::Bytecode(vm::Bytecode::StructEnd).toHex();
     }
 
     Array::Array(Prototype *element,data::u32 size)

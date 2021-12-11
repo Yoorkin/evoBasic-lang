@@ -22,5 +22,6 @@ namespace evoBasic::data{
     using u64 = unsigned long long;
 
     using ptr = u64;
+    using size = u64;
 }
 #endif //EVOBASIC_DATADEF_H

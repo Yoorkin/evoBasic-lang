@@ -63,18 +63,18 @@ namespace evoBasic::vm{
 
 
     std::vector<std::string> Data::to_string = {
-        "void","boolean","i8","i16","i32","i64","f32","f64","u8","u16","u32","u64"
+        "void","boolean","i8","i16","i32","i64","f32","f64","u8","u16","u32","u64","raw_string","memory"
     };
 
     std::vector<int> Data::to_size = {
-        0,1,1,2,4,8,4,8,1,2,4,8
+        0,1,1,2,4,8,4,8,1,2,4,8,0,0
     };
 
     std::vector<data::u8> Data::to_hex = {
-        0xD0,0xD1,0xD2,0xD3,0xD4,0xD5,0xD6,0xD7,0xD8,0xD9,0xDA,0xDB
+        0xD0,0xD1,0xD2,0xD3,0xD4,0xD5,0xD6,0xD7,0xD8,0xD9,0xDA,0xDB,0xDC,0xDD
     };
 
-    Data Data::ptr(vm::Data::u64);
+    Data Data::ptr(Data::u64);
 
     std::string Data::toString() {
         return to_string[value_];

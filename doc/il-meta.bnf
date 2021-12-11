@@ -1,0 +1,61 @@
+
+type ::= module | static-function | virtual-function | class;
+
+name ::= "* utf8-string *";
+
+access-flag ::= '(' 'access' ('Public'|'Private'|'Protected'|'Friend') ')';
+
+extend ::= '(' 'extend' name ')';
+
+impl ::= '(' 'impl' name ')';
+
+class ::= '(' 'cls' [access-flag] name [extend] {impl} {(static-function|static-field|virtual-function|field)} ')';
+
+module ::= '(' 'mod' [access-flag] name {(static-function|static-field|module|record|enum)} ')';
+
+record ::= '(' 'record' [access-flag] name {field} ')';
+
+field ::= '(' 'fld' [access-flag] name type ')';
+
+enum ::= '(' 'enum' [access-flag] name {enum-pair} ')';
+
+enum-pair ::= '(' 'pair' name i32-value ')';
+
+interface ::= '(' 'interface' [access-flag] name {virtual-function} ')'
+
+static-field ::= '(' 'sfld' [access-flag] name type ')';
+
+external-function ::= '(' 'ext' [access-flag] name [lib] {param} [result] ')';
+
+lib ::= '(' 'lib' name ')';
+
+virtual-function ::= '(' 'vftn' [access-flag] name {param} {local} [result] {inst} ')';
+
+static-function ::= '(' 'sftn' [access-flag] name {param} {local} [result] {inst} ')';
+
+result ::= '(' 'result' type ')';
+
+param ::= '(' 'param' name type')'
+        | '(' 'opt' name type static-function')'
+        | '(' 'inf' name type ')'
+        ;
+
+local ::= '(' 'local' name type ')';
+
+inst ::= "* add,ldfld,mul,newobj... *";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
