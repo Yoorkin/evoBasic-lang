@@ -70,7 +70,7 @@ namespace evoBasic::type{
     }
 
     Parameter::Parameter(std::string name,Prototype *prototype, bool isByval, bool isOptional ,bool isParamArray)
-            : Variable(SymbolKind::Argument), is_byval(isByval), is_optional(isOptional),is_param_array(isParamArray){
+            : Variable(SymbolKind::Parameter), is_byval(isByval), is_optional(isOptional), is_param_array(isParamArray){
         setName(move(name));
         if(isParamArray)is_byval = true;
         if(prototype)setPrototype(prototype);
@@ -176,7 +176,7 @@ namespace evoBasic::type{
 
     void Function::add(Symbol *symbol){
         switch(symbol->getKind()){
-            case SymbolKind::Argument:
+            case SymbolKind::Parameter:
                 if(symbol->as<Parameter*>()->getName()!="self"){
                     auto param = symbol->as<Parameter*>();
                     if(param->isOptional()){
@@ -443,6 +443,7 @@ namespace evoBasic::type{
     }
 
     void Domain::addMemoryLayout(Variable *variable) {
+        variable->setLayoutIndex(memory_layout.size());
         memory_layout.push_back(variable);
     }
 
@@ -812,6 +813,13 @@ namespace evoBasic::type{
         }
     }
 
+    void Variable::setLayoutIndex(std::size_t index) {
+        layout_index = index;
+    }
+
+    std::size_t Variable::getLayoutIndex(){
+        return layout_index;
+    }
 
     std::string EnumMember::debug(int indent) {
         stringstream str;

@@ -30,10 +30,6 @@
 
     memory of whole record
 
-- ptr
-
-    pointer to any types except class object and function
-
 - array
 
     memory of whole array

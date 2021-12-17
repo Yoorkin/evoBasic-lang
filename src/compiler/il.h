@@ -23,7 +23,7 @@ namespace evoBasic::il{
     class Block;
 
     enum DataType{
-        i8,i16,i32,i64,u8,u16,u32,u64,f32,f64,ref,ftn,vftn,sftn,record,array
+        empty,i8,i16,i32,i64,u8,u16,u32,u64,f32,f64,ref,ftn,vftn,sftn,record,array,boolean,character
     };
 
     class Node {
@@ -366,12 +366,12 @@ namespace evoBasic::il{
         Block &Ldloc(DataType data);
         Block &Ldloca();
         Block &Stloc(DataType data);
-        Block &Ldfld(DataType data,Fld *field);
-        Block &Ldsfld(DataType data,SFld *field);
-        Block &Ldflda(DataType data,Fld *field);
-        Block &Ldsflda(DataType data,SFld *field);
-        Block &Stfld(DataType data,Fld *field);
-        Block &Stsfld(DataType data,SFld *field);
+        Block &Ldfld(DataType data,Token *fld);
+        Block &Ldsfld(DataType data,Token *sfld);
+        Block &Ldflda(DataType data,Token *fld);
+        Block &Ldsflda(DataType data,Token *sfld);
+        Block &Stfld(DataType data,Token *fld);
+        Block &Stsfld(DataType data,Token *sfld);
         Block &Ldelem(DataType data);
         Block &Ldelema();
         Block &Stelem(DataType data);

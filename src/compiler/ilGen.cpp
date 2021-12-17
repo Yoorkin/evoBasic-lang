@@ -11,6 +11,76 @@ namespace evoBasic{
 
     using MemberList = list<Member*>;
 
+    struct EmptyOperand {};
+
+    struct DataOperand {
+        il::DataType data;
+        type::Primitive *symbol = nullptr;
+    };
+
+    struct RefOperand;
+
+    struct FldOperand {
+        enum FldKind{local,sfld,fld,arg}kind;
+        type::Variable *variable = nullptr;
+    };
+
+    struct ElementOperand {
+        type::Array *array = nullptr;
+    };
+
+    struct FtnOperand {
+        il::DataType ftn;
+        type::Function *symbol = nullptr;
+    };
+
+    struct RecordOperand {
+        type::Record *symbol = nullptr;
+    };
+
+    struct ClassOperand {
+        type::Class *symbol = nullptr;
+    };
+
+    struct ArrayOperand;
+
+    struct TokenOperand {
+        il::Token *token = nullptr;
+        type::Symbol *symbol = nullptr;
+    };
+
+    using OperandInfo = std::variant<EmptyOperand,DataOperand,RefOperand,FtnOperand,RecordOperand,ClassOperand,ArrayOperand,TokenOperand,FldOperand,ElementOperand>;
+
+    struct RefOperand {
+        OperandInfo *ref = nullptr;
+        //~RefOperand(){delete ref;}
+    };
+
+    struct ArrayOperand {
+        OperandInfo *element = nullptr;
+        type::Array *symbol = nullptr;
+    };
+
+    enum class OperandKind : int{empty,data,ref,ftn,record,cls,array,token,fld,element};
+
+    RefOperand refTo(OperandInfo info){
+        return RefOperand{new OperandInfo(info)};
+    }
+
+    type::Symbol *stripOperandInfo(OperandInfo type){
+        switch ((OperandKind)type.index()) {
+            case OperandKind::empty:    PANIC;
+            case OperandKind::data:     return get<DataOperand>(type).symbol;
+            case OperandKind::ref:      return stripOperandInfo(*get<RefOperand>(type).ref);
+            case OperandKind::ftn:      return get<FtnOperand>(type).symbol;
+            case OperandKind::record:   return get<RecordOperand>(type).symbol;
+            case OperandKind::cls:      return get<ClassOperand>(type).symbol;
+            case OperandKind::array:    return get<ArrayOperand>(type).symbol;
+            case OperandKind::token:    return get<TokenOperand>(type).symbol;
+        }
+        return nullptr;
+    }
+
     il::IL *ILGen::gen(AST *ast, Context *context) {
         return nullptr;
     }
@@ -25,7 +95,7 @@ namespace evoBasic{
 
     std::any ILGen::visitModule(ast::Module *mod_node, ILGenArgs args) {
         vector<Member*> members;
-        for(auto iter = mod_node->member; iter != nullptr; iter = iter->next_sibling){
+        FOR_EACH(iter,mod_node->member){
             auto ls = any_cast<MemberList>(visitMember(iter,args));
             members.insert(members.end(),ls.begin(),ls.end());
         }
@@ -44,7 +114,7 @@ namespace evoBasic{
 
         Extend *extend = factory.createExtend(cls_node->class_symbol->getExtend());
 
-        for(auto iter = cls_node->member; iter != nullptr; iter = iter->next_sibling){
+        FOR_EACH(iter,cls_node->member){
             auto ls = any_cast<MemberList>(visitMember(iter,args));
             members.insert(members.end(),ls.begin(),ls.end());
         }
@@ -56,7 +126,7 @@ namespace evoBasic{
 
     std::any ILGen::visitEnum(ast::Enum *em_node, ILGenArgs args) {
         vector<Pair*> pairs;
-        for(auto iter = em_node->member; iter!=nullptr; iter=iter->next_sibling){
+        FOR_EACH(iter,em_node->member){
             pairs.push_back(factory.createPair(getID(iter->name), getDigit(iter->value)));
         }
 
@@ -150,18 +220,6 @@ namespace evoBasic{
         return MemberList{member};
     }
 
-    std::any ILGen::visitMember(ast::Member *member_node, ILGenArgs args) {
-        switch (member_node->member_kind) {
-            case ast::Member::class_:    return visitClass((ast::Class*)member_node,args);
-            case ast::Member::module_:   return visitModule((ast::Module*)member_node,args);
-            case ast::Member::type_:     return visitType((ast::Type*)member_node,args);
-            case ast::Member::enum_:     return visitEnum((ast::Enum*)member_node,args);
-            case ast::Member::dim_:      return visitDim((ast::Dim*)member_node,args);
-            case ast::Member::interface_:return visitInterface((ast::Interface*)member_node,args);
-        }
-        PANIC;
-    }
-
     std::any ILGen::visitLet(ast::Let *let_node, ILGenArgs args) {
         for(auto var = let_node->variable; var!=nullptr; var = var->next_sibling){
             auto [name,prototype] = any_cast<tuple<string,type::Prototype*>>(visitVariable(var,args));
@@ -213,31 +271,185 @@ namespace evoBasic{
     }
 
     std::any ILGen::visitContinue(ast::stmt::Continue *cont_node, ILGenArgs args) {
-        return Visitor::visitContinue(cont_node, args);
+        args.previous_block->Br(args.next_block);
+        return {};
     }
 
     std::any ILGen::visitReturn(ast::stmt::Return *ret_node, ILGenArgs args) {
-        return Visitor::visitReturn(ret_node, args);
+        args.previous_block->Ret();
+        return {};
     }
 
     std::any ILGen::visitExit(ast::stmt::Exit *exit_node, ILGenArgs args) {
-        return Visitor::visitExit(exit_node, args);
+        //todo
     }
 
     std::any ILGen::visitBinary(ast::expr::Binary *logic_node, ILGenArgs args) {
-        return Visitor::visitBinary(logic_node, args);
+
     }
 
     std::any ILGen::visitUnary(ast::expr::Unary *unit_node, ILGenArgs args) {
-        return Visitor::visitUnary(unit_node, args);
+
     }
 
     std::any ILGen::visitCallee(ast::expr::Callee *callee_node, ILGenArgs args) {
-        return Visitor::visitCallee(callee_node, args);
+
     }
 
     std::any ILGen::visitArg(ast::expr::Callee::Argument *arg_node, ILGenArgs args) {
-        return Visitor::visitArg(arg_node, args);
+
     }
+
+    std::any ILGen::visitIndex(ast::expr::Index *index_node, ILGenArgs args) {
+
+    }
+
+    std::any ILGen::visitCast(ast::expr::Cast *cast_node, ILGenArgs args) {
+
+    }
+
+    std::any ILGen::visitAssign(ast::expr::Assign *assign_node, ILGenArgs args) {
+        auto lhs = any_cast<OperandInfo>(visitExpression(assign_node->lhs,args));
+        args.dot_expression_context = stripOperandInfo(lhs);
+        auto rhs = any_cast<OperandInfo>(visitExpression(assign_node->rhs,args));
+
+        switch((OperandKind)lhs.index()){
+            case OperandKind::token:{
+                auto token_operand = get<TokenOperand>(lhs);
+                switch(token_operand.symbol->getKind()){
+                    case type::SymbolKind::Variable:
+                    case type::SymbolKind::Parameter:{
+                        auto variable = token_operand.symbol->as<type::Variable*>();
+                        switch(variable->getVariableKind()){
+                            case type::VariableKind::Local:
+                                args.previous_block->Push(il::u16,variable->getLayoutIndex())
+                                                    .Stloc(assign_node->type->il_type);
+                                break;
+                            case type::VariableKind::Parameter:
+                                args.previous_block->Push(il::u16,variable->getLayoutIndex())
+                                        .Starg(assign_node->type->il_type);
+                                break;
+                            case type::VariableKind::StaticField:
+                                args.previous_block->Stsfld(assign_node->type->il_type,token_operand.token);
+                                break;
+                            case type::VariableKind::Field:
+                                args.previous_block->Stfld(assign_node->type->il_type,token_operand.token);
+                                break;
+                        }
+                        break;
+                    }
+                }
+                break;
+            }
+            case OperandKind::ref:{
+                auto ref_operand = get<RefOperand>(lhs);
+                //todo ref to array element
+            }
+        }
+
+        args.previous_block->Stloc().Starg().Stelem().Stfld().Stsfld();
+
+        return lhs;
+    }
+
+    std::any ILGen::visitDot(ast::expr::Dot *dot_node, ILGenArgs args) {
+        auto lhs = visitExpression(dot_node->lhs,args);
+        args.dot_expression_context = any_cast<type::Symbol*>(lhs);
+        return visitExpression(dot_node->rhs,args);
+    }
+
+    std::any ILGen::visitID(ast::expr::ID *id_node, ILGenArgs args) {
+        auto name = getID(id_node);
+        if(args.need_lookup) {
+            return args.dot_expression_context->as<type::Domain*>()->lookUp(name);
+        }
+        else{
+            return args.dot_expression_context->as<type::Domain*>()->find(name);
+        }
+    }
+
+    std::any ILGen::visitBoolean(ast::expr::Boolean *bl_node, ILGenArgs args) {
+        args.previous_block->Push(il::boolean,bl_node->value);
+        return OperandInfo(DataOperand{il::boolean});
+    }
+
+    std::any ILGen::visitChar(ast::expr::Char *ch_node, ILGenArgs args) {
+        args.previous_block->Push(il::character,ch_node->value);
+        return OperandInfo(DataOperand{il::character});
+    }
+
+    std::any ILGen::visitDigit(ast::expr::Digit *digit_node, ILGenArgs args) {
+        args.previous_block->Push(il::i32,digit_node->value);
+        return OperandInfo(DataOperand{il::i32});
+    }
+
+    std::any ILGen::visitDecimal(ast::expr::Decimal *decimal, ILGenArgs args) {
+        args.previous_block->Push(il::f64,decimal->value);
+        return OperandInfo(DataOperand{il::f64});
+    }
+
+    std::any ILGen::visitString(ast::expr::String *str_node, ILGenArgs args) {
+        //todo: load raw string and initialize class string
+        return OperandInfo(refTo(ClassOperand{args.context->getBuiltIn().getStringClass()}));
+    }
+
+    std::any ILGen::visitParentheses(ast::expr::Parentheses *parentheses_node, ILGenArgs args) {
+        return visitExpression(parentheses_node->expr,args);
+    }
+
+    std::any ILGen::visitExprStmt(ast::stmt::ExprStmt *expr_stmt_node, ILGenArgs args) {
+        return visitExpression(expr_stmt_node->expr,args);
+    }
+
+    std::any ILGen::visitExpression(ast::expr::Expression *expr_node, ILGenArgs args) {
+        using exp = ast::expr::Expression;
+        using namespace ast::expr;
+        switch ((*expr_node).expression_kind) {
+            case exp::binary_:      return visitBinary((Binary*)expr_node,args);
+            case exp::unary_:       return visitUnary((Unary*)expr_node, args);
+            case exp::digit_:       return visitDigit((Digit*)expr_node,args);
+            case exp::decimal_:     return visitDecimal((Decimal*)expr_node,args);
+            case exp::string_:      return visitString((String*)expr_node,args);
+            case exp::char_:        return visitChar((Char*)expr_node,args);
+            case exp::parentheses_: return visitParentheses((Parentheses*)expr_node,args);
+            case exp::boolean_:     return visitBoolean((Boolean*)expr_node,args);
+            case exp::new_:         return visitNew((New*)expr_node,args);
+            case exp::assign_:      return visitAssign((Assign*)expr_node,args);
+            case exp::index_:       return visitIndex((Index*)expr_node,args);
+            case exp::dot_:         return visitDot((Dot*)expr_node,args);
+            case exp::callee_:      return visitCallee((Callee*)expr_node,args);
+            case exp::ID_:          return visitID((ID*)expr_node,args);
+            case exp::colon_:       return visitColon((Colon*)expr_node,args);
+        }
+        PANIC;
+    }
+
+    std::any ILGen::visitStatement(ast::stmt::Statement *stmt_node, ILGenArgs args) {
+        switch ((*stmt_node).stmt_flag) {
+            case ast::stmt::Statement::let_:        return visitLet((ast::stmt::Let*)stmt_node,args);
+            case ast::stmt::Statement::loop_:       return visitLoop((ast::stmt::Loop*)stmt_node,args);
+            case ast::stmt::Statement::if_:         return visitIf((ast::stmt::If*)stmt_node,args);
+            case ast::stmt::Statement::for_:        return visitFor((ast::stmt::For*)stmt_node,args);
+            case ast::stmt::Statement::select_:     return visitSelect((ast::stmt::Select*)stmt_node,args);
+            case ast::stmt::Statement::return_:     return visitReturn((ast::stmt::Return*)stmt_node,args);
+            case ast::stmt::Statement::continue_:   return visitContinue((ast::stmt::Continue*)stmt_node,args);
+            case ast::stmt::Statement::exit_:       return visitExit((ast::stmt::Exit*)stmt_node,args);
+            case ast::stmt::Statement::expr_:       return visitExprStmt((ast::stmt::ExprStmt*)stmt_node,args);
+        }
+        PANIC;
+    }
+
+    std::any ILGen::visitMember(ast::Member *member_node, ILGenArgs args) {
+        switch (member_node->member_kind) {
+            case ast::Member::class_:    return visitClass((ast::Class*)member_node,args);
+            case ast::Member::module_:   return visitModule((ast::Module*)member_node,args);
+            case ast::Member::type_:     return visitType((ast::Type*)member_node,args);
+            case ast::Member::enum_:     return visitEnum((ast::Enum*)member_node,args);
+            case ast::Member::dim_:      return visitDim((ast::Dim*)member_node,args);
+            case ast::Member::interface_:return visitInterface((ast::Interface*)member_node,args);
+        }
+        PANIC;
+    }
+
 }
 

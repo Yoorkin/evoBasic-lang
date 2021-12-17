@@ -187,7 +187,7 @@ namespace evoBasic{
                 break;
             case SymbolKind::Interface:
                 break;
-            case SymbolKind::Argument:
+            case SymbolKind::Parameter:
                 break;
             case SymbolKind::Array:
                 break;

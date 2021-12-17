@@ -10,15 +10,20 @@
 #include "ast.h"
 #include "il.h"
 #include "visitor.h"
+#include "defaultVisitor.h"
 
 namespace evoBasic{
     
     struct ILGenArgs{
+        type::Symbol *dot_expression_context = nullptr;
+        bool need_lookup = false;
+        Context *context = nullptr;
         il::FtnWithDefinition *ftn = nullptr;
-        il::Block *previous_block = nullptr;
+        il::Block *previous_block = nullptr,
+                  *next_block = nullptr;
     };
     
-    class ILGen : public Visitor<ILGenArgs>{
+    class ILGen : public DefaultVisitor<ILGenArgs>{
         il::ILFactory factory;
     public:
         il::IL *gen(AST *ast,Context *context);
@@ -61,11 +66,11 @@ namespace evoBasic{
         std::any visitParentheses(ast::expr::Parentheses *parentheses_node, ILGenArgs args) override;
         std::any visitExprStmt(ast::stmt::ExprStmt *expr_stmt_node, ILGenArgs args) override;
 
-        std::any visitAnnotation(ast::Annotation *anno_node, ILGenArgs args)override;
         std::any visitExpression(ast::expr::Expression *expr_node, ILGenArgs args) override;
 
         std::any visitMember(ast::Member *member_node, ILGenArgs args) override;
         std::any visitStatement(ast::stmt::Statement *stmt_node, ILGenArgs args) override;
+
     };
 }
 

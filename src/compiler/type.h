@@ -45,7 +45,7 @@ namespace evoBasic::type{
 
     enum class SymbolKind{
         Error,Class,Enum,EnumMember,Record,Function,Module,
-        Primitive,TmpDomain,Variable,Argument,Array,Interface
+        Primitive,TmpDomain,Variable,Parameter,Array,Interface
     };
 
     class Symbol {
@@ -118,12 +118,16 @@ namespace evoBasic::type{
         }
     };
 
+    enum class VariableKind{Local,Field,StaticField,Parameter};
+
     class Variable : public Symbol{
         friend class Record;
         Prototype *prototype{nullptr};
         bool is_const = false;
         bool is_global = false;
         std::size_t offset = -1;
+        std::size_t layout_index = -1;
+        VariableKind var_kind;
     public:
         Variable();
         explicit Variable(SymbolKind kind);
@@ -133,9 +137,13 @@ namespace evoBasic::type{
         void setPrototype(Prototype *ptr);
         std::string debug(int indent)override;
         std::size_t getOffset();
+        void setLayoutIndex(std::size_t index);
+        std::size_t getLayoutIndex();
         void setOffset(std::size_t value);
         virtual data::ptr getRealByteLength();
         void generateMetaBytecode(ir::IR *out)override;
+        VariableKind getVariableKind();
+        void setVariableKind(VariableKind kind);
     };
 
     //domain interface

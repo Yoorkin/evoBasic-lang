@@ -16,8 +16,8 @@
 - NonStatic
 
 3.按是否引用划分
-- Byval-Argument
-- Byref-Argument
+- Byval-Parameter
+- Byref-Parameter
 
 4.按是否解引用数组划分
 - [Deref-Array]
@@ -50,12 +50,12 @@
 15. Variable[Deref-Array]
 16. Static.Static 
 17. NonStatic.NonStatic 
-18. Byval-Argument.Invoke
-19. Byval-Argument.Variable
-20. Byval-Argument[Deref-Array]
-21. Byref-Argument.Invoke
-22. Byref-Argument.Variable
-23. Byref-Argument[Deref-Array]
+18. Byval-Parameter.Invoke
+19. Byval-Parameter.Variable
+20. Byval-Parameter[Deref-Array]
+21. Byref-Parameter.Invoke
+22. Byref-Parameter.Variable
+23. Byref-Parameter[Deref-Array]
 24. Local-Variable.X
 25. Module-Variable.X
 26. Instance-Variable.X

@@ -24,6 +24,8 @@
 
 #ifndef EVOBASIC_TYPEANALYZER_H
 #define EVOBASIC_TYPEANALYZER_H
+
+#include <il.h>
 #include "defaultVisitor.h"
 #include "type.h"
 #include "context.h"
@@ -75,7 +77,7 @@ namespace evoBasic{
         std::any visitAnnotation(ast::Annotation *anno_node, TypeAnalyzerArgs args) override;
         std::any visitAnnotationUnit(ast::AnnotationUnit *unit_node, TypeAnalyzerArgs args) override;
 
-        bool check_binary_op_valid(Location *code,ConversionRules &rules,
+        type::Prototype *check_binary_op_valid(Location *code,ConversionRules &rules,
                                    type::Prototype *lhs,type::Prototype *rhs,ast::expr::Expression **lhs_node,ast::expr::Expression **rhs_node);
         void check_access(Location *code_location,type::Symbol *target,type::Domain *current,type::Domain *current_class_or_module);
         void check_callee(Location *location,ast::expr::Argument *argument,type::Function *target, TypeAnalyzerArgs args);
@@ -89,6 +91,8 @@ namespace evoBasic{
         void visitStatementList(ast::stmt::Statement *stmt_list, TypeAnalyzerArgs args);
 
         std::any visitAllMember(type::Domain *domain, ast::Member *member, TypeAnalyzerArgs args);
+
+        evoBasic::il::DataType mapPrototypeToIL(type::Prototype *variable_prototype);
     };
 }
 

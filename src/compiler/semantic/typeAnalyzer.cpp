@@ -365,27 +365,28 @@ namespace evoBasic{
 
     std::any TypeAnalyzer::visitDigit(ast::expr::Digit *digit_node, TypeAnalyzerArgs args) {
         auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::i32);
-        return (*digit_node).type = new ExpressionType(primitive,ExpressionType::rvalue);
+        return digit_node->type = new ExpressionType(primitive,ExpressionType::rvalue,il::i32);
     }
 
     std::any TypeAnalyzer::visitDecimal(ast::expr::Decimal *decimal_node, TypeAnalyzerArgs args) {
-        auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::i32);
-        return (*decimal_node).type = new ExpressionType(primitive,ExpressionType::rvalue);
+        auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::f64);
+        return decimal_node->type = new ExpressionType(primitive,ExpressionType::rvalue,il::f64);
     }
 
     std::any TypeAnalyzer::visitBoolean(ast::expr::Boolean *bl_node, TypeAnalyzerArgs args) {
-        auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::i32);
-        return (*bl_node).type = new ExpressionType(primitive,ExpressionType::rvalue);
+        auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::boolean);
+        return (*bl_node).type = new ExpressionType(primitive,ExpressionType::rvalue,il::boolean);
     }
 
     std::any TypeAnalyzer::visitChar(ast::expr::Char *ch_node, TypeAnalyzerArgs args) {
-        auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::i32);
-        return (*ch_node).type = new ExpressionType(primitive,ExpressionType::rvalue);
+        auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::u16);
+        return (*ch_node).type = new ExpressionType(primitive,ExpressionType::rvalue,il::u16);
     }
 
     std::any TypeAnalyzer::visitString(ast::expr::String *str_node, TypeAnalyzerArgs args) {
         auto cls = args.context->getBuiltIn().getStringClass();
-        return (*str_node).type = new ExpressionType(cls,ExpressionType::rvalue);
+        // todo: create string Object and push ref into operand stack
+        return (*str_node).type = new ExpressionType(cls,ExpressionType::rvalue,il::ref);
     }
     
     std::any TypeAnalyzer::visitBinary(ast::expr::Binary *binary_node, TypeAnalyzerArgs args) {
@@ -412,14 +413,14 @@ namespace evoBasic{
                    !is_boolean(rhs_type,binary_node->rhs->location)){
                     return ExpressionType::Error;
                 }
-                return binary_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue);
+                return binary_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue,il::boolean);
 
             }
             case Op::Not:{
                 if(!is_boolean(rhs_type,binary_node->rhs->location)){
                     return ExpressionType::Error;
                 }
-                return binary_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue);
+                return binary_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue,il::boolean);
             }
             case Op::EQ:
             case Op::NE:
@@ -430,20 +431,46 @@ namespace evoBasic{
                 if(!check_binary_op_valid(binary_node->location,args.context->getConversionRules(),
                                           lhs_type->getPrototype(),rhs_type->getPrototype(),&binary_node->lhs,&binary_node->rhs))
                     return ExpressionType::Error;
-                return binary_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue);
+                return binary_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue,il::boolean);
             }
             case Op::ADD:
             case Op::MINUS:
             case Op::MUL:
             case Op::DIV:
             case Op::FDIV:{
-                if(!check_binary_op_valid(binary_node->location,args.context->getConversionRules(),
-                                          lhs_type->getPrototype(),rhs_type->getPrototype(),&binary_node->lhs,&binary_node->rhs))
-                    return ExpressionType::Error;
-                return binary_node->type = new ExpressionType(lhs_type->getPrototype(),ExpressionType::rvalue);
+                auto result_type = check_binary_op_valid(binary_node->location,args.context->getConversionRules(),
+                                                         lhs_type->getPrototype(),rhs_type->getPrototype(),&binary_node->lhs,&binary_node->rhs);
+                if(!result_type) return ExpressionType::Error;
+                return binary_node->type = new ExpressionType(lhs_type->getPrototype(),ExpressionType::rvalue,mapPrototypeToIL(result_type));
             }
             default:
                 PANIC;
+        }
+    }
+
+    il::DataType TypeAnalyzer::mapPrototypeToIL(Prototype *type){
+        using data = vm::Data;
+        using kind = type::SymbolKind;
+        switch(type->getKind()){
+            case kind::Class:       return il::ref;
+            case kind::Enum:        return il::u32;
+            case kind::Record:      return il::record;
+            case kind::Array:       return il::array;
+            case kind::Function:    return il::ftn;
+            case kind::Primitive:
+                switch(type->as<Primitive*>()->getDataKind().getValue()){
+                    case data::i8:          return il::u8;
+                    case data::i16:         return il::i16;
+                    case data::i32:         return il::i32;
+                    case data::i64:         return il::i64;
+                    case data::u8:          return il::u8;
+                    case data::u16:         return il::u16;
+                    case data::u32:         return il::u32;
+                    case data::u64:         return il::u64;
+                    case data::boolean:     return il::boolean;
+                    default: PANIC;
+                }
+            default: PANIC;
         }
     }
     
@@ -483,19 +510,22 @@ namespace evoBasic{
 
             switch (target->getKind()) {
                 case type::SymbolKind::Variable:
-                case type::SymbolKind::Argument:
+                case type::SymbolKind::Parameter:
                     if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,target->isStatic());
-                    return new ExpressionType(target->as<type::Variable*>()->getPrototype(),ExpressionType::lvalue,target->isStatic());
+                    return new ExpressionType(target->as<type::Variable*>()->getPrototype(),
+                                              ExpressionType::lvalue,
+                                              mapPrototypeToIL(target->as<type::Variable*>()->getPrototype()),
+                                              target->isStatic());
                 case type::SymbolKind::Function:
                     if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,target->isStatic());
-                    return new ExpressionType(target,ExpressionType::path,true);
+                    return new ExpressionType(target,ExpressionType::path,il::empty,true);
                 case type::SymbolKind::Module:
                 case type::SymbolKind::Class:
                 case type::SymbolKind::Enum:
                     if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,true);
-                    return new ExpressionType(target,ExpressionType::path,true);
+                    return new ExpressionType(target,ExpressionType::path,il::empty,true);
                 case type::SymbolKind::EnumMember:
-                    return new ExpressionType(target->getParent(),ExpressionType::rvalue, true);
+                    return new ExpressionType(target->getParent(),ExpressionType::rvalue,mapPrototypeToIL(target->getParent()),true);
                 default:
                     PANIC;
             }
@@ -561,7 +591,7 @@ namespace evoBasic{
             }
         }
         
-        return index_node->type = new ExpressionType(ret_prototype,ExpressionType::lvalue);
+        return index_node->type = new ExpressionType(ret_prototype,ExpressionType::lvalue,mapPrototypeToIL(ret_prototype));
     }
 
     std::any TypeAnalyzer::visitCallee(ast::expr::Callee *callee_node, TypeAnalyzerArgs args) {
@@ -582,7 +612,7 @@ namespace evoBasic{
 
         auto ret = func->getRetSignature();
         if(ret){
-            return callee_node->type = new ExpressionType(ret->as<type::Prototype*>(),ExpressionType::rvalue);
+            return callee_node->type = new ExpressionType(ret->as<type::Prototype*>(),ExpressionType::rvalue,mapPrototypeToIL(ret));
         }
         else{
             return callee_node->type = ExpressionType::Void;
@@ -612,7 +642,7 @@ namespace evoBasic{
 
         check_callee(new_node->location,new_node->argument,constructor,args);
 
-        return new ExpressionType(cls,ExpressionType::rvalue);
+        return new ExpressionType(cls,ExpressionType::rvalue,il::ref);
     }
 
     std::any TypeAnalyzer::visitExprStmt(ast::stmt::ExprStmt *expr_stmt_node, TypeAnalyzerArgs args) {
@@ -652,7 +682,7 @@ namespace evoBasic{
         }
     }
     
-    bool TypeAnalyzer::check_binary_op_valid(Location *code,ConversionRules &rules,
+    Prototype *TypeAnalyzer::check_binary_op_valid(Location *code,ConversionRules &rules,
                                              Prototype *lhs,Prototype *rhs,Expression **lhs_node,Expression **rhs_node) {
         if(!rhs->equal(lhs)){
             auto result = rules.getImplicitPromotionRule(lhs,rhs);
@@ -667,15 +697,15 @@ namespace evoBasic{
                     Logger::warning((*rhs_node)->location,lang->fmtImplicitCvtFromAToB(rhs->getName(),result_type->getName()));
                     rules.insertCastAST(result_type, rhs_node);
                 }
-                return true;
+                return result_type;
             }
             else{
                 Logger::error(code,lang->fmtBinaryOpInvalid(lhs->getName(),rhs->getName()));
-                return false;
+                return nullptr;
             }
         }
         else{
-            return true;
+            return lhs;
         }
     }
 
@@ -721,7 +751,7 @@ namespace evoBasic{
     std::any TypeAnalyzer::visitAnnotation(ast::Annotation *annotation_node, TypeAnalyzerArgs args) {
         auto iter = (*annotation_node).unit;
         args.need_lookup = true;
-        args.dot_prefix = new ExpressionType(args.domain,ExpressionType::rvalue,false);
+        args.dot_prefix = new ExpressionType(args.domain,ExpressionType::rvalue,mapPrototypeToIL(args.domain),false);
         auto symbol = visitAnnotationUnit(iter,args);
         iter = iter->next_sibling;
         args.dot_prefix->symbol = any_cast<Symbol*>(symbol);

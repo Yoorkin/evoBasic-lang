@@ -812,11 +812,11 @@ namespace evoBasic{
 //        auto arg_type = arg_node->expr->type;
 //        if(param->isByval()){ // ByVal Parameter
 //            switch (arg_node->pass_kind) {
-//                case ast::expr::Callee::Argument::byref:
+//                case ast::expr::Callee::Parameter::byref:
 //                    //do nothing
 //                    break;
-//                case ast::expr::Callee::Argument::undefined:
-//                case ast::expr::Callee::Argument::byval: {
+//                case ast::expr::Callee::Parameter::undefined:
+//                case ast::expr::Callee::Parameter::byval: {
 //                    auto arg_operand = any_cast<OperandType>(visitExpression(arg_node->expr, args));
 //                    loadOperandAddress(arg_operand,args.previous_block);
 //                    break;
@@ -825,7 +825,7 @@ namespace evoBasic{
 //        }
 //        else{ // ByRef Parameter
 //            switch (arg_node->pass_kind) {
-//                case ast::expr::Callee::Argument::byval: {
+//                case ast::expr::Callee::Parameter::byval: {
 //                    // store value in temporary address
 //                    pushVariableAddress(arg_node->temp_address, args.previous_block, true);
 //                    auto operand = any_cast<OperandType>(visitExpression(arg_node->expr, args));
@@ -853,8 +853,8 @@ namespace evoBasic{
 //                    pushVariableAddress(arg_node->temp_address, args.previous_block, true);
 //                    break;
 //                }
-//                case ast::expr::Callee::Argument::byref:
-//                case ast::expr::Callee::Argument::undefined:
+//                case ast::expr::Callee::Parameter::byref:
+//                case ast::expr::Callee::Parameter::undefined:
 //                    visitExpression(arg_node->expr,args);
 //                    break;
 //            }
@@ -880,7 +880,7 @@ namespace evoBasic{
                 auto record = symbol->as<type::Record*>();
                 return RecordType{record->getByteLength(),record};
             }
-            case SymbolKind::Argument: {
+            case SymbolKind::Parameter: {
                 auto argument = symbol->as<Parameter*>();
                 auto element = mapSymbolToOperandType(argument->getPrototype());
                 if(argument->isByval()) {
@@ -1125,7 +1125,7 @@ namespace evoBasic{
                 return Data(Data::ptr);
             case SymbolKind::Primitive:
                 return target->as<Primitive*>()->getDataKind();
-            case SymbolKind::Argument:
+            case SymbolKind::Parameter:
             case SymbolKind::TmpDomain:
             case SymbolKind::EnumMember:
             case SymbolKind::Module:
