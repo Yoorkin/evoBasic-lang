@@ -6,14 +6,14 @@
 #include "nullSafe.h"
 namespace evoBasic::vm{
 
-//    Segment,Define,Jmp,Jif,EQ,NE,LT,GT,LE,GE,Add,Sub,Mul,Div,FDiv,Neg,And,Or,Xor,Not,Load,Store,Invoke,Push,Pop,Ret,Cast,Dup,
+//    Segment,Define,Jmp,InstJif,EQ,NE,LT,GT,LE,GE,Add,Sub,Mul,Div,FDiv,Neg,And,Or,Xor,Not,Load,Store,Invoke,InstPush,Pop,Ret,Cast,Dup,
 //    PushFrameBase, /* push current stack frame address */
 //    PushGlobalBase /* push global address */
 
     std::vector<std::string> Bytecode::to_string = {
         "Entrance","MetaSegment","ConstSegment","CodeSegment",
-        "Define","Jmp","Jif","EQ","NE","LT","GT","LE","GE","Add","Sub","Mul","Div","FDiv",
-        "Neg","And","Or","Xor","Not","Load","Store","Invoke","Push","Pop","Ret","Cast","Dup",
+        "Define","Jmp","InstJif","EQ","NE","LT","GT","LE","GE","Add","Sub","Mul","Div","FDiv",
+        "Neg","And","Or","Xor","Not","Load","Store","Invoke","InstPush","Pop","Ret","Cast","Dup",
         "Stm","Ldm","Psm",
         "PushFrameBase","PushGlobalBase","Nop","StoreR","StmR","Intrinsic","External",
         "RcInc","RcDec"
@@ -29,10 +29,10 @@ namespace evoBasic::vm{
     std::map<std::string,Bytecode::Value> Bytecode::string_to_value = {
         {"Entrance",Entrance},
         {"MetaSegment",MetaSegment},{"ConstSegment",ConstSegment},{"CodeSegment",CodeSegment},
-        {"Define",Define},{"Jmp",Jmp},{"Jif",Jif},{"EQ",EQ},{"NE",NE},{"LT",LT},{"GT",GT},
+        {"Define",Define},{"Jmp",Jmp},{"InstJif",Jif},{"EQ",EQ},{"NE",NE},{"LT",LT},{"GT",GT},
         {"LE",LE},{"GE",GE},{"Add",Add},{"Sub",Sub},{"Mul",Mul},{"Div",Div},{"FDiv",FDiv},
         {"Neg",Neg},{"And",And},{"Or",Or},{"Xor",Xor},{"Not",Not},{"Load",Load},{"Store",Store},{"Invoke",Invoke},
-        {"Push",Push},{"Pop",Pop},{"Ret",Ret},{"Cast",Cast},{"Dup",Dup},{"Stm",Stm},{"Ldm",Ldm},{"Psm",Psm},
+        {"InstPush",Push},{"Pop",Pop},{"Ret",Ret},{"Cast",Cast},{"Dup",Dup},{"Stm",Stm},{"Ldm",Ldm},{"Psm",Psm},
         {"PushFrameBase",PushFrameBase},{"PushGlobalBase",PushGlobalBase},{"Nop",Nop},{"StoreR",StoreR},{"StmR",StmR},
         {"Intrinsic",Intrinsic},{"External",External},{"RcInc",RcInc},{"RcDec",RcDec}
     };

@@ -12,7 +12,7 @@
 #include <stack>
 #include "cmd.h"
 #include "logger.h"
-#include "formator.h"
+#include "format.h"
 #include "stack.h"
 #include "bytecode.h"
 using namespace std;
@@ -393,7 +393,7 @@ int main(int argc,char *argv[]){
     CmdDistributor distributor;
     distributor.others([&](const string &file){
         if(fs::exists(file)) files.emplace_back(file);
-        else Logger::error(format()<<"cannot find file '"<<file<<"'");
+        else Logger::error(format() << "cannot find file '" << file << "'");
     });
 
     for(int i=1;i<argc;i++){

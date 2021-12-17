@@ -8,6 +8,7 @@
 #include "type.h"
 #include "context.h"
 #include "utils.h"
+#include "il.h"
 
 namespace evoBasic{
 
@@ -38,6 +39,7 @@ namespace evoBasic{
          *   None-Static Function       yes                 yes
          *
          */
+        il::DataType il_type;
         bool is_static = false;
         enum ValueKind {lvalue,rvalue,path,error,void_} value_kind;
         ExpressionType()=default;

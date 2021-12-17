@@ -53,7 +53,7 @@ namespace evoBasic{
             Logger::dev("update memory layout topo order: ");
             for(auto &domain : context->byteLengthDependencies.getTopologicalOrder()){
                 domain->updateMemoryLayout();
-                Logger::dev(format()<<" -> "<<domain->mangling()<<"{"<<domain->getByteLength()<<"}");
+                Logger::dev(format() << " -> " << domain->mangling() << "{" << domain->getByteLength() << "}");
             }
             Logger::dev("\n");
             return true;

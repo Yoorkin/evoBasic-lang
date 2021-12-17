@@ -1,6 +1,26 @@
-//
-// Created by yorkin on 11/24/21.
-//
+/*
+ * Created by yorkin on 11/24/21.
+ *
+ * type analyzer.
+ *
+ * This phase plays an important role in semantic check.
+ *  - Determine expressions prototype and value type(lvalue or rvalue)
+ *
+ *  - Type check for function/sub/Constructor call,assignment,array index,for-statement condition,looping condition,
+ *      select-case expression,return expression,binary/unary operation
+ *
+ *  - Access control check. E.g. Static Sub in class can't access Non-static field
+ *
+ *  - Insert nodes for implicit conversion and report warning.
+ *
+ *  - Reject invalid conversion
+ *
+ *  - Reject initialization of abstract class
+ *
+ *  - Determine il-data-type of symbols and expressions, Store into AST.
+ *
+ *
+ */
 
 #ifndef EVOBASIC_TYPEANALYZER_H
 #define EVOBASIC_TYPEANALYZER_H
@@ -22,7 +42,7 @@ namespace evoBasic{
         bool need_lookup = false;
     };
 
-    class TypeAnalyzer : public Visitor<TypeAnalyzerArgs>{
+    class TypeAnalyzer : public DefaultVisitor<TypeAnalyzerArgs>{
     public:
         std::any visitGlobal(ast::Global *global_node, TypeAnalyzerArgs args) override;
         std::any visitModule(ast::Module *mod_node, TypeAnalyzerArgs args) override;
@@ -67,6 +87,8 @@ namespace evoBasic{
         std::any visitString(ast::expr::String *str_node, TypeAnalyzerArgs args) override;
 
         void visitStatementList(ast::stmt::Statement *stmt_list, TypeAnalyzerArgs args);
+
+        std::any visitAllMember(type::Domain *domain, ast::Member *member, TypeAnalyzerArgs args);
     };
 }
 

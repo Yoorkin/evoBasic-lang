@@ -122,6 +122,62 @@ namespace evoBasic{
         virtual std::any visitExpression(ast::expr::Expression **expr_node,ARGS args){PANIC;}
         virtual std::any visitNew(ast::expr::New **new_node,ARGS args){PANIC;}
     };
+
+#define Transform(AST,NAME) using AST##Tuple = std::tuple<ast::AST*,std::any>; \
+    virtual AST##Tuple transform##AST(ast::AST *NAME##_node,ARGS... args){PANIC;}
+
+    template<typename ...ARGS>
+    class Transformer{
+    public:
+        Transform(Global,global)
+        Transform(Class,class)
+        Transform(Module,module)
+        Transform(Interface,interface)
+        Transform(Import,import)
+        Transform(Dim,dim)
+        Transform(Variable,variable)
+        Transform(Function,function)
+        Transform(External,exteranl)
+        Transform(Constructor,ctor)
+        Transform(Operator,op)
+        Transform(Enum,enum)
+        Transform(Type,type)
+        Transform(Parameter,parameter)
+        Transform(Let,let)
+        Transform(Select,select)
+        Transform(Loop,loop)
+        Transform(If,if)
+        Transform(For,for)
+        Transform(Return,return)
+        Transform(Exit,exit)
+        Transform(Continue,continue)
+        Transform(Case,case)
+        Transform(ExprStmt,expr_stmt)
+        Transform(Binary,binary)
+        Transform(Unary,unary)
+        Transform(Index,index)
+        Transform(Dot,dot)
+        Transform(Assign,assign)
+        Transform(Cast,cast)
+        Transform(Colon,colon)
+        Transform(Callee,callee)
+        Transform(Argument,arg)
+        Transform(ID,id)
+        Transform(Digit,digit)
+        Transform(Decimal,decimal)
+        Transform(String,string)
+        Transform(Char,char)
+        Transform(Boolean,boolean)
+        Transform(Parentheses,parentheses)
+        Transform(Annotation,annotation)
+        Transform(AnnotationUnit,annotation_unit)
+        Transform(Member,member)
+        Transform(Statement,statement)
+        Transform(Expression,expression)
+        Transform(New,new)
+    };
+#undef Transform
+
 }
 
 

@@ -12,11 +12,7 @@
 - f64
 - ref
 
-    reference to class object
-
-- ptr
-
-    pointer to any types except class object and function
+    reference to class object/array/field/record
 
 - ftn
 
@@ -30,7 +26,17 @@
 
     reference to static function
 
+- record
 
+    memory of whole record
+
+- ptr
+
+    pointer to any types except class object and function
+
+- array
+
+    memory of whole array
 
 # instructions
 
@@ -44,13 +50,19 @@
 
     format: `callvirt`
 
-    transform: ..., ftn,ref -> ...
+    transform: ..., vftn,ref -> ...
 
 - callext
 
     format: `callext <ExtFtnDecl>`
 
     transform: ... -> ..., `function return`
+
+- calls
+
+    format: `calls`
+
+    transform: ..., sftn -> ... 
 
 - call
 
@@ -76,10 +88,18 @@
 
     transform: ... -> ...
 
-- ldc
-    format: `ldc.<DataType> <Value>`
+- push
 
-    transform: ... -> ..., `value`
+    format: `push.<DataType> <Value>`
+
+    transform: ... -> ..., `data type`
+
+
+- ldc
+
+    format: `ldc <constDecl>`
+
+    transform: ... -> ..., `value of constDecl`
 
 - ldftn
 
@@ -125,7 +145,7 @@
 
 - ldloca
 
-    format: `ldloca.<DataType>`
+    format: `ldloca`
 
     transform: ..., u16 -> ..., ptr
 
@@ -139,7 +159,7 @@
 
     format: `ldfld.<DataType> <FieldDecl>`
 
-    transform: ... -> `data type` 
+    transform: ..., ref -> `data type` 
 
 - ldsfld
 
@@ -151,7 +171,7 @@
 
     format: `ldflda.<DataType> <FieldDecl>`
 
-    transform: ... -> `data type`
+    transform: ..., ref -> `data type`
 
 - ldsflda
 
@@ -163,13 +183,31 @@
 
     format: `stfld.<DataType> <FieldDecl>`
 
-    transform: ..., `data type` -> ...
+    transform: ..., `data type`,ref -> ...
 
 - stsfld
 
     format: `stsfld.<DataType> <StaticFieldDecl>`
 
     transform: ..., `data type` -> ...
+
+- ldelem
+
+    format: `ldelem.<DataType>`
+
+    transform: ..., u16,ref -> `data type` 
+
+- ldelema
+
+    format: `ldelema`
+
+    transform: ..., u16,ref -> ref
+
+- stelem
+
+    format: `stelem.<DataType>`
+
+    transform: ..., `data type value`, u16, ref -> 
 
 - ldnull
 
@@ -190,7 +228,7 @@
 
     transform: ..., ref -> ..., ref
 
-- Conv
+- InstConv
 
     format: `conv <SrcDataType> <DstDataType>`
 
@@ -278,21 +316,21 @@ End Module
                 (result Boolean)
                     
                     ldarg.u32 1
-                    token.ldc.u32 UI.Message.Update
+                    ldc.u32 UI.Message.Update
                     EQ
                     ldc.i16 .iftrue
-                    Jif
-                    token.ldc.u32 Message.Hide
+                    InstJif
+                    ldc.u32 Message.Hide
                     ldarg.ref 0
-                    token.callvirt UI.Button.OnMessage
+                    callvirt UI.Button.OnMessage
                     ret
                 .iftrue:
                     ldarg 0 
-                    token.ldfld.i32 UI.Position.x
+                    ldfld.i32 UI.Position.x
                     ldarg 0
-                    token.ldfld.i32 UI.Position.w
+                    ldfld.i32 UI.Position.w
                     sub.i32
-                    ldc 233
+                    push.i32 233
                     add.i32
                     conv.i32 boolean
                     ret

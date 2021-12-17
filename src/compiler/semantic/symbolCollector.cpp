@@ -13,7 +13,7 @@ namespace evoBasic{
         args.domain = args.context->getGlobal();
         args.domain->setLocation(global->location);
 
-        for(auto iter = global->member;iter!=nullptr;iter=iter->next_sibling){
+        FOR_EACH(iter,global->member){
             auto object = visitMember(iter,args);
             if(!object.has_value())continue;
             auto symbol = any_cast<type::Symbol*>(object);
@@ -37,7 +37,7 @@ namespace evoBasic{
         args.domain = mod;
         mod_node->module_symbol = mod;
 
-        for(auto iter = mod_node->member;iter!=nullptr;iter=iter->next_sibling){
+        FOR_EACH(iter,mod_node->member){
             auto object = visitMember(iter,args);
             if(!object.has_value())continue;
             auto symbol = any_cast<type::Symbol*>(object);
@@ -45,6 +45,7 @@ namespace evoBasic{
                 mod->add(symbol);
             }
         }
+
         return mod->as<type::Symbol*>();
     }
 
@@ -59,7 +60,7 @@ namespace evoBasic{
         args.domain = cls;
         cls_node->class_symbol = cls;
 
-        for(auto iter = cls_node->member;iter!=nullptr;iter=iter->next_sibling){
+        FOR_EACH(iter,cls_node->member){
             auto object = visitMember(iter,args);
             if(!object.has_value())continue;
             auto symbol = any_cast<type::Symbol*>(object);
@@ -101,7 +102,7 @@ namespace evoBasic{
         ty->setLocation(type_node->location);
         type_node->type_symbol = ty;
 
-        for(auto iter = type_node->member;iter != nullptr;iter = iter->next_sibling){
+        FOR_EACH(iter,type_node->member){
             auto symbol = any_cast<type::Symbol*>(visitVariable(iter,args));
             symbol->setAccessFlag(AccessFlag::Public);
             if(is_name_valid(symbol->getName(), iter->location,ty)){
@@ -113,8 +114,9 @@ namespace evoBasic{
 
     std::any SymbolCollector::visitDim(ast::Dim *dim_node, SymbolCollectorArgs args) {
         NotNull(dim_node);
-        type::Symbol *symbol;
-        for(auto iter = dim_node->variable; iter!=nullptr; iter=iter->next_sibling){
+        type::Symbol *symbol = nullptr;
+
+        FOR_EACH(iter,dim_node->variable){
             symbol = any_cast<type::Symbol*>(visitVariable(iter,args));
             symbol->setAccessFlag(dim_node->access);
             symbol->setStatic(dim_node->is_static);

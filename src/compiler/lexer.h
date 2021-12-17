@@ -5,7 +5,7 @@
 #ifndef EVOBASIC2_LEXER_H
 #define EVOBASIC2_LEXER_H
 #include "token.h"
-#include "formator.h"
+#include "format.h"
 #include <set>
 namespace evoBasic{
     class SyntaxException:public std::exception{

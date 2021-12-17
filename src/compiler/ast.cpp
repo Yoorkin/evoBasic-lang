@@ -50,8 +50,8 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Class::debug() {
-        string text = format()<<"Class"
-                <<" "<<AccessFlagToString[(int)access];
+        string text = format() << "Class"
+                               << " " << AccessFlagToString[(int)access];
         auto ret = new DebugInfo{text,{name->debug()}};
         if(extend)ret->childs.push_back(extend->debug());
         auto iter = member;
@@ -63,8 +63,8 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Module::debug() {
-        string text = format()<<"Module "
-                            <<" "<<AccessFlagToString[(int)access];
+        string text = format() << "Module "
+                               << " " << AccessFlagToString[(int)access];
         auto ret = new DebugInfo{text,{name->debug()}};
         auto iter = member;
         while(iter){
@@ -76,8 +76,8 @@ namespace evoBasic::ast{
 
 
     DebugInfo *Interface::debug() {
-        string text = format()<<"Interface "
-                              <<" "<<AccessFlagToString[(int)access];
+        string text = format() << "Interface "
+                               << " " << AccessFlagToString[(int)access];
         auto ret = new DebugInfo{text,{name->debug()}};
         Member *iter = function;
         while(iter){
@@ -92,10 +92,10 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Dim::debug() {
-        string text = format()<<"Dim"
-                              <<" "<<AccessFlagToString[(int)access]
-                              <<(is_const?" Const":"")
-                              <<(is_static?" Static":"");
+        string text = format() << "Dim"
+                               << " " << AccessFlagToString[(int)access]
+                               << (is_const?" Const":"")
+                               << (is_static?" Static":"");
         auto ret = new DebugInfo{text};
         auto iter = variable;
         while(iter){
@@ -114,10 +114,10 @@ namespace evoBasic::ast{
 
     DebugInfo *Function::debug() {
         vector flag = {" Virtual"," Override",""};
-        string text = format()<<"Function"
-                              <<" "<<AccessFlagToString[(int)access]
-                              <<flag[(int)method_flag]
-                              <<(is_static?" Static":"");
+        string text = format() << "Function"
+                               << " " << AccessFlagToString[(int)access]
+                               << flag[(int)method_flag]
+                               << (is_static?" Static":"");
         auto ret = new DebugInfo{text};
         if(name)ret->childs.push_back(name->debug());
         auto iter = parameter;
@@ -151,8 +151,8 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Enum::debug() {
-        string text = format()<<"Enum"
-                              <<" "<<AccessFlagToString[(int)access];
+        string text = format() << "Enum"
+                               << " " << AccessFlagToString[(int)access];
         auto ret = new DebugInfo{text,{name->debug()}};
         auto iter = member;
         while(iter){
@@ -163,8 +163,8 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Type::debug() {
-        string text = format()<<"Type"
-                              <<" "<<AccessFlagToString[(int)access];
+        string text = format() << "Type"
+                               << " " << AccessFlagToString[(int)access];
         auto ret = new DebugInfo{text,{name->debug()}};
         auto iter = member;
         while(iter){
@@ -244,7 +244,7 @@ namespace evoBasic::ast{
 
     DebugInfo *stmt::Exit::debug() {
         vector<string> flag = {"For","While","Sub"};
-        return new DebugInfo{format()<<"Exit "<<flag[exit_flag]};
+        return new DebugInfo{format() << "Exit " << flag[exit_flag]};
     }
 
     DebugInfo *stmt::Continue::debug() {
@@ -298,7 +298,7 @@ namespace evoBasic::ast{
 
     DebugInfo *expr::Unary::debug() {
         vector<string> OpStr = {"Empty","'-'","'+'"};
-        return new DebugInfo{format()<<"Unary "<<OpStr[op],{terminal->debug()}};
+        return new DebugInfo{format() << "Unary " << OpStr[op], {terminal->debug()}};
     }
 
     DebugInfo *expr::Parentheses::debug() {
@@ -306,12 +306,12 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *expr::ID::debug() {
-        return new DebugInfo{format()<<"ID '"<<lexeme<<"'"};
+        return new DebugInfo{format() << "ID '" << lexeme << "'"};
     }
 
     DebugInfo *expr::Callee::Argument::debug() {
         vector<string> PassKindStr{"Undefined","ByRef","ByVal"};
-        return new DebugInfo{format()<<"Parameter "<<PassKindStr[pass_kind],{expr->debug()}};
+        return new DebugInfo{format() << "Parameter " << PassKindStr[pass_kind], {expr->debug()}};
     }
 
     DebugInfo *expr::Callee::debug() {
@@ -326,23 +326,23 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *expr::Digit::debug() {
-        return new DebugInfo{format()<<"Digit "<<value};
+        return new DebugInfo{format() << "Digit " << value};
     }
 
     DebugInfo *expr::Decimal::debug() {
-        return new DebugInfo{format()<<"Decimal "<<value};
+        return new DebugInfo{format() << "Decimal " << value};
     }
 
     DebugInfo *expr::String::debug() {
-        return new DebugInfo{format()<<"String \""<<value<<"\""};
+        return new DebugInfo{format() << "String \"" << value << "\""};
     }
 
     DebugInfo *expr::Char::debug() {
-        return new DebugInfo{format()<<"Char '"<<value<<"'"};
+        return new DebugInfo{format() << "Char '" << value << "'"};
     }
 
     DebugInfo *expr::Boolean::debug() {
-        return new DebugInfo{format()<<"Boolean "<<(value?"true":"false")};
+        return new DebugInfo{format() << "Boolean " << (value ? "true" : "false")};
     }
 
     DebugInfo *EnumMember::debug() {

@@ -85,6 +85,7 @@ namespace evoBasic::type{
         }
 
         std::string mangling(char separator = '$');
+        std::list<std::string> getFullName();
 
         virtual std::string debug(int indent)=0;
         virtual void generateMetaBytecode(ir::IR *out);
@@ -275,6 +276,7 @@ namespace evoBasic::type{
         ExternalFunction(const ExternalFunction&)=delete;
         explicit ExternalFunction(std::string library,std::string name);
         FunctionKind getFunctionKind()override;
+        std::string getLibName();
         void generateMetaBytecode(ir::IR *out)override;
     };
 

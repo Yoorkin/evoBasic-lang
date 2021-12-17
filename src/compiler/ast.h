@@ -6,6 +6,8 @@
 #include <memory>
 #include <list>
 
+#define FOR_EACH(Iterator,Head) for(auto Iterator=Head; Iterator!=nullptr; Iterator=Iterator->next_sibling)
+
 namespace evoBasic{
     enum class AccessFlag {Public,Private,Friend,Protected};
     enum class MethodFlag {Virtual,Override,None};
@@ -75,6 +77,9 @@ namespace evoBasic::ast{
         struct String;
         struct Char;
     }
+
+    using namespace stmt;
+    using namespace expr;
 
 
 

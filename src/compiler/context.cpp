@@ -176,7 +176,7 @@ namespace evoBasic{
             case SymbolKind::Primitive:
                 *expression = new ast::expr::Cast(
                         *expression,
-                        constructAnnotationAST(format()<<"global."<<dst->getName())
+                        constructAnnotationAST(format() << "global." << dst->getName())
                         );
                 break;
             case SymbolKind::TmpDomain:

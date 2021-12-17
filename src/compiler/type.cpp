@@ -196,7 +196,7 @@ namespace evoBasic::type{
                 addMemoryLayout(symbol->as<Variable*>());
                 break;
             case SymbolKind::TmpDomain:
-                symbol->setName(format()<<"#"<<tmp_domain_count);
+                symbol->setName(format() << "#" << tmp_domain_count);
                 tmp_domain_count++;
                 break;
         }
@@ -390,6 +390,13 @@ namespace evoBasic::type{
 
     void Symbol::generateMetaBytecode(ir::IR *out) {
         PANIC;
+    }
+
+    std::list<std::string> Symbol::getFullName() {
+        list<string> ls;
+        if(getParent()) ls = move(getParent()->getFullName());
+        ls.push_back(getName());
+        return ls;
     }
 
 
@@ -862,7 +869,7 @@ namespace evoBasic::type{
 
     Array::Array(Prototype *element,data::u32 size)
         : Class(SymbolKind::Array),element_type(element),size_(size){
-        setName(format()<<element->getName()<<"["<<size<<"]");
+        setName(format() << element->getName() << "[" << size << "]");
     }
 
     Prototype *Array::getElementPrototype() {
@@ -877,7 +884,7 @@ namespace evoBasic::type{
     }
 
     std::string Array::debug(int indent) {
-        return format()<<"Ptr<"<<element_type->getName()<<">";
+        return format() << "Ptr<" << element_type->getName() << ">";
     }
 
     data::ptr Array::getByteLength() {
@@ -936,8 +943,8 @@ namespace evoBasic::type{
         }
         else{
             auto tmp = slot[conflict->second].first;
-            Logger::error({tmp->getLocation(),function->getLocation()},format()<<"naming conflict with '"
-                                        <<tmp->mangling('.')<<"' and '"<<function->mangling('.')<<"'");
+            Logger::error({tmp->getLocation(),function->getLocation()}, format() << "naming conflict with '"
+                                                                                 << tmp->mangling('.') << "' and '" << function->mangling('.') << "'");
         }
     }
 
@@ -951,7 +958,7 @@ namespace evoBasic::type{
         auto target = this->slot[slot].first;
         if(!target->equal(function)){
             Logger::error({function->getLocation(),target->getLocation()},
-                                format()<<"override method '"
+                          format() << "override method '"
                                 <<target->mangling('.')<<"' and '"
                                 <<function->mangling('.')
                                 <<"' have different parameters or return type");

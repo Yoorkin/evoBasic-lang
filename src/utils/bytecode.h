@@ -29,24 +29,24 @@ namespace evoBasic::vm{
      *     global_var : i32
      * .init
      *     PushGlobalBase
-     *     Push.i32 99
+     *     InstPush.i32 99
      *     Store.i32
      * .main
      *     PushFrameBase
      *     Store.i32 100
      *
      *     PushFrameBase
-     *     Push.i32 1
+     *     InstPush.i32 1
      *     Add.i32
      *
-     *     Push.i32 20
+     *     InstPush.i32 20
      *     Store.i32
      *
      *     PushFrameBase
      *     Load.i32
      *
      *     PushFrameBase
-     *     Push.i32 1
+     *     InstPush.i32 1
      *     Add.i32
      *     Load.i32
      *
@@ -59,19 +59,19 @@ namespace evoBasic::vm{
      *
      *     Cast.i32 i8
      *     PushFrameBase
-     *     Push.i32 16
+     *     InstPush.i32 16
      *     Add.i32
      *
      *     Store.i32
      *
-     *     Push.i32 0
+     *     InstPush.i32 0
      *     ret
      * .max
      *     PushFrameBase
      *     Store.i32
      *
      *     PushFrameBase
-     *     Push.i32 1
+     *     InstPush.i32 1
      *     Add.i32
      *     Store.i32
      *
@@ -79,7 +79,7 @@ namespace evoBasic::vm{
      *     Load.i32
      *
      *     PushFrameBase
-     *     Push.i32 1
+     *     InstPush.i32 1
      *     Add.i32
      *
      *     Cmp.i32
@@ -91,7 +91,7 @@ namespace evoBasic::vm{
      *     Jmp .max.L3
      * .max.L2
      *     PushFrameBase
-     *     Push.i32 1
+     *     InstPush.i32 1
      *     Add.i32
      *
      *     Load.i32

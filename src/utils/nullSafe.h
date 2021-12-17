@@ -6,7 +6,7 @@
 #define EVOBASIC2_NULLSAFE_H
 #include<exception>
 #include<string>
-#include"formator.h"
+#include"format.h"
 #define DEBUG
 #ifdef DEBUG
 
@@ -14,7 +14,7 @@ class AssertionException : public std::exception{
     std::string msg;
 public:
     AssertionException(std::string file,std::string func,int line,std::string message){
-        msg = format()<<"In file '"<<file<<"' function '"<<func<<"' line '"<<line<<"',"<<message;
+        msg = format() << "In file '" << file << "' function '" << func << "' line '" << line << "'," << message;
     }
     const char * what() const noexcept override{
         return msg.c_str();

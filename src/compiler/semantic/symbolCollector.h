@@ -1,6 +1,19 @@
-//
-// Created by yorkin on 11/24/21.
-//
+/*
+ * Created by yorkin on 11/24/21.
+ *
+ * symbol collector.
+ *
+ * This phase is aims to support forward declaration
+ *
+ *  - bind name,access flag,static flag and location of source to below symbols:
+ *      Module,Class,Interface,Enum,Type,Static/Non-static field
+ *
+ *  - Store those symbols in hierarchical structure and AST
+ *
+ *  - verify if a name has been declared
+ *
+ */
+
 
 #ifndef EVOBASIC_SYMBOLCOLLECTOR_H
 #define EVOBASIC_SYMBOLCOLLECTOR_H

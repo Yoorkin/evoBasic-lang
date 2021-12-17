@@ -20,5 +20,4 @@ public:
     }
 };
 
-
 #endif //EVOVM_FORMATOR_H

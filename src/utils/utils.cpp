@@ -4,6 +4,7 @@
 
 #include "utils.h"
 #include "logger.h"
+#include "i18n.h"
 
 using namespace std;
 namespace evoBasic{
@@ -29,7 +30,7 @@ namespace evoBasic{
     bool is_name_valid(const string& name,Location *location, type::Domain *domain){
         NotNull(location);
         if(domain->findInDomainOnly(name)){
-            Logger::error(location,"Naming conflict in current scope");
+            Logger::error(location,i18n::lang->msgNameConflicit());
             return false;
         }
         return true;

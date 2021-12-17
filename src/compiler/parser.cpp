@@ -4,7 +4,7 @@
 
 #include "parser.h"
 #include "logger.h"
-#include "formator.h"
+#include "format.h"
 using namespace std;
 using namespace evoBasic::ast;
 using namespace evoBasic::ast::stmt;

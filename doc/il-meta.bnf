@@ -19,7 +19,7 @@ field ::= '(' 'fld' [access-flag] name type ')';
 
 enum ::= '(' 'enum' [access-flag] name {enum-pair} ')';
 
-enum-pair ::= '(' 'pair' name i32-value ')';
+enum-pair ::= '(' 'pair' name u32-value ')';
 
 interface ::= '(' 'interface' [access-flag] name {virtual-function} ')'
 
