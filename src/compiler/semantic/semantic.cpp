@@ -17,8 +17,8 @@ using namespace evoBasic::ast::expr;
 namespace evoBasic{
 
 
-    ExpressionType *ExpressionType::Error = new ExpressionType(new type::Error,error);
-    ExpressionType *ExpressionType::Void = new ExpressionType(new type::Error,void_);
+    ExpressionType *ExpressionType::Error = new ExpressionType(new type::Error,error,il::empty);
+    ExpressionType *ExpressionType::Void = new ExpressionType(new type::Error,void_,il::empty);
 
     void Semantic::collectSymbol(AST *ast, Context *context) {
         SymbolCollector collector;
@@ -30,10 +30,10 @@ namespace evoBasic{
 
     void Semantic::collectDetail(AST *ast, Context *context) {
         DetailCollector collector;
-        DefaultArgs args;
+        DetailArgs args;
         args.domain = context->getGlobal();
         args.context = context;
-        collector.visitGlobal(&ast,args);
+        collector.visitGlobal(ast,args);
     }
 
     void Semantic::typeCheck(AST *ast, Context *context) {

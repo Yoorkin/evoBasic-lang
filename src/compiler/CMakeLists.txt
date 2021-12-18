@@ -2,6 +2,22 @@ cmake_minimum_required(VERSION 3.13)
 project(evoBasic)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-limit-debug-info -Wno-switch")
 
-add_executable(ecc ${COMPILER_SOURCE} ${UTILS_SOURCE} semantic/defaultVisitor.cpp semantic/defaultVisitor.h il.cpp il.h ilGen.cpp ilGen.h ../utils/i18n.h)
+file(GLOB COMPILER_SOURCE
+        token.cpp
+        lexer.cpp
+        parser.cpp
+        type.cpp
+        visitor.cpp
+        context.cpp
+        ast.cpp
+        semantic/defaultVisitor.cpp
+        semantic/symbolCollector.cpp
+        semantic/detailCollector.cpp
+        semantic/typeAnalyzer.cpp
+        semantic/semantic.cpp
+        )
+
+
+add_executable(ecc main.cpp ${COMPILER_SOURCE} ${UTILS_SOURCE})
 MESSAGE(${COMPILER_SOURCE})
 target_include_directories(ecc PRIVATE ${COMPILER_INCLUDE} ${UTILS_INCLUDE})

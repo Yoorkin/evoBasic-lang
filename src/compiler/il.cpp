@@ -199,4 +199,12 @@ namespace evoBasic::il{
         //todo token query
         return ret;
     }
+
+    std::string Local::toString() {
+        return std::string();
+    }
+
+    void Local::toHex(std::ostream &stream) {
+
+    }
 }

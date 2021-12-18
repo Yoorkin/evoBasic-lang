@@ -3,7 +3,6 @@ project(evoBasic)
 
 set(CMAKE_CXX_STANDARD 20)
 
-file(GLOB COMPILER_SOURCE ${CMAKE_SOURCE_DIR}/src/compiler/*.cpp ${CMAKE_SOURCE_DIR}/src/compiler/semantic/*.cpp)
 file(GLOB UTILS_SOURCE ${CMAKE_SOURCE_DIR}/src/utils/*.cpp)
 file(GLOB VM_SOURCE ${CMAKE_SOURCE_DIR}/src/vm/*.cpp)
 

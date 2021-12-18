@@ -88,7 +88,6 @@ namespace evoBasic::type{
         std::list<std::string> getFullName();
 
         virtual std::string debug(int indent)=0;
-        virtual void generateMetaBytecode(ir::IR *out);
 
         virtual bool isStatic();
         void setStatic(bool value);
@@ -141,7 +140,7 @@ namespace evoBasic::type{
         std::size_t getLayoutIndex();
         void setOffset(std::size_t value);
         virtual data::ptr getRealByteLength();
-        void generateMetaBytecode(ir::IR *out)override;
+        
         VariableKind getVariableKind();
         void setVariableKind(VariableKind kind);
     };
@@ -190,7 +189,7 @@ namespace evoBasic::type{
 
         bool equal(Prototype *ptr)override {return false;}
         std::string debug(int indent)override;
-        void generateMetaBytecode(ir::IR *out)override;
+        
     };
 
     class Record : public Domain {
@@ -203,7 +202,7 @@ namespace evoBasic::type{
         const std::vector<Variable*>& getFields();
         void add(Symbol *symbol)override;
         std::string debug(int indent)override;
-        void generateMetaBytecode(ir::IR *out)override;
+        
     };
 
 
@@ -257,7 +256,7 @@ namespace evoBasic::type{
     public:
         explicit Constructor(ast::Constructor *node);
         FunctionKind getFunctionKind()override;
-        void generateMetaBytecode(ir::IR *out)override;
+        
     };
 
     class UserFunction : public Function{
@@ -274,7 +273,7 @@ namespace evoBasic::type{
         void setParent(Domain *parent)override;
         std::string debug(int indent)override;
         FunctionKind getFunctionKind()override;
-        void generateMetaBytecode(ir::IR *out)override;
+        
     };
 
 
@@ -285,7 +284,7 @@ namespace evoBasic::type{
         explicit ExternalFunction(std::string library,std::string name);
         FunctionKind getFunctionKind()override;
         std::string getLibName();
-        void generateMetaBytecode(ir::IR *out)override;
+        
     };
 
     class VirtualTable{
@@ -341,7 +340,7 @@ namespace evoBasic::type{
         Symbol *find(const std::string& name)override;
 
         bool isAbstract();
-        void generateMetaBytecode(ir::IR *out)override;
+        
     };
 
     class Interface : public Domain{
@@ -353,7 +352,7 @@ namespace evoBasic::type{
         bool equal(Prototype *ptr)final{PANIC;}
         std::string debug(int indent)final;
         VirtualTable *getVTable();
-        void generateMetaBytecode(ir::IR *out)override;
+        
     };
 
     namespace primitive{
@@ -387,7 +386,7 @@ namespace evoBasic::type{
 
         bool equal(Prototype *ptr)override;
         std::string debug(int indent)override;
-        void generateMetaBytecode(ir::IR *out)override;
+        
     };
 
     class EnumMember : public Prototype{
@@ -400,7 +399,7 @@ namespace evoBasic::type{
         int getIndex()const{return index;}
         std::string debug(int indent)override;
         virtual bool equal(Prototype *ptr){PANIC;}
-        void generateMetaBytecode(ir::IR *out)override;
+        
     };
 
     class Parameter : public Variable{
@@ -413,7 +412,7 @@ namespace evoBasic::type{
         bool isParamArray();
         data::ptr getRealByteLength()override;
         bool equal(Parameter* ptr);
-        void generateMetaBytecode(ir::IR *out)override;
+        
     };
 
     class Array : public Class{
@@ -426,7 +425,7 @@ namespace evoBasic::type{
         std::string debug(int indent)override;
         data::ptr getByteLength()override;
         data::ptr getSize(){return size_;}
-        void generateMetaBytecode(ir::IR *out)override;
+        
     };
 
 

@@ -27,9 +27,8 @@ namespace evoBasic::vm{
     };
     
     std::map<std::string,Bytecode::Value> Bytecode::string_to_value = {
-        {"Entrance",Entrance},
         {"MetaSegment",MetaSegment},{"ConstSegment",ConstSegment},{"CodeSegment",CodeSegment},
-        {"Define",Define},{"Jmp",Jmp},{"InstJif",Jif},{"EQ",EQ},{"NE",NE},{"LT",LT},{"GT",GT},
+        {"Jmp",Jmp},{"InstJif",Jif},{"EQ",EQ},{"NE",NE},{"LT",LT},{"GT",GT},
         {"LE",LE},{"GE",GE},{"Add",Add},{"Sub",Sub},{"Mul",Mul},{"Div",Div},{"FDiv",FDiv},
         {"Neg",Neg},{"And",And},{"Or",Or},{"Xor",Xor},{"Not",Not},{"Load",Load},{"Store",Store},{"Invoke",Invoke},
         {"InstPush",Push},{"Pop",Pop},{"Ret",Ret},{"Cast",Cast},{"Dup",Dup},{"Stm",Stm},{"Ldm",Ldm},{"Psm",Psm},

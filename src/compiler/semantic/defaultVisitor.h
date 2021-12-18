@@ -45,13 +45,13 @@ namespace evoBasic{
                 auto iter = annotation_node->unit;
                 need_lookup = true;
                 dot_expression_context = domain;
-                auto symbol = visitAnnotationUnit(&iter,args);
+                auto symbol = visitAnnotationUnit(iter,args);
                 iter = iter->next_sibling;
                 dot_expression_context = any_cast<type::Symbol*>(symbol);
 
                 need_lookup = false;
                 while(iter!=nullptr){
-                    symbol = visitAnnotationUnit(&iter,args);
+                    symbol = visitAnnotationUnit(iter,args);
                     dot_expression_context = any_cast<type::Symbol*>(symbol);
                     iter=iter->next_sibling;
                 }

@@ -6,11 +6,11 @@
 #define EVOBASIC2_SEMANTIC_H
 #include "visitor.h"
 #include "type.h"
-#include "context.h"
 #include "utils.h"
 #include "il.h"
 
 namespace evoBasic{
+    class Context;
 
     using AST = ast::Global;
 

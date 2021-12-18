@@ -77,6 +77,8 @@ namespace evoBasic{
             case OperandKind::cls:      return get<ClassOperand>(type).symbol;
             case OperandKind::array:    return get<ArrayOperand>(type).symbol;
             case OperandKind::token:    return get<TokenOperand>(type).symbol;
+            case OperandKind::fld:      return get<FldOperand>(type).variable;
+            case OperandKind::element:  return get<ElementOperand>(type).array;
         }
         return nullptr;
     }
@@ -181,7 +183,8 @@ namespace evoBasic{
         }
 
         for(auto arg : function->getArgsOptions()){
-            params.push_back(factory.createOption(arg->getName(),arg->getPrototype()));
+            //params.push_back(factory.createOption(arg->getName(),arg->getPrototype(),nullptr));//todo
+            PANIC;
         }
 
         if(function->getParamArray()){
@@ -223,7 +226,7 @@ namespace evoBasic{
     std::any ILGen::visitLet(ast::Let *let_node, ILGenArgs args) {
         for(auto var = let_node->variable; var!=nullptr; var = var->next_sibling){
             auto [name,prototype] = any_cast<tuple<string,type::Prototype*>>(visitVariable(var,args));
-            args.ftn->locals.push_back(factory.createLocal(name,prototype));
+            args.ftn->addLocal(factory.createLocal(name,prototype));
         }
         return {};
     }
@@ -261,13 +264,13 @@ namespace evoBasic{
         auto next_block = new Block;
         auto previous_block = args.previous_block;
 
-        previous_block->Push(DataType::u16,)
-                            .Ldloca();
+//        previous_block->Push(DataType::u16,)
+//                            .Ldloca();
         visitExpression(for_node->begin,args);
         previous_block->Stloc(for_node->iterator->type->il_type);
         previous_block->Br(condition_block);
-
-        condition_block->Ldloc()
+//
+//        condition_block->Ldloc()
     }
 
     std::any ILGen::visitContinue(ast::stmt::Continue *cont_node, ILGenArgs args) {
@@ -309,47 +312,8 @@ namespace evoBasic{
     }
 
     std::any ILGen::visitAssign(ast::expr::Assign *assign_node, ILGenArgs args) {
-        auto lhs = any_cast<OperandInfo>(visitExpression(assign_node->lhs,args));
-        args.dot_expression_context = stripOperandInfo(lhs);
-        auto rhs = any_cast<OperandInfo>(visitExpression(assign_node->rhs,args));
 
-        switch((OperandKind)lhs.index()){
-            case OperandKind::token:{
-                auto token_operand = get<TokenOperand>(lhs);
-                switch(token_operand.symbol->getKind()){
-                    case type::SymbolKind::Variable:
-                    case type::SymbolKind::Parameter:{
-                        auto variable = token_operand.symbol->as<type::Variable*>();
-                        switch(variable->getVariableKind()){
-                            case type::VariableKind::Local:
-                                args.previous_block->Push(il::u16,variable->getLayoutIndex())
-                                                    .Stloc(assign_node->type->il_type);
-                                break;
-                            case type::VariableKind::Parameter:
-                                args.previous_block->Push(il::u16,variable->getLayoutIndex())
-                                        .Starg(assign_node->type->il_type);
-                                break;
-                            case type::VariableKind::StaticField:
-                                args.previous_block->Stsfld(assign_node->type->il_type,token_operand.token);
-                                break;
-                            case type::VariableKind::Field:
-                                args.previous_block->Stfld(assign_node->type->il_type,token_operand.token);
-                                break;
-                        }
-                        break;
-                    }
-                }
-                break;
-            }
-            case OperandKind::ref:{
-                auto ref_operand = get<RefOperand>(lhs);
-                //todo ref to array element
-            }
-        }
 
-        args.previous_block->Stloc().Starg().Stelem().Stfld().Stsfld();
-
-        return lhs;
     }
 
     std::any ILGen::visitDot(ast::expr::Dot *dot_node, ILGenArgs args) {

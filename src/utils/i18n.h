@@ -104,7 +104,7 @@ namespace evoBasic::i18n{
     public:
     };
 
-    std::shared_ptr<Language> lang = std::make_shared<Language>();
+    extern std::shared_ptr<Language> lang;
 
 #undef Fmt
 #undef Msg

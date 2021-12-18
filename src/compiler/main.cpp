@@ -112,17 +112,17 @@ int main(int argc,char *argv[]) {
 
     Logger::dev(context->getGlobal()->debug(0));
 
-    if(Logger::errorCount == 0){
-        for(auto ast : asts){
-            Semantic::solveByteLengthDependencies(context);
-            IRGen gen;
-
-            auto ir = gen.gen(ast,context);
-            ir->toString(cout);
-            fstream file("out.evo",ios::binary | ios::out);
-            ir->toHex(file);
-        }
-    }
+//    if(Logger::errorCount == 0){
+//        for(auto ast : asts){
+//            Semantic::solveByteLengthDependencies(context);
+//            IRGen gen;
+//
+//            auto ir = gen.gen(ast,context);
+//            ir->toString(cout);
+//            fstream file("out.evo",ios::binary | ios::out);
+//            ir->toHex(file);
+//        }
+//    }
 
     cout<<endl<<Logger::errorCount<<" error(s),"
         <<Logger::warningCount<<" warning(s)."<<endl;

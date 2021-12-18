@@ -6,7 +6,8 @@
 #include "parser.h"
 #include "nullSafe.h"
 #include "bytecode.h"
-#include "semantic/semantic.h"
+#include "semantic.h"
+
 using namespace std;
 using namespace evoBasic::type;
 using namespace evoBasic::type::primitive;
@@ -192,7 +193,7 @@ namespace evoBasic{
             case SymbolKind::Array:
                 break;
         }
-        (**expression).type = new ExpressionType(dst,ExpressionType::rvalue);
+        (*expression)->type = new ExpressionType(dst,ExpressionType::rvalue,il::empty);
     }
 
 
