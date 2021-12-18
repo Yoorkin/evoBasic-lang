@@ -9,7 +9,7 @@ file(GLOB COMPILER_SOURCE
         type.cpp
         visitor.cpp
         context.cpp
-        ast.cpp
+        parseTree.cpp
         semantic/defaultVisitor.cpp
         semantic/symbolCollector.cpp
         semantic/detailCollector.cpp

@@ -12,8 +12,8 @@
 
 using namespace std;
 using namespace evoBasic::type;
-using namespace evoBasic::ast;
-using namespace evoBasic::ast::expr;
+using namespace evoBasic::parseTree;
+using namespace evoBasic::parseTree::expr;
 namespace evoBasic{
 
 

@@ -15,7 +15,7 @@
 namespace evoBasic{
 
     using SymbolPtr = type::Symbol*;
-    using PromotionRuleFunction = std::function<std::shared_ptr<type::Prototype>(ast::Node *node)>;
+    using PromotionRuleFunction = std::function<std::shared_ptr<type::Prototype>(parseTree::Node *node)>;
     using BinaryOpSignature = std::pair<SymbolPtr,SymbolPtr>;
     class Context;
 
@@ -57,7 +57,7 @@ namespace evoBasic{
         bool isExplicitCastRuleExist(Ptr src, Ptr dst)const;
         bool isImplicitCastRuleExist(Ptr src, Ptr dst)const;
         std::optional<Rule> getImplicitPromotionRule(Ptr lhs, Ptr rhs)const;
-        void insertCastAST(Value dst,ast::expr::Expression **expression);
+        void insertCastAST(Value dst, parseTree::expr::Expression **expression);
     };
 
     class Context{

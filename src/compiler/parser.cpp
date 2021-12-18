@@ -6,9 +6,9 @@
 #include "logger.h"
 #include "format.h"
 using namespace std;
-using namespace evoBasic::ast;
-using namespace evoBasic::ast::stmt;
-using namespace evoBasic::ast::expr;
+using namespace evoBasic::parseTree;
+using namespace evoBasic::parseTree::stmt;
+using namespace evoBasic::parseTree::expr;
 
 namespace evoBasic{
 #define statement_follows Token::for_,Token::let_,Token::select_,Token::if_,Token::while_, \
@@ -22,7 +22,7 @@ namespace evoBasic{
 
     Parser::Parser(Lexer *lexer):lexer(lexer){}
     
-    ast::Global *Parser::parseGlobal(){
+    parseTree::Global *Parser::parseGlobal(){
         set<Token::Enum> member_follows = {
                 Token::function_,Token::operator_,Token::type_,
                 Token::enum_,Token::dim_,Token::END_CLASS,Token::EOF_
@@ -45,7 +45,7 @@ namespace evoBasic{
         return global;
     }
 
-    ast::Class *Parser::parseClass(Follows follows){
+    parseTree::Class *Parser::parseClass(Follows follows){
         auto member_follows = combine(follows,{
                 Token::function_,Token::operator_,Token::type_,
                 Token::enum_,Token::dim_,Token::END_CLASS
@@ -89,7 +89,7 @@ namespace evoBasic{
         return cls;
     }
 
-    ast::Module *Parser::parseModule(Follows follows){
+    parseTree::Module *Parser::parseModule(Follows follows){
         auto member_follows = combine(follows,{
                 Token::private_,Token::public_,Token::friend_,Token::protected_,
                 Token::function_,Token::sub_,Token::operator_,Token::type_,
@@ -116,7 +116,7 @@ namespace evoBasic{
         return mod;
     }
 
-    ast::Type *Parser::parseType(Follows follows){
+    parseTree::Type *Parser::parseType(Follows follows){
         auto member_follows = combine(follows,{Token::END_TYPE});
 
         auto type = new Type;
@@ -139,7 +139,7 @@ namespace evoBasic{
         return type;
     }
 
-    ast::Enum *Parser::parseEnum(Follows follows){
+    parseTree::Enum *Parser::parseEnum(Follows follows){
         auto member_follows = combine(follows,{Token::END_ENUM});
 
         auto enum_ = new Enum;
@@ -163,7 +163,7 @@ namespace evoBasic{
 
 
 
-    ast::Member *Parser::parseMember(Follows follows){
+    parseTree::Member *Parser::parseMember(Follows follows){
         auto access = parseAccessFlag();
         bool is_static = false;
         if(lexer->predict(Token::static_)){
@@ -234,14 +234,14 @@ namespace evoBasic{
         }
     }
 
-    ast::Import *Parser::parseImport(Follows follows){
+    parseTree::Import *Parser::parseImport(Follows follows){
         auto import = new Import;
         lexer->match(Token::import_);
         import->location = lexer->getToken()->getLocation();
         import->annotation = parseAnnotation(follows);
         return import;
     }
-    ast::Dim *Parser::parseDim(Follows follows){
+    parseTree::Dim *Parser::parseDim(Follows follows){
         auto member_follows = combine(follows,{Token::COMMA});
         auto dim = new Dim;
 
@@ -266,7 +266,7 @@ namespace evoBasic{
         }
         return dim;
     }
-    ast::Variable *Parser::parseVariable(Follows follows){
+    parseTree::Variable *Parser::parseVariable(Follows follows){
         auto var = new Variable;
         var->name = parseID(combine(follows,{Token::as_}));
         var->location = var->name->location;
@@ -283,7 +283,7 @@ namespace evoBasic{
 
         return var;
     }
-    ast::Function *Parser::parseFunction(Follows follows){
+    parseTree::Function *Parser::parseFunction(Follows follows){
         auto stmt_follows = combine(follows,{Token::END_FUNCTION,Token::END_SUB});
 
         auto func = new Function;
@@ -324,7 +324,7 @@ namespace evoBasic{
         return func;
     }
 
-    ast::External *Parser::parseExternal(Follows follows){
+    parseTree::External *Parser::parseExternal(Follows follows){
         auto ext = new External;
         lexer->match(Token::declare_);
         bool hasReturn = false;
@@ -362,7 +362,7 @@ namespace evoBasic{
     }
 
 
-    ast::Constructor *Parser::parseConstructor(const set<Token::Enum> &follows) {
+    parseTree::Constructor *Parser::parseConstructor(const set<Token::Enum> &follows) {
         auto stmt_follows = combine(follows,{Token::END_NEW});
         auto constructor = new Constructor;
 
@@ -375,7 +375,7 @@ namespace evoBasic{
         return constructor;
     }
 
-    ast::EnumMember *Parser::parseEnumMember(Follows follows){
+    parseTree::EnumMember *Parser::parseEnumMember(Follows follows){
         auto member = new EnumMember;
         member->name = parseID(combine(follows,{Token::ASSIGN}));
         auto begin_location = member->name->location;
@@ -388,7 +388,7 @@ namespace evoBasic{
         return member;
     }
 
-    ast::Interface *Parser::parseInterface(const set<Token::Enum> &follows) {
+    parseTree::Interface *Parser::parseInterface(const set<Token::Enum> &follows) {
         auto interface = new Interface;
         lexer->match(Token::interface_);
         interface->name = parseID(combine(follows,{Token::function_,Token::sub_,Token::END_INTERFACE}));
@@ -419,7 +419,7 @@ namespace evoBasic{
     }
 
 
-    ast::Function *Parser::parseFunctionInterface(const set<Token::Enum> &follows) {
+    parseTree::Function *Parser::parseFunctionInterface(const set<Token::Enum> &follows) {
         auto func = new Function;
         lexer->match(Token::function_);
         func->name = parseID(follows);
@@ -431,7 +431,7 @@ namespace evoBasic{
         return func;
     }
 
-    ast::Function *Parser::parseSubInterface(const set<Token::Enum> &follows) {
+    parseTree::Function *Parser::parseSubInterface(const set<Token::Enum> &follows) {
         auto func = new Function;
         lexer->match(Token::sub_);
         func->name = parseID(follows);
@@ -444,7 +444,7 @@ namespace evoBasic{
 
 
 
-    ast::Parameter* Parser::parseParameterList(Follows follows){
+    parseTree::Parameter* Parser::parseParameterList(Follows follows){
         auto member_follows = combine(follows,{Token::RP, Token::COMMA});
 
         lexer->match(Token::LP);
@@ -463,7 +463,7 @@ namespace evoBasic{
         return head;
     }
 
-    ast::stmt::Statement* Parser::parseStmtList(Follows follows){
+    parseTree::stmt::Statement* Parser::parseStmtList(Follows follows){
         set<Token::Enum> stmt_follows = {statement_follows};
         auto member_follows = combine(follows,stmt_follows);
 
@@ -520,7 +520,7 @@ namespace evoBasic{
         return head;
     }
 
-    ast::Parameter *Parser::parseParameter(Follows follows){
+    parseTree::Parameter *Parser::parseParameter(Follows follows){
         auto param = new Parameter;
 
         switch (lexer->getNextToken()->getKind()) {
@@ -558,7 +558,7 @@ namespace evoBasic{
         return param;
     }
 
-    ast::expr::ID *Parser::parseID(Follows follows){
+    parseTree::expr::ID *Parser::parseID(Follows follows){
         lexer->match(Token::ID);
         auto id = new ID;
         id->location = lexer->getToken()->getLocation();
@@ -566,7 +566,7 @@ namespace evoBasic{
         return id;
     }
 
-    ast::stmt::Let *Parser::parseLet(Follows follows){
+    parseTree::stmt::Let *Parser::parseLet(Follows follows){
         auto member_follows = combine(follows,{Token::COMMA});
 
         auto let = new Let;
@@ -585,7 +585,7 @@ namespace evoBasic{
         return let;
     }
 
-    ast::stmt::Select *Parser::parseSelect(Follows follows){
+    parseTree::stmt::Select *Parser::parseSelect(Follows follows){
         auto member_follows = combine(follows,{Token::case_,Token::END_SELECT});
 
         auto select = new Select;
@@ -620,7 +620,7 @@ namespace evoBasic{
         return select;
     }
 
-    ast::stmt::Loop *Parser::parseLoop(Follows follows){
+    parseTree::stmt::Loop *Parser::parseLoop(Follows follows){
         auto member_follows = combine(follows,{Token::wend_});
 
         auto loop = new Loop;
@@ -632,7 +632,7 @@ namespace evoBasic{
         return loop;
     }
 
-    ast::stmt::If *Parser::parseIf(Follows follows){
+    parseTree::stmt::If *Parser::parseIf(Follows follows){
         auto member_follows = combine(follows,{Token::END_IF,Token::else_,Token::elseif_});
 
         auto if_ = new If;
@@ -678,7 +678,7 @@ namespace evoBasic{
         return if_;
     }
 
-    ast::stmt::For *Parser::parseFor(Follows follows){
+    parseTree::stmt::For *Parser::parseFor(Follows follows){
         auto addition_follows = combine(follows, {Token::next_,statement_follows});
 
         auto for_ = new For;
@@ -705,7 +705,7 @@ namespace evoBasic{
         return for_;
     }
 
-    ast::stmt::Return *Parser::parseReturn(Follows follows){
+    parseTree::stmt::Return *Parser::parseReturn(Follows follows){
         auto tmp = new Return;
         lexer->match(Token::return_);
         tmp->location = lexer->getToken()->getLocation();
@@ -713,7 +713,7 @@ namespace evoBasic{
         return tmp;
     }
 
-    ast::stmt::Exit *Parser::parseExit(Follows follows){
+    parseTree::stmt::Exit *Parser::parseExit(Follows follows){
         auto tmp = new Exit;
         lexer->match(Token::exit_);
         tmp->location = lexer->getToken()->getLocation();
@@ -734,7 +734,7 @@ namespace evoBasic{
         return tmp;
     }
 
-    ast::expr::Expression *Parser::parseLogic(Follows follows){
+    parseTree::expr::Expression *Parser::parseLogic(Follows follows){
         auto addition_follows = combine(follows,{Token::and_,Token::or_,Token::xor_,Token::not_});
 
         Expression *rhs,*lhs = parseCmp(addition_follows);
@@ -761,7 +761,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseCmp(Follows follows){
+    parseTree::expr::Expression *Parser::parseCmp(Follows follows){
         auto addition_follows = combine(follows,{Token::EQ,Token::NE,Token::LT,Token::GT,Token::LE,Token::GE});
 
         Expression *rhs,*lhs = parseAdd(addition_follows);
@@ -803,7 +803,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseAdd(Follows follows){
+    parseTree::expr::Expression *Parser::parseAdd(Follows follows){
         auto addition_follows = combine(follows,{Token::ADD,Token::MINUS});
 
         Expression *rhs,*lhs = parseTerm(addition_follows);
@@ -825,7 +825,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseTerm(Follows follows){
+    parseTree::expr::Expression *Parser::parseTerm(Follows follows){
         auto addition_follows = combine(follows,{Token::MUL,Token::FDIV,Token::DIV});
 
         Expression *rhs,*lhs = parseFactor(addition_follows);
@@ -852,7 +852,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseFactor(Follows follows){
+    parseTree::expr::Expression *Parser::parseFactor(Follows follows){
         auto addition_follows = combine(follows,{Token::as_,Token::ASSIGN});
 
         Expression *lhs = parseUnary(addition_follows);
@@ -876,7 +876,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseUnary(Follows follows){
+    parseTree::expr::Expression *Parser::parseUnary(Follows follows){
         switch(lexer->getNextToken()->getKind()){
             case Token::MINUS:
                 lexer->match(Token::MINUS);
@@ -889,7 +889,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseDot(Follows follows) {
+    parseTree::expr::Expression *Parser::parseDot(Follows follows) {
         auto addition_follows = combine(follows,{Token::DOT});
 
         Expression *rhs,*lhs = parseTerminal(follows);
@@ -906,7 +906,7 @@ namespace evoBasic{
 
     }
 
-    ast::expr::Expression *Parser::parseTerminal(Follows follows){
+    parseTree::expr::Expression *Parser::parseTerminal(Follows follows){
         auto addition_follows = combine(follows,{Token::DOT});
         bool panic = false;
         while(true){
@@ -930,7 +930,7 @@ namespace evoBasic{
                     return parseNew(addition_follows);
                 default:
                     if(panic){
-                        auto err = new ast::expr::Expression;
+                        auto err = new parseTree::expr::Expression;
                         err->location = lexer->getToken()->getLocation();
                         return err;
                     }
@@ -941,7 +941,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Expression *Parser::parseUnit(Follows follows){
+    parseTree::expr::Expression *Parser::parseUnit(Follows follows){
         auto begin_location = lexer->getNextToken()->getLocation();
         Expression *ret = parseID(follows);
 
@@ -966,7 +966,7 @@ namespace evoBasic{
     }
 
 
-    ast::expr::Callee::Argument* Parser::parseArgsList(Follows follows){
+    parseTree::expr::Callee::Argument* Parser::parseArgsList(Follows follows){
         auto addition_follows = combine(follows,{Token::COMMA});
 
         lexer->match(Token::LP);
@@ -989,24 +989,24 @@ namespace evoBasic{
     }
 
 
-    ast::expr::Callee::Argument *Parser::parseArg(Follows follows) {
+    parseTree::expr::Callee::Argument *Parser::parseArg(Follows follows) {
         auto arg = new Callee::Argument;
         auto begin_location = lexer->getNextToken()->getLocation();
 
         if(lexer->predict(Token::byval_)){
             lexer->match(Token::byval_);
-            arg->pass_kind = ast::expr::Callee::Argument::byval;
+            arg->pass_kind = parseTree::expr::Callee::Argument::byval;
         }
         else if(lexer->predict(Token::byref_)){
             lexer->match(Token::byref_);
-            arg->pass_kind = ast::expr::Callee::Argument::byref;
+            arg->pass_kind = parseTree::expr::Callee::Argument::byref;
         }
         arg->expr = parseLogic(follows);
         arg->location = new Location(begin_location,lexer->getToken()->getLocation());
         return arg;
     }
 
-    ast::expr::Digit *Parser::parseDigit(Follows follows){
+    parseTree::expr::Digit *Parser::parseDigit(Follows follows){
         if(lexer->predict(Token::DIGIT)){
             lexer->match(Token::DIGIT);
             auto digit = new expr::Digit;
@@ -1020,7 +1020,7 @@ namespace evoBasic{
         }
     }
 
-    ast::expr::Decimal *Parser::parseDecimal(Follows follows){
+    parseTree::expr::Decimal *Parser::parseDecimal(Follows follows){
         lexer->match(Token::DECIMAL);
         auto decimal = new expr::Decimal;
         decimal->location = lexer->getToken()->getLocation();
@@ -1028,7 +1028,7 @@ namespace evoBasic{
         return decimal;
     }
 
-    ast::expr::String *Parser::parseString(Follows follows){
+    parseTree::expr::String *Parser::parseString(Follows follows){
         lexer->match(Token::STRING);
         auto str = new expr::String;
         str->location = lexer->getToken()->getLocation();
@@ -1037,7 +1037,7 @@ namespace evoBasic{
         return str;
     }
 
-    ast::expr::Char *Parser::parseChar(Follows follows){
+    parseTree::expr::Char *Parser::parseChar(Follows follows){
         lexer->match(Token::CHAR);
         auto ch = new expr::Char;
         ch->location = lexer->getToken()->getLocation();
@@ -1046,7 +1046,7 @@ namespace evoBasic{
         return ch;
     }
 
-    ast::expr::Boolean *Parser::parseBoolean(Follows follows){
+    parseTree::expr::Boolean *Parser::parseBoolean(Follows follows){
         auto boo = new Boolean;
         if(lexer->predict(Token::false_)){
             lexer->match(Token::false_);
@@ -1061,23 +1061,23 @@ namespace evoBasic{
         return boo;
     }
 
-    ast::expr::Expression *Parser::parseParentheses(Follows follows) {
+    parseTree::expr::Expression *Parser::parseParentheses(Follows follows) {
         lexer->match(Token::LP);
         auto location_begin = lexer->getToken()->getLocation();
-        auto parentheses = new ast::expr::Parentheses;
+        auto parentheses = new parseTree::expr::Parentheses;
         parentheses->expr = parseLogic(follows);
         parentheses->location = new Location(location_begin,lexer->getNextToken()->getLocation());
         lexer->match(Token::RP, follows, "Expected token ')'");
         return parentheses;
     }
 
-    ast::stmt::ExprStmt *Parser::parseExprStmt(Follows follows) {
+    parseTree::stmt::ExprStmt *Parser::parseExprStmt(Follows follows) {
         auto tmp = new ExprStmt;
         tmp->expr = parseLogic(follows);
         return tmp;
     }
 
-    ast::Annotation *Parser::parseAnnotation(const set<Token::Enum> &follows) {
+    parseTree::Annotation *Parser::parseAnnotation(const set<Token::Enum> &follows) {
         auto annotation = new Annotation;
         auto begin_location = lexer->getNextToken()->getLocation();
 
@@ -1101,7 +1101,7 @@ namespace evoBasic{
         return annotation;
     }
 
-    ast::AnnotationUnit *Parser::parseAnnotationUnit(const set<Token::Enum> &follows) {
+    parseTree::AnnotationUnit *Parser::parseAnnotationUnit(const set<Token::Enum> &follows) {
         auto unit = new AnnotationUnit;
         auto begin_location = lexer->getNextToken()->getLocation();
         unit->name = parseID(follows);
@@ -1110,7 +1110,7 @@ namespace evoBasic{
     }
 
 
-    ast::Implement *Parser::parseImplement(const std::set<Token::Enum> &follows) {
+    parseTree::Implement *Parser::parseImplement(const std::set<Token::Enum> &follows) {
         auto impl = new Implement;
         lexer->match(Token::impl);
         impl->annotation = parseAnnotation(follows);
@@ -1118,7 +1118,7 @@ namespace evoBasic{
         return impl;
     }
 
-    ast::expr::New *Parser::parseNew(const set<Token::Enum> &follows) {
+    parseTree::expr::New *Parser::parseNew(const set<Token::Enum> &follows) {
         lexer->match(Token::new_);
         auto ret = new New;
         auto location_begin = lexer->getToken()->getLocation();
@@ -1128,7 +1128,7 @@ namespace evoBasic{
         return ret;
     }
 
-    ast::Annotation *constructAnnotationAST(std::string code) {
+    parseTree::Annotation *constructAnnotationAST(std::string code) {
         auto tmp = Logger::debugMode;
         Logger::debugMode = false;
         auto source = new StringSource(std::move(code));

@@ -30,16 +30,16 @@ namespace evoBasic{
 
     class SymbolCollector : public Visitor<SymbolCollectorArgs>{
     public:
-        std::any visitGlobal(ast::Global *global, SymbolCollectorArgs args) override;
-        std::any visitModule(ast::Module *mod, SymbolCollectorArgs args) override;
-        std::any visitClass(ast::Class *cls, SymbolCollectorArgs args) override;
-        std::any visitInterface(ast::Interface *interface_node, SymbolCollectorArgs args) override;
-        std::any visitEnum(ast::Enum *em, SymbolCollectorArgs args) override;
-        std::any visitType(ast::Type *ty, SymbolCollectorArgs args) override;
-        std::any visitDim(ast::Dim *dim, SymbolCollectorArgs args) override;
-        std::any visitVariable(ast::Variable *variable_node, SymbolCollectorArgs args) override;
-        std::any visitID(ast::expr::ID *id, SymbolCollectorArgs args) override;
-        std::any visitMember(ast::Member *member_node, SymbolCollectorArgs args) override;
+        std::any visitGlobal(parseTree::Global *global, SymbolCollectorArgs args) override;
+        std::any visitModule(parseTree::Module *mod, SymbolCollectorArgs args) override;
+        std::any visitClass(parseTree::Class *cls, SymbolCollectorArgs args) override;
+        std::any visitInterface(parseTree::Interface *interface_node, SymbolCollectorArgs args) override;
+        std::any visitEnum(parseTree::Enum *em, SymbolCollectorArgs args) override;
+        std::any visitType(parseTree::Type *ty, SymbolCollectorArgs args) override;
+        std::any visitDim(parseTree::Dim *dim, SymbolCollectorArgs args) override;
+        std::any visitVariable(parseTree::Variable *variable_node, SymbolCollectorArgs args) override;
+        std::any visitID(parseTree::expr::ID *id, SymbolCollectorArgs args) override;
+        std::any visitMember(parseTree::Member *member_node, SymbolCollectorArgs args) override;
     };
 
 }

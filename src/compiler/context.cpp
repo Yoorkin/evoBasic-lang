@@ -160,7 +160,7 @@ namespace evoBasic{
         else return *target;
     }
 
-    void ConversionRules::insertCastAST(ConversionRules::Value dst, ast::expr::Expression **expression) {
+    void ConversionRules::insertCastAST(ConversionRules::Value dst, parseTree::expr::Expression **expression) {
         switch (dst->getKind()) {
             case SymbolKind::Class:
                 break;
@@ -175,7 +175,7 @@ namespace evoBasic{
             case SymbolKind::Module:
                 break;
             case SymbolKind::Primitive:
-                *expression = new ast::expr::Cast(
+                *expression = new parseTree::expr::Cast(
                         *expression,
                         constructAnnotationAST(format() << "global." << dst->getName())
                         );

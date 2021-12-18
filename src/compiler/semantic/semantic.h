@@ -12,7 +12,7 @@
 namespace evoBasic{
     class Context;
 
-    using AST = ast::Global;
+    using AST = parseTree::Global;
 
     class Semantic {
     public:

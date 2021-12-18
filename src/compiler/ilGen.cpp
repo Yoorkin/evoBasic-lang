@@ -310,10 +310,137 @@ namespace evoBasic{
     std::any ILGen::visitCast(ast::expr::Cast *cast_node, ILGenArgs args) {
 
     }
+//        switch(assign_node->rhs->expression_kind){
+//            case binary_:
+//            case unary_:
+//            case parentheses_:
+//            case ID_:
+//            case cast_:
+//            case digit_:
+//            case decimal:
+//            case string_:
+//            case char_:
+//            case boolean_:
+//            case callee_:
+//            case new_:
+//            case index_:
+//            case dot_:
+//            case assign_:
+//            case colon_:
+//        }
+#define MatchExp(Node,Kind) Node->expression_kind==ast::expr::Expression::Kind
+#define MatchLhsRhs(Parent,Lhs,Rhs) MatchExp(Parent->lhs,Lhs) && MatchExp(Parent->rhs,Rhs)
 
     std::any ILGen::visitAssign(ast::expr::Assign *assign_node, ILGenArgs args) {
-
-
+//        auto store = [](type::Variable *variable,il::DataType data){
+//            switch(variable->getVariableKind()){
+//                case type::VariableKind::Local:
+//                    break;
+//                case type::VariableKind::StaticField:
+//                    break;
+//                case type::VariableKind::Field:
+//                    break;
+//                case type::VariableKind::Parameter:
+//                    break;
+//            }
+//        };
+//
+//        switch(assign_node->lhs->expression_kind){
+//            case ast::Expression::ID_:
+//                switch(assign_node->rhs->expression_kind){
+//                    case ast::Expression::binary_:
+//                    case ast::Expression::unary_:
+//                    case ast::Expression::parentheses_:
+//                    case ast::Expression::ID_:
+//                    case ast::Expression::cast_:
+//                    case ast::Expression::digit_:
+//                    case ast::Expression::decimal_:
+//                    case ast::Expression::string_:
+//                    case ast::Expression::char_:
+//                    case ast::Expression::boolean_:
+//                    case ast::Expression::callee_:
+//                    case ast::Expression::new_:
+//                    case ast::Expression::index_:
+//                    case ast::Expression::dot_:
+//                    case ast::Expression::assign_:
+//                    case ast::Expression::colon_:
+//                }
+//                break;
+//            case ast::Expression::index_:
+//                switch(assign_node->rhs->expression_kind){
+//                    case ast::Expression::binary_:
+//                    case ast::Expression::unary_:
+//                    case ast::Expression::parentheses_:
+//                    case ast::Expression::ID_:
+//                    case ast::Expression::cast_:
+//                    case ast::Expression::digit_:
+//                    case ast::Expression::decimal_:
+//                    case ast::Expression::string_:
+//                    case ast::Expression::char_:
+//                    case ast::Expression::boolean_:
+//                    case ast::Expression::callee_:
+//                    case ast::Expression::new_:
+//                    case ast::Expression::index_:
+//                    case ast::Expression::dot_:
+//                    case ast::Expression::assign_:
+//                    case ast::Expression::colon_:
+//                }
+//                break;
+//            case ast::Expression::dot_:
+//                switch(assign_node->rhs->expression_kind){
+//                    case ast::Expression::binary_:
+//                    case ast::Expression::unary_:
+//                    case ast::Expression::parentheses_:
+//                    case ast::Expression::ID_:
+//                    case ast::Expression::cast_:
+//                    case ast::Expression::digit_:
+//                    case ast::Expression::decimal_:
+//                    case ast::Expression::string_:
+//                    case ast::Expression::char_:
+//                    case ast::Expression::boolean_:
+//                    case ast::Expression::callee_:
+//                    case ast::Expression::new_:
+//                    case ast::Expression::index_:
+//                    case ast::Expression::dot_:
+//                    case ast::Expression::assign_:
+//                    case ast::Expression::colon_:
+//                }
+//                break;
+//            case ast::Expression::assign_:
+//                switch(assign_node->rhs->expression_kind){
+//                    case ast::Expression::binary_:
+//                    case ast::Expression::unary_:
+//                    case ast::Expression::parentheses_:
+//                    case ast::Expression::ID_:
+//                    case ast::Expression::cast_:
+//                    case ast::Expression::digit_:
+//                    case ast::Expression::decimal_:
+//                    case ast::Expression::string_:
+//                    case ast::Expression::char_:
+//                    case ast::Expression::boolean_:
+//                    case ast::Expression::callee_:
+//                    case ast::Expression::new_:
+//                    case ast::Expression::index_:
+//                    case ast::Expression::dot_:
+//                    case ast::Expression::assign_:
+//                    case ast::Expression::colon_:
+//                }
+//                break;
+//            //左子树不会是以下类型(在语义分析阶段被排除)
+//            case ast::Expression::binary_:
+//            case ast::Expression::unary_:
+//            case ast::Expression::parentheses_:
+//            case ast::Expression::cast_:
+//            case ast::Expression::digit_:
+//            case ast::Expression::decimal_:
+//            case ast::Expression::string_:
+//            case ast::Expression::char_:
+//            case ast::Expression::boolean_:
+//            case ast::Expression::callee_:
+//            case ast::Expression::new_:
+//            case ast::Expression::colon_:
+//                PANIC;
+//        }
     }
 
     std::any ILGen::visitDot(ast::expr::Dot *dot_node, ILGenArgs args) {

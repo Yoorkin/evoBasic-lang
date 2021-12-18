@@ -82,7 +82,7 @@ int main(int argc,char *argv[]) {
     }
 
     auto context = new Context;
-    list<ast::Global*> asts;
+    list<parseTree::Global*> asts;
 
     if(!enable_compile)return 0;
 

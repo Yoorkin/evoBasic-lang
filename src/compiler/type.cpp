@@ -227,7 +227,7 @@ namespace evoBasic::type{
         return FunctionKind::Function;
     }
 
-    UserFunction::UserFunction(FunctionFlag flag,ast::Function *function_node)
+    UserFunction::UserFunction(FunctionFlag flag, parseTree::Function *function_node)
         :function_node(function_node),flag(flag){
         switch (flag) {
             case FunctionFlag::Method:
@@ -241,7 +241,7 @@ namespace evoBasic::type{
         }
     }
 
-    ast::Function* UserFunction::getFunctionNode() {
+    parseTree::Function* UserFunction::getFunctionNode() {
         return this->function_node;
     }
 
@@ -866,7 +866,7 @@ namespace evoBasic::type{
         return FunctionKind::Constructor;
     }
 
-    Constructor::Constructor(ast::Constructor *node) : constructor_node(node) {}
+    Constructor::Constructor(parseTree::Constructor *node) : constructor_node(node) {}
 
     VirtualTable::VirtualTable(VirtualTable *base)
         : slot(base->slot),slot_map(base->slot_map),base(base) {}

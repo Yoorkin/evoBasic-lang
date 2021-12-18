@@ -10,25 +10,25 @@
 namespace evoBasic{
     using namespace std;
     using namespace type;
-    using namespace ast;
-    using namespace ast::expr;
+    using namespace parseTree;
+    using namespace parseTree::expr;
     using namespace i18n;
     
-    void TypeAnalyzer::visitStatementList(ast::stmt::Statement *stmt_list, TypeAnalyzerArgs args) {
+    void TypeAnalyzer::visitStatementList(parseTree::stmt::Statement *stmt_list, TypeAnalyzerArgs args) {
         args.domain = new type::TemporaryDomain(args.domain,args.function);
         FOR_EACH(iter,stmt_list){
             visitStatement(iter,args);
         }
     }
 
-    std::any TypeAnalyzer::visitArg(ast::expr::Callee::Argument *argument_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitArg(parseTree::expr::Callee::Argument *argument_node, TypeAnalyzerArgs args) {
         NotNull(args.checking_function);
         auto function = args.checking_function;
         type::Parameter *param = nullptr;
-        if(argument_node->expr->expression_kind == ast::expr::Expression::colon_){
+        if(argument_node->expr->expression_kind == parseTree::expr::Expression::colon_){
             // parameter initialization
             auto colon_node = (Colon*)(argument_node->expr);
-            if(colon_node->lhs->expression_kind != ast::expr::Expression::ID_){
+            if(colon_node->lhs->expression_kind != parseTree::expr::Expression::ID_){
                 Logger::error(colon_node->lhs->location,lang->msgExpectedParamNameInOptInitialization());
                 return {};
             }
@@ -80,20 +80,20 @@ namespace evoBasic{
 
         if(param->isByval()){
             switch (argument_node->pass_kind) {
-                case ast::expr::Callee::Argument::undefined:
-                case ast::expr::Callee::Argument::byval:
+                case parseTree::expr::Callee::Argument::undefined:
+                case parseTree::expr::Callee::Argument::byval:
                     if(!param->getPrototype()->equal(arg_type->symbol->as<Prototype*>())){
                         if(!try_implicit_conversion())report_type_error();
                     }
                     break;
-                case ast::expr::Callee::Argument::byref:
+                case parseTree::expr::Callee::Argument::byref:
                     Logger::error(argument_node->location, lang->msgExpectedByValButByRef());
                     break;
             }
         }
         else{
             switch (argument_node->pass_kind) {
-                case ast::expr::Callee::Argument::byval:
+                case parseTree::expr::Callee::Argument::byval:
                     if(!param->getPrototype()->equal(arg_type->symbol->as<Prototype*>())){
                         if(!try_implicit_conversion())report_type_error();
                     }
@@ -107,12 +107,12 @@ namespace evoBasic{
                     }
                     args.function->addMemoryLayout(argument_node->temp_address);
                     break;
-                case ast::expr::Callee::Argument::byref:
+                case parseTree::expr::Callee::Argument::byref:
                     if(!param->getPrototype()->equal(arg_type->getPrototype())){
                         report_type_error();
                     }
                     break;
-                case ast::expr::Callee::Argument::undefined:
+                case parseTree::expr::Callee::Argument::undefined:
                     if(arg_type->value_kind != ExpressionType::lvalue){
                         Logger::error(argument_node->location, lang->msgCannotPassTmpValByRefImplicit());
                     }
@@ -126,48 +126,48 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitMember(ast::Member *member_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitMember(parseTree::Member *member_node, TypeAnalyzerArgs args) {
         switch ((*member_node).member_kind) {
-            case ast::Member::function_: return visitFunction((ast::Function*)member_node,args);
-            case ast::Member::class_:    return visitClass((ast::Class*)member_node,args);
-            case ast::Member::module_:   return visitModule((ast::Module*)member_node,args);
-            case ast::Member::type_:     return{}; //return visitType((ast::Type*)member_node,args);
-            case ast::Member::enum_:     return{}; //visitEnum((ast::Enum*)member_node,args);
-            case ast::Member::dim_:      return{}; //return visitDim((ast::Dim*)member_node,args);
-            case ast::Member::external_: return visitExternal((ast::External*)member_node,args);
-            case ast::Member::interface_:return{};
-            case ast::Member::constructor_:return visitConstructor((ast::Constructor*)member_node,args);
+            case parseTree::Member::function_: return visitFunction((parseTree::Function*)member_node, args);
+            case parseTree::Member::class_:    return visitClass((parseTree::Class*)member_node, args);
+            case parseTree::Member::module_:   return visitModule((parseTree::Module*)member_node, args);
+            case parseTree::Member::type_:     return{}; //return visitType((ast::Type*)member_node,args);
+            case parseTree::Member::enum_:     return{}; //visitEnum((ast::Enum*)member_node,args);
+            case parseTree::Member::dim_:      return{}; //return visitDim((ast::Dim*)member_node,args);
+            case parseTree::Member::external_: return visitExternal((parseTree::External*)member_node, args);
+            case parseTree::Member::interface_:return{};
+            case parseTree::Member::constructor_:return visitConstructor((parseTree::Constructor*)member_node, args);
         }
         PANIC;
     }
 
-    std::any TypeAnalyzer::visitStatement(ast::stmt::Statement *stmt_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitStatement(parseTree::stmt::Statement *stmt_node, TypeAnalyzerArgs args) {
         switch ((*stmt_node).stmt_flag) {
-            case ast::stmt::Statement::let_: return visitLet((ast::stmt::Let*)stmt_node,args);
-            case ast::stmt::Statement::loop_:return visitLoop((ast::stmt::Loop*)stmt_node,args);
-            case ast::stmt::Statement::if_:  return visitIf((ast::stmt::If*)stmt_node,args);
-            case ast::stmt::Statement::for_: return visitFor((ast::stmt::For*)stmt_node,args);
-            case ast::stmt::Statement::select_:return visitSelect((ast::stmt::Select*)stmt_node,args);
-            case ast::stmt::Statement::return_:return visitReturn((ast::stmt::Return*)stmt_node,args);
-            case ast::stmt::Statement::continue_:return visitContinue((ast::stmt::Continue*)stmt_node,args);
-            case ast::stmt::Statement::exit_:return visitExit((ast::stmt::Exit*)stmt_node,args);
-            case ast::stmt::Statement::expr_:return visitExprStmt((ast::stmt::ExprStmt*)stmt_node,args);
+            case parseTree::stmt::Statement::let_: return visitLet((parseTree::stmt::Let*)stmt_node, args);
+            case parseTree::stmt::Statement::loop_:return visitLoop((parseTree::stmt::Loop*)stmt_node, args);
+            case parseTree::stmt::Statement::if_:  return visitIf((parseTree::stmt::If*)stmt_node, args);
+            case parseTree::stmt::Statement::for_: return visitFor((parseTree::stmt::For*)stmt_node, args);
+            case parseTree::stmt::Statement::select_:return visitSelect((parseTree::stmt::Select*)stmt_node, args);
+            case parseTree::stmt::Statement::return_:return visitReturn((parseTree::stmt::Return*)stmt_node, args);
+            case parseTree::stmt::Statement::continue_:return visitContinue((parseTree::stmt::Continue*)stmt_node, args);
+            case parseTree::stmt::Statement::exit_:return visitExit((parseTree::stmt::Exit*)stmt_node, args);
+            case parseTree::stmt::Statement::expr_:return visitExprStmt((parseTree::stmt::ExprStmt*)stmt_node, args);
         }
         PANIC;
     }
 
 
-    std::any TypeAnalyzer::visitGlobal(ast::Global *global_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitGlobal(parseTree::Global *global_node, TypeAnalyzerArgs args) {
         return visitAllMember(args.context->getGlobal(),global_node->member,args);
     }
-    std::any TypeAnalyzer::visitModule(ast::Module *module_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitModule(parseTree::Module *module_node, TypeAnalyzerArgs args) {
         return visitAllMember(module_node->module_symbol,module_node->member,args);
     }
-    std::any TypeAnalyzer::visitClass(ast::Class *class_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitClass(parseTree::Class *class_node, TypeAnalyzerArgs args) {
         return visitAllMember(class_node->class_symbol,class_node->member,args);
     }
 
-    std::any TypeAnalyzer::visitAllMember(type::Domain *domain,ast::Member *member,TypeAnalyzerArgs args){
+    std::any TypeAnalyzer::visitAllMember(type::Domain *domain, parseTree::Member *member, TypeAnalyzerArgs args){
         args.domain = args.current_class_or_module = domain;
         FOR_EACH(iter,member){
             visitMember(iter,args);
@@ -176,21 +176,21 @@ namespace evoBasic{
     }
 
 
-    std::any TypeAnalyzer::visitFunction(ast::Function *function_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitFunction(parseTree::Function *function_node, TypeAnalyzerArgs args) {
         auto function = function_node->function_symbol;
         args.domain = args.function = function;
         visitStatementList(function_node->statement,args);
         return {};
     }
 
-    std::any TypeAnalyzer::visitConstructor(ast::Constructor *ctor_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitConstructor(parseTree::Constructor *ctor_node, TypeAnalyzerArgs args) {
         auto function = ctor_node->constructor_symbol;
         args.domain = args.function = function;
         visitStatementList(ctor_node->statement,args);
         return {};
     }
 
-    std::any TypeAnalyzer::visitLet(ast::stmt::Let *let_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitLet(parseTree::stmt::Let *let_node, TypeAnalyzerArgs args) {
         for(auto iter = (*let_node).variable;iter!=nullptr;iter = iter->next_sibling){
             auto name = getID(iter->name);
             if(is_name_valid(name,iter->location,args.domain)){
@@ -246,7 +246,7 @@ namespace evoBasic{
     }
 
 
-    std::any TypeAnalyzer::visitSelect(ast::stmt::Select *select_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitSelect(parseTree::stmt::Select *select_node, TypeAnalyzerArgs args) {
         auto condition_type = any_cast<ExpressionType*>(visitExpression((*select_node).condition,args));
         FOR_EACH(iter,select_node->case_){
             if(iter->condition){
@@ -261,7 +261,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitLoop(ast::stmt::Loop *loop_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitLoop(parseTree::stmt::Loop *loop_node, TypeAnalyzerArgs args) {
         auto condition_type = any_cast<ExpressionType*>(visitExpression(loop_node->condition,args));
         if(!condition_type->getPrototype()->equal(args.context->getBuiltIn().getPrimitive(vm::Data::boolean))){
             Logger::error(loop_node->condition->location, lang->msgExpExpectedBoolean());
@@ -270,7 +270,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitIf(ast::stmt::If *ifstmt_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitIf(parseTree::stmt::If *ifstmt_node, TypeAnalyzerArgs args) {
         FOR_EACH(iter,ifstmt_node->case_){
             if(iter->condition){
                 auto case_type = any_cast<ExpressionType*>(visitExpression(iter->condition,args));
@@ -283,7 +283,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitFor(ast::stmt::For *forstmt_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitFor(parseTree::stmt::For *forstmt_node, TypeAnalyzerArgs args) {
         auto iterator_type = any_cast<ExpressionType*>(visitExpression((*forstmt_node).iterator,args));
         if(iterator_type->value_kind == ExpressionType::error){
             Logger::error(forstmt_node->iterator->location, lang->msgForStmtIteratorNotFound());
@@ -316,7 +316,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any TypeAnalyzer::visitReturn(ast::stmt::Return *ret_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitReturn(parseTree::stmt::Return *ret_node, TypeAnalyzerArgs args) {
         auto type = any_cast<ExpressionType*>(visitExpression((*ret_node).expr,args));
         if(type->value_kind == ExpressionType::error)return {};
 
@@ -335,9 +335,9 @@ namespace evoBasic{
     }
 
     
-    std::any TypeAnalyzer::visitExpression(ast::expr::Expression *expr_node, TypeAnalyzerArgs args) {
-        using exp = ast::expr::Expression;
-        using namespace ast::expr;
+    std::any TypeAnalyzer::visitExpression(parseTree::expr::Expression *expr_node, TypeAnalyzerArgs args) {
+        using exp = parseTree::expr::Expression;
+        using namespace parseTree::expr;
         switch ((*expr_node).expression_kind) {
             case exp::binary_:      return visitBinary((Binary*)expr_node,args);
             case exp::unary_:       return visitUnary((Unary*)expr_node, args);
@@ -359,37 +359,37 @@ namespace evoBasic{
         PANIC;
     }
 
-    std::any TypeAnalyzer::visitUnary(ast::expr::Unary *unary_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitUnary(parseTree::expr::Unary *unary_node, TypeAnalyzerArgs args) {
         return visitExpression(unary_node->terminal,args);
     }
 
-    std::any TypeAnalyzer::visitDigit(ast::expr::Digit *digit_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitDigit(parseTree::expr::Digit *digit_node, TypeAnalyzerArgs args) {
         auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::i32);
         return digit_node->type = new ExpressionType(primitive,ExpressionType::rvalue,il::i32);
     }
 
-    std::any TypeAnalyzer::visitDecimal(ast::expr::Decimal *decimal_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitDecimal(parseTree::expr::Decimal *decimal_node, TypeAnalyzerArgs args) {
         auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::f64);
         return decimal_node->type = new ExpressionType(primitive,ExpressionType::rvalue,il::f64);
     }
 
-    std::any TypeAnalyzer::visitBoolean(ast::expr::Boolean *bl_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitBoolean(parseTree::expr::Boolean *bl_node, TypeAnalyzerArgs args) {
         auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::boolean);
         return (*bl_node).type = new ExpressionType(primitive,ExpressionType::rvalue,il::boolean);
     }
 
-    std::any TypeAnalyzer::visitChar(ast::expr::Char *ch_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitChar(parseTree::expr::Char *ch_node, TypeAnalyzerArgs args) {
         auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::u16);
         return (*ch_node).type = new ExpressionType(primitive,ExpressionType::rvalue,il::u16);
     }
 
-    std::any TypeAnalyzer::visitString(ast::expr::String *str_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitString(parseTree::expr::String *str_node, TypeAnalyzerArgs args) {
         auto cls = args.context->getBuiltIn().getStringClass();
         // todo: create string Object and push ref into operand stack
         return (*str_node).type = new ExpressionType(cls,ExpressionType::rvalue,il::ref);
     }
     
-    std::any TypeAnalyzer::visitBinary(ast::expr::Binary *binary_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitBinary(parseTree::expr::Binary *binary_node, TypeAnalyzerArgs args) {
         auto lhs_type = any_cast<ExpressionType*>(visitExpression(binary_node->lhs,args));
         auto rhs_type = any_cast<ExpressionType*>(visitExpression(binary_node->rhs,args));
         if(lhs_type->value_kind == ExpressionType::error || rhs_type->value_kind == ExpressionType::error)
@@ -404,7 +404,7 @@ namespace evoBasic{
             return true;
         };
         
-        using Op = ast::expr::Binary;
+        using Op = parseTree::expr::Binary;
         switch (binary_node->op) {
             case Op::And:
             case Op::Or:
@@ -474,7 +474,7 @@ namespace evoBasic{
         }
     }
     
-    std::any TypeAnalyzer::visitDot(ast::expr::Dot *dot_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitDot(parseTree::expr::Dot *dot_node, TypeAnalyzerArgs args) {
         auto lhs_type = any_cast<ExpressionType*>(visitExpression(dot_node->lhs,args));
 
         switch (lhs_type->value_kind) {
@@ -491,7 +491,7 @@ namespace evoBasic{
         return dot_node->type = rhs_type;
     }
 
-    std::any TypeAnalyzer::visitID(ast::expr::ID *id_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitID(parseTree::expr::ID *id_node, TypeAnalyzerArgs args) {
         try{
             auto name = getID(id_node);
             Symbol *target = nullptr;
@@ -541,7 +541,7 @@ namespace evoBasic{
         }
     }
 
-    std::any TypeAnalyzer::visitAssign(ast::expr::Assign *assign_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitAssign(parseTree::expr::Assign *assign_node, TypeAnalyzerArgs args) {
         auto lhs_type = any_cast<ExpressionType*>(visitExpression(assign_node->lhs,args));
         auto rhs_type = any_cast<ExpressionType*>(visitExpression(assign_node->rhs,args));
         if(lhs_type->value_kind == ExpressionType::error || rhs_type->value_kind == ExpressionType::error)
@@ -557,7 +557,7 @@ namespace evoBasic{
         return assign_node->type = lhs_type;
     }
 
-    std::any TypeAnalyzer::visitIndex(ast::expr::Index *index_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitIndex(parseTree::expr::Index *index_node, TypeAnalyzerArgs args) {
         auto target_type = any_cast<ExpressionType*>(visitExpression(index_node->target,args));
         auto value_type = any_cast<ExpressionType*>(visitExpression(index_node->value,args));
 
@@ -594,7 +594,7 @@ namespace evoBasic{
         return index_node->type = new ExpressionType(ret_prototype,ExpressionType::lvalue,mapPrototypeToIL(ret_prototype));
     }
 
-    std::any TypeAnalyzer::visitCallee(ast::expr::Callee *callee_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitCallee(parseTree::expr::Callee *callee_node, TypeAnalyzerArgs args) {
         auto target_type = any_cast<ExpressionType*>(visitExpression(callee_node->name,args));
         
         if(target_type->value_kind == ExpressionType::error){
@@ -621,7 +621,7 @@ namespace evoBasic{
     }
 
 
-    std::any TypeAnalyzer::visitNew(ast::expr::New *new_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitNew(parseTree::expr::New *new_node, TypeAnalyzerArgs args) {
         auto prototype = any_cast<Prototype*>(visitAnnotation(new_node->annotation,args));
 
         auto cls = prototype->as<type::Class*>();
@@ -645,12 +645,12 @@ namespace evoBasic{
         return new ExpressionType(cls,ExpressionType::rvalue,il::ref);
     }
 
-    std::any TypeAnalyzer::visitExprStmt(ast::stmt::ExprStmt *expr_stmt_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitExprStmt(parseTree::stmt::ExprStmt *expr_stmt_node, TypeAnalyzerArgs args) {
         args.dot_prefix = nullptr;
         return visitExpression(expr_stmt_node->expr,args);
     }
 
-    std::any TypeAnalyzer::visitParentheses(ast::expr::Parentheses *parentheses_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitParentheses(parseTree::expr::Parentheses *parentheses_node, TypeAnalyzerArgs args) {
         args.dot_prefix = nullptr;
         return visitExpression(parentheses_node->expr,args);
     }
@@ -716,7 +716,7 @@ namespace evoBasic{
         auto arg = argument;
         bool opt_flag = false;
         while(arg){
-            if(arg->expr->expression_kind != ast::expr::Expression::colon_){
+            if(arg->expr->expression_kind != parseTree::expr::Expression::colon_){
                 if(opt_flag){
                     Logger::error(arg->location,lang->msgRegularAppearAfterOpt());
                 }
@@ -748,7 +748,7 @@ namespace evoBasic{
 
     }
 
-    std::any TypeAnalyzer::visitAnnotation(ast::Annotation *annotation_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitAnnotation(parseTree::Annotation *annotation_node, TypeAnalyzerArgs args) {
         auto iter = (*annotation_node).unit;
         args.need_lookup = true;
         args.dot_prefix = new ExpressionType(args.domain,ExpressionType::rvalue,mapPrototypeToIL(args.domain),false);
@@ -776,7 +776,7 @@ namespace evoBasic{
         return ret_prototype;
     }
 
-    std::any TypeAnalyzer::visitAnnotationUnit(ast::AnnotationUnit *unit_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitAnnotationUnit(parseTree::AnnotationUnit *unit_node, TypeAnalyzerArgs args) {
         auto name = getID((*unit_node).name);
         Symbol *symbol = nullptr;
         if(args.need_lookup){
@@ -800,8 +800,8 @@ namespace evoBasic{
         }
     }
 
-    std::any TypeAnalyzer::visitColon(ast::expr::Colon *colon_node, TypeAnalyzerArgs args) {
-        if(colon_node->lhs->expression_kind != ast::expr::Expression::ID_){
+    std::any TypeAnalyzer::visitColon(parseTree::expr::Colon *colon_node, TypeAnalyzerArgs args) {
+        if(colon_node->lhs->expression_kind != parseTree::expr::Expression::ID_){
             Logger::error(colon_node->location,lang->msgParamInitialExpectedIDInLhs());
             return ExpressionType::Error;
         }

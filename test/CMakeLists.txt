@@ -35,7 +35,7 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/src/compiler/type.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/visitor.cpp
     compileHelper.h
-)
+        ../src/compiler/ast.cpp ../src/compiler/ast.h)
 
 target_include_directories(
     cbTest PRIVATE

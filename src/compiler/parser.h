@@ -4,7 +4,7 @@
 
 #ifndef EVOBASIC2_PARSER_H
 #define EVOBASIC2_PARSER_H
-#include "ast.h"
+#include "parseTree.h"
 #include "lexer.h"
 #include <set>
 namespace evoBasic{
@@ -14,69 +14,69 @@ namespace evoBasic{
         Lexer *lexer;
     public:
         explicit Parser(Lexer *lexer);
-        ast::Global *parseGlobal();
-        ast::Class *parseClass(Follows follows);
-        ast::Module *parseModule(Follows follows);
-        ast::Type *parseType(Follows follows);
-        ast::Enum *parseEnum(Follows follows);
-        ast::Member *parseMember(Follows follows);
+        parseTree::Global *parseGlobal();
+        parseTree::Class *parseClass(Follows follows);
+        parseTree::Module *parseModule(Follows follows);
+        parseTree::Type *parseType(Follows follows);
+        parseTree::Enum *parseEnum(Follows follows);
+        parseTree::Member *parseMember(Follows follows);
         AccessFlag parseAccessFlag();
-        ast::Implement *parseImplement(Follows follows);
+        parseTree::Implement *parseImplement(Follows follows);
 
-        ast::Import *parseImport(Follows follows);
-        ast::Dim *parseDim(Follows follows);
-        ast::Variable *parseVariable(Follows follows);
-        ast::Function *parseFunction(Follows follows);
-        ast::External *parseExternal(Follows follows);
-        ast::Constructor *parseConstructor(Follows follows);
-        ast::EnumMember *parseEnumMember(Follows follows);
-        ast::Interface *parseInterface(Follows follows);
-        ast::Function *parseFunctionInterface(Follows follows);
-        ast::Function *parseSubInterface(Follows follows);
+        parseTree::Import *parseImport(Follows follows);
+        parseTree::Dim *parseDim(Follows follows);
+        parseTree::Variable *parseVariable(Follows follows);
+        parseTree::Function *parseFunction(Follows follows);
+        parseTree::External *parseExternal(Follows follows);
+        parseTree::Constructor *parseConstructor(Follows follows);
+        parseTree::EnumMember *parseEnumMember(Follows follows);
+        parseTree::Interface *parseInterface(Follows follows);
+        parseTree::Function *parseFunctionInterface(Follows follows);
+        parseTree::Function *parseSubInterface(Follows follows);
 
 
-        ast::Parameter *parseParameter(Follows follows);
-        ast::expr::ID *parseID(Follows follows);
+        parseTree::Parameter *parseParameter(Follows follows);
+        parseTree::expr::ID *parseID(Follows follows);
 
-        ast::stmt::Let *parseLet(Follows follows);
-        ast::stmt::Select *parseSelect(Follows follows);
-        ast::stmt::Loop *parseLoop(Follows follows);
-        ast::stmt::If *parseIf(Follows follows);
-        ast::stmt::For *parseFor(Follows follows);
-        ast::stmt::Return *parseReturn(Follows follows);
-        ast::stmt::Exit *parseExit(Follows follows);
+        parseTree::stmt::Let *parseLet(Follows follows);
+        parseTree::stmt::Select *parseSelect(Follows follows);
+        parseTree::stmt::Loop *parseLoop(Follows follows);
+        parseTree::stmt::If *parseIf(Follows follows);
+        parseTree::stmt::For *parseFor(Follows follows);
+        parseTree::stmt::Return *parseReturn(Follows follows);
+        parseTree::stmt::Exit *parseExit(Follows follows);
 
-        ast::stmt::ExprStmt *parseExprStmt(Follows follows);
-        ast::expr::Expression *parseLogic(Follows follows);
-        ast::expr::Expression *parseCmp(Follows follows);
-        ast::expr::Expression *parseAdd(Follows follows);
-        ast::expr::Expression *parseTerm(Follows follows);
-        ast::expr::Expression *parseFactor(Follows follows);
-        ast::expr::Expression *parseUnary(Follows follows);
-        ast::expr::Expression *parseDot(Follows follows);
-        ast::expr::Expression *parseTerminal(Follows follows);
+        parseTree::stmt::ExprStmt *parseExprStmt(Follows follows);
+        parseTree::expr::Expression *parseLogic(Follows follows);
+        parseTree::expr::Expression *parseCmp(Follows follows);
+        parseTree::expr::Expression *parseAdd(Follows follows);
+        parseTree::expr::Expression *parseTerm(Follows follows);
+        parseTree::expr::Expression *parseFactor(Follows follows);
+        parseTree::expr::Expression *parseUnary(Follows follows);
+        parseTree::expr::Expression *parseDot(Follows follows);
+        parseTree::expr::Expression *parseTerminal(Follows follows);
 
-        ast::Annotation *parseAnnotation(Follows follows);
-        ast::AnnotationUnit *parseAnnotationUnit(Follows follows);
+        parseTree::Annotation *parseAnnotation(Follows follows);
+        parseTree::AnnotationUnit *parseAnnotationUnit(Follows follows);
 
         //callee\id\index
-        ast::expr::Expression *parseUnit(Follows follows);
-        ast::expr::Callee::Argument *parseArg(Follows follows);
+        parseTree::expr::Expression *parseUnit(Follows follows);
+        parseTree::expr::Callee::Argument *parseArg(Follows follows);
 
-        ast::expr::Digit *parseDigit(Follows follows);
-        ast::expr::Decimal *parseDecimal(Follows follows);
-        ast::expr::String *parseString(Follows follows);
-        ast::expr::Char *parseChar(Follows follows);
-        ast::expr::Boolean *parseBoolean(Follows follows);
-        ast::expr::Expression *parseParentheses(Follows follows);
+        parseTree::expr::Digit *parseDigit(Follows follows);
+        parseTree::expr::Decimal *parseDecimal(Follows follows);
+        parseTree::expr::String *parseString(Follows follows);
+        parseTree::expr::Char *parseChar(Follows follows);
+        parseTree::expr::Boolean *parseBoolean(Follows follows);
+        parseTree::expr::Expression *parseParentheses(Follows follows);
 
-        ast::Parameter *parseParameterList(Follows follows);
-        ast::stmt::Statement *parseStmtList(Follows follows);
-        ast::expr::Callee::Argument* parseArgsList(Follows follows);
-        ast::expr::New *parseNew(Follows follows);
+        parseTree::Parameter *parseParameterList(Follows follows);
+        parseTree::stmt::Statement *parseStmtList(Follows follows);
+        parseTree::expr::Callee::Argument* parseArgsList(Follows follows);
+        parseTree::expr::New *parseNew(Follows follows);
     };
 
-    ast::Annotation *constructAnnotationAST (std::string code);
+    parseTree::Annotation *constructAnnotationAST (std::string code);
 }
 
 

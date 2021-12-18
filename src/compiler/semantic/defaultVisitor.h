@@ -23,7 +23,7 @@ namespace evoBasic{
         Location *exception_location = nullptr;
         std::string not_found_name;
     public:
-        std::any visitAnnotationUnit(ast::AnnotationUnit *unit_node, ARGS args) override{
+        std::any visitAnnotationUnit(parseTree::AnnotationUnit *unit_node, ARGS args) override{
             auto name = getID(unit_node->name);
             type::Symbol *symbol = nullptr;
             if(need_lookup){
@@ -40,7 +40,7 @@ namespace evoBasic{
             }
             return symbol;
         }
-        std::any visitAnnotation(ast::Annotation *annotation_node, ARGS args) override{
+        std::any visitAnnotation(parseTree::Annotation *annotation_node, ARGS args) override{
             try{
                 auto iter = annotation_node->unit;
                 need_lookup = true;

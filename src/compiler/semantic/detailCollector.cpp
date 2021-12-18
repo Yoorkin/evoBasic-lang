@@ -5,17 +5,17 @@
 #include "detailCollector.h"
 #include "logger.h"
 #include "semantic.h"
-#include "ast.h"
+#include "parseTree.h"
 #include "i18n.h"
 
 using namespace std;
 using namespace evoBasic::type;
-using namespace evoBasic::ast;
-using namespace evoBasic::ast::expr;
+using namespace evoBasic::parseTree;
+using namespace evoBasic::parseTree::expr;
 using namespace evoBasic::i18n;
 namespace evoBasic{
 
-    std::any DetailCollector::visitAllMember(type::Domain *domain,ast::Member *member,DetailArgs args){
+    std::any DetailCollector::visitAllMember(type::Domain *domain, parseTree::Member *member, DetailArgs args){
         args.domain = args.parent_class_or_module = domain;
         FOR_EACH(iter,member){
             visitMember(iter,args);
@@ -23,16 +23,16 @@ namespace evoBasic{
         return {};
     }
     
-    std::any DetailCollector::visitGlobal(ast::Global *global_node, DetailArgs args) {
+    std::any DetailCollector::visitGlobal(parseTree::Global *global_node, DetailArgs args) {
         args.context->byteLengthDependencies.addIsolate(args.context->getGlobal());
         return visitAllMember(global_node->global_symbol,global_node->member,args);
     }
 
-    std::any DetailCollector::visitModule(ast::Module *module_node, DetailArgs args) {
+    std::any DetailCollector::visitModule(parseTree::Module *module_node, DetailArgs args) {
         return visitAllMember(module_node->module_symbol,module_node->member,args);
     }
 
-    std::any DetailCollector::visitClass(ast::Class *class_node, DetailArgs args) {
+    std::any DetailCollector::visitClass(parseTree::Class *class_node, DetailArgs args) {
         NotNull(class_node);
         auto class_symbol = class_node->class_symbol;
         args.domain = args.parent_class_or_module = class_symbol;
@@ -73,11 +73,11 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitInterface(ast::Interface *interface_node, DetailArgs args) {
+    std::any DetailCollector::visitInterface(parseTree::Interface *interface_node, DetailArgs args) {
         return visitAllMember(interface_node->interface_symbol,interface_node->function,args);
     }
 
-    std::any DetailCollector::visitEnum(ast::Enum *enum_node, DetailArgs args) {
+    std::any DetailCollector::visitEnum(parseTree::Enum *enum_node, DetailArgs args) {
         args.domain = enum_node->enum_symbol;
         int index = 0;
         FOR_EACH(iter,enum_node->member){
@@ -97,7 +97,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitType(ast::Type *type_node, DetailArgs args) {
+    std::any DetailCollector::visitType(parseTree::Type *type_node, DetailArgs args) {
         auto name = getID(type_node->name);
         auto type = type_node->type_symbol;
         NotNull(type);
@@ -119,7 +119,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitDim(ast::Dim *dim_node, DetailArgs args) {
+    std::any DetailCollector::visitDim(parseTree::Dim *dim_node, DetailArgs args) {
         FOR_EACH(iter,dim_node->variable){
             auto variable = any_cast<Symbol*>(visitVariable(iter,args))->as<type::Variable*>();
 
@@ -146,7 +146,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitVariable(ast::Variable *variable_node, DetailArgs args) {
+    std::any DetailCollector::visitVariable(parseTree::Variable *variable_node, DetailArgs args) {
         auto name = getID(variable_node->name);
         auto variable = variable_node->variable_symbol;
         NotNull(variable);
@@ -155,7 +155,7 @@ namespace evoBasic{
         return variable->as<Symbol*>();
     }
 
-    std::any DetailCollector::visitFunction(ast::Function *function_node, DetailArgs args) {
+    std::any DetailCollector::visitFunction(parseTree::Function *function_node, DetailArgs args) {
         string name;
         if(function_node->name){
             name = getID(function_node->name);
@@ -234,7 +234,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitExternal(ast::External *external_node, DetailArgs args) {
+    std::any DetailCollector::visitExternal(parseTree::External *external_node, DetailArgs args) {
         auto name = getID(external_node->name);
 
         if(is_name_valid(name,external_node->name->location,args.domain)){
@@ -256,7 +256,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitConstructor(ast::Constructor *ctor_node, DetailArgs args) {
+    std::any DetailCollector::visitConstructor(parseTree::Constructor *ctor_node, DetailArgs args) {
         switch (args.parent_class_or_module->getKind()) {
             case SymbolKind::Module:
                 Logger::error(ctor_node->location,lang->msgCtorOnlyAllowedInCls());
@@ -277,7 +277,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitParameter(ast::Parameter *parameter_node, DetailArgs args) {
+    std::any DetailCollector::visitParameter(parseTree::Parameter *parameter_node, DetailArgs args) {
         auto name = getID(parameter_node->name);
         auto prototype = any_cast<Prototype*>(visitAnnotation(parameter_node->annotation,args));
         NotNull(prototype);
@@ -299,17 +299,17 @@ namespace evoBasic{
         return {};
     }
 
-    std::any DetailCollector::visitMember(ast::Member *member_node, DetailArgs args) {
+    std::any DetailCollector::visitMember(parseTree::Member *member_node, DetailArgs args) {
         switch (member_node->member_kind) {
-            case ast::Member::function_:    return visitFunction((ast::Function*)member_node,args);
-            case ast::Member::class_:       return visitClass((ast::Class*)member_node,args);
-            case ast::Member::module_:      return visitModule((ast::Module*)member_node,args);
-            case ast::Member::type_:        return visitType((ast::Type*)member_node,args);
-            case ast::Member::enum_:        return visitEnum((ast::Enum*)member_node,args);
-            case ast::Member::dim_:         return visitDim((ast::Dim*)member_node,args);
-            case ast::Member::external_:    return visitExternal((ast::External*)member_node,args);
-            case ast::Member::interface_:   return visitInterface((ast::Interface*)member_node,args);
-            case ast::Member::constructor_: return visitConstructor((ast::Constructor*)member_node,args);
+            case parseTree::Member::function_:    return visitFunction((parseTree::Function*)member_node, args);
+            case parseTree::Member::class_:       return visitClass((parseTree::Class*)member_node, args);
+            case parseTree::Member::module_:      return visitModule((parseTree::Module*)member_node, args);
+            case parseTree::Member::type_:        return visitType((parseTree::Type*)member_node, args);
+            case parseTree::Member::enum_:        return visitEnum((parseTree::Enum*)member_node, args);
+            case parseTree::Member::dim_:         return visitDim((parseTree::Dim*)member_node, args);
+            case parseTree::Member::external_:    return visitExternal((parseTree::External*)member_node, args);
+            case parseTree::Member::interface_:   return visitInterface((parseTree::Interface*)member_node, args);
+            case parseTree::Member::constructor_: return visitConstructor((parseTree::Constructor*)member_node, args);
         }
         PANIC;
     }

@@ -8,7 +8,7 @@ using namespace std;
 
 namespace evoBasic{
 
-    std::any SymbolCollector::visitGlobal(evoBasic::ast::Global *global, evoBasic::SymbolCollectorArgs args) {
+    std::any SymbolCollector::visitGlobal(evoBasic::parseTree::Global *global, evoBasic::SymbolCollectorArgs args) {
         NotNull(global);
         args.domain = args.context->getGlobal();
         args.domain->setLocation(global->location);
@@ -25,7 +25,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any SymbolCollector::visitModule(ast::Module *mod_node, SymbolCollectorArgs args) {
+    std::any SymbolCollector::visitModule(parseTree::Module *mod_node, SymbolCollectorArgs args) {
         NotNull(mod_node);
         if(mod_node->has_error)return {};
 
@@ -49,7 +49,7 @@ namespace evoBasic{
         return mod->as<type::Symbol*>();
     }
 
-    std::any SymbolCollector::visitClass(ast::Class *cls_node, SymbolCollectorArgs args) {
+    std::any SymbolCollector::visitClass(parseTree::Class *cls_node, SymbolCollectorArgs args) {
         NotNull(cls_node);
         if(cls_node->has_error)return {};
 
@@ -72,7 +72,7 @@ namespace evoBasic{
     }
 
 
-    std::any SymbolCollector::visitInterface(ast::Interface *interface_node, SymbolCollectorArgs args) {
+    std::any SymbolCollector::visitInterface(parseTree::Interface *interface_node, SymbolCollectorArgs args) {
         auto interface = new type::Interface;
         interface->setName(getID(interface_node->name));
         interface->setAccessFlag(interface_node->access);
@@ -82,7 +82,7 @@ namespace evoBasic{
         return interface->as<type::Symbol*>();
     }
 
-    std::any SymbolCollector::visitEnum(ast::Enum *em_node, SymbolCollectorArgs args) {
+    std::any SymbolCollector::visitEnum(parseTree::Enum *em_node, SymbolCollectorArgs args) {
         NotNull(em_node);
         if(em_node->has_error)return {};
 
@@ -94,7 +94,7 @@ namespace evoBasic{
         return em->as<type::Symbol*>();
     }
 
-    std::any SymbolCollector::visitType(ast::Type *type_node, SymbolCollectorArgs args) {
+    std::any SymbolCollector::visitType(parseTree::Type *type_node, SymbolCollectorArgs args) {
         NotNull(type_node);
         auto ty = new type::Record;
         ty->setName(any_cast<string>(visitID(type_node->name,args)));
@@ -112,7 +112,7 @@ namespace evoBasic{
         return ty->as<type::Symbol*>();
     }
 
-    std::any SymbolCollector::visitDim(ast::Dim *dim_node, SymbolCollectorArgs args) {
+    std::any SymbolCollector::visitDim(parseTree::Dim *dim_node, SymbolCollectorArgs args) {
         NotNull(dim_node);
         type::Symbol *symbol = nullptr;
 
@@ -128,7 +128,7 @@ namespace evoBasic{
         return {};
     }
 
-    std::any SymbolCollector::visitVariable(ast::Variable *variable_node, SymbolCollectorArgs args) {
+    std::any SymbolCollector::visitVariable(parseTree::Variable *variable_node, SymbolCollectorArgs args) {
         NotNull(variable_node);
         auto variable = new type::Variable;
         auto name = any_cast<string>(visitID(variable_node->name, args));
@@ -138,19 +138,19 @@ namespace evoBasic{
         return variable->as<type::Symbol*>();
     }
 
-    std::any SymbolCollector::visitID(ast::expr::ID *id, SymbolCollectorArgs args) {
+    std::any SymbolCollector::visitID(parseTree::expr::ID *id, SymbolCollectorArgs args) {
         NotNull(id);
         return id->lexeme;
     }
 
-    std::any SymbolCollector::visitMember(ast::Member *member_node, SymbolCollectorArgs args) {
+    std::any SymbolCollector::visitMember(parseTree::Member *member_node, SymbolCollectorArgs args) {
         switch (member_node->member_kind) {
-            case ast::Member::class_:    return visitClass((ast::Class*)member_node,args);
-            case ast::Member::module_:   return visitModule((ast::Module*)member_node,args);
-            case ast::Member::type_:     return visitType((ast::Type*)member_node,args);
-            case ast::Member::enum_:     return visitEnum((ast::Enum*)member_node,args);
-            case ast::Member::dim_:      return visitDim((ast::Dim*)member_node,args);
-            case ast::Member::interface_:return visitInterface((ast::Interface*)member_node,args);
+            case parseTree::Member::class_:    return visitClass((parseTree::Class*)member_node, args);
+            case parseTree::Member::module_:   return visitModule((parseTree::Module*)member_node, args);
+            case parseTree::Member::type_:     return visitType((parseTree::Type*)member_node, args);
+            case parseTree::Member::enum_:     return visitEnum((parseTree::Enum*)member_node, args);
+            case parseTree::Member::dim_:      return visitDim((parseTree::Dim*)member_node, args);
+            case parseTree::Member::interface_:return visitInterface((parseTree::Interface*)member_node, args);
         }
         return {};
     }

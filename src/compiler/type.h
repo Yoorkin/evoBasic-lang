@@ -16,7 +16,7 @@
 #include <sstream>
 #include <memory>
 #include <optional>
-#include "ast.h"
+#include "parseTree.h"
 #include "token.h"
 #include "bytecode.h"
 #include "ir.h"
@@ -252,21 +252,21 @@ namespace evoBasic::type{
     };
 
     class Constructor : public Function{
-        ast::Constructor *constructor_node = nullptr;
+        parseTree::Constructor *constructor_node = nullptr;
     public:
-        explicit Constructor(ast::Constructor *node);
+        explicit Constructor(parseTree::Constructor *node);
         FunctionKind getFunctionKind()override;
         
     };
 
     class UserFunction : public Function{
-        ast::Function *function_node;
+        parseTree::Function *function_node;
         FunctionFlag flag = FunctionFlag::Method;
         Parameter *self = nullptr;
     public:
         UserFunction(const UserFunction&)=delete;
-        UserFunction(FunctionFlag flag,ast::Function *function_node);
-        ast::Function *getFunctionNode();
+        UserFunction(FunctionFlag flag, parseTree::Function *function_node);
+        parseTree::Function *getFunctionNode();
         virtual FunctionFlag getFunctionFlag();
         void setFunctionFlag(FunctionFlag flag);
         bool isStatic()override;

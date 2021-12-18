@@ -51,22 +51,22 @@ namespace evoBasic{
     
     class DetailCollector : public DefaultVisitor<DetailArgs>{
     public:
-        std::any visitGlobal(ast::Global *global_node, DetailArgs args) override;
-        std::any visitModule(ast::Module *module_node, DetailArgs args) override;
-        std::any visitClass(ast::Class *class_node, DetailArgs args) override;
-        std::any visitInterface(ast::Interface *interface_node,DetailArgs args)override;
+        std::any visitGlobal(parseTree::Global *global_node, DetailArgs args) override;
+        std::any visitModule(parseTree::Module *module_node, DetailArgs args) override;
+        std::any visitClass(parseTree::Class *class_node, DetailArgs args) override;
+        std::any visitInterface(parseTree::Interface *interface_node, DetailArgs args)override;
 
-        std::any visitEnum(ast::Enum *enum_node, DetailArgs args) override;
-        std::any visitType(ast::Type *type_node, DetailArgs args) override;
-        std::any visitDim(ast::Dim *dim_node, DetailArgs args) override;
-        std::any visitVariable(ast::Variable *variable_node, DetailArgs args) override;
-        std::any visitFunction(ast::Function *function_node, DetailArgs args) override;
-        std::any visitExternal(ast::External *external_node, DetailArgs args) override;
-        std::any visitConstructor(ast::Constructor *ctor_node, DetailArgs args) override;
-        std::any visitParameter(ast::Parameter *parameter_node, DetailArgs args) override;
-        std::any visitMember(ast::Member *member_node, DetailArgs args) override;
+        std::any visitEnum(parseTree::Enum *enum_node, DetailArgs args) override;
+        std::any visitType(parseTree::Type *type_node, DetailArgs args) override;
+        std::any visitDim(parseTree::Dim *dim_node, DetailArgs args) override;
+        std::any visitVariable(parseTree::Variable *variable_node, DetailArgs args) override;
+        std::any visitFunction(parseTree::Function *function_node, DetailArgs args) override;
+        std::any visitExternal(parseTree::External *external_node, DetailArgs args) override;
+        std::any visitConstructor(parseTree::Constructor *ctor_node, DetailArgs args) override;
+        std::any visitParameter(parseTree::Parameter *parameter_node, DetailArgs args) override;
+        std::any visitMember(parseTree::Member *member_node, DetailArgs args) override;
 
-        std::any visitAllMember(type::Domain *domain, ast::Member *member, DetailArgs args);
+        std::any visitAllMember(type::Domain *domain, parseTree::Member *member, DetailArgs args);
         bool is_extend_valid(type::Class *class_symbol,type::Class *base_class);
     };
 

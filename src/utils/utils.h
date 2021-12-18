@@ -6,14 +6,14 @@
 #define EVOBASIC_UTILS_H
 #include <string>
 #include <exception>
-#include "ast.h"
+#include "parseTree.h"
 #include "type.h"
 namespace evoBasic{
-    std::string getID(ast::expr::ID *id);
+    std::string getID(parseTree::expr::ID *id);
 
-    int getDigit(ast::expr::Digit *digit);
+    int getDigit(parseTree::expr::Digit *digit);
 
-    std::string getString(ast::expr::String *str);
+    std::string getString(parseTree::expr::String *str);
 
     bool is_name_valid(const std::string& name, Location *location, type::Domain *domain);
 }

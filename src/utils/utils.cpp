@@ -8,7 +8,7 @@
 
 using namespace std;
 namespace evoBasic{
-    string getID(ast::expr::ID *id) {
+    string getID(parseTree::expr::ID *id) {
         NotNull(id);
         string ret = id->lexeme;
         transform(ret.begin(),ret.end(),ret.begin(),[](char c){
@@ -17,12 +17,12 @@ namespace evoBasic{
         return ret;
     }
 
-    int getDigit(ast::expr::Digit *digit){
+    int getDigit(parseTree::expr::Digit *digit){
         NotNull(digit);
         return digit->value;
     }
 
-    string getString(ast::expr::String *str){
+    string getString(parseTree::expr::String *str){
         return str->value;
     }
 
