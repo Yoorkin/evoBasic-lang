@@ -4,6 +4,11 @@
 
 #include "ast.h"
 namespace evoBasic::ast{
+    Expression *Expression::error = new Expression;
+
+    DebugInfo *Expression::debug() {
+        return nullptr;
+    }
 
     evoBasic::DebugInfo *Global::debug() {
         return nullptr;

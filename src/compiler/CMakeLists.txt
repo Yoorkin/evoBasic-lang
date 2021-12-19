@@ -10,6 +10,7 @@ file(GLOB COMPILER_SOURCE
         visitor.cpp
         context.cpp
         parseTree.cpp
+        ast.cpp
         semantic/defaultVisitor.cpp
         semantic/symbolCollector.cpp
         semantic/detailCollector.cpp

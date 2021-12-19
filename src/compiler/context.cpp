@@ -161,39 +161,39 @@ namespace evoBasic{
     }
 
     void ConversionRules::insertCastAST(ConversionRules::Value dst, parseTree::expr::Expression **expression) {
-        switch (dst->getKind()) {
-            case SymbolKind::Class:
-                break;
-            case SymbolKind::Enum:
-                break;
-            case SymbolKind::EnumMember:
-                break;
-            case SymbolKind::Record:
-                break;
-            case SymbolKind::Function:
-                break;
-            case SymbolKind::Module:
-                break;
-            case SymbolKind::Primitive:
-                *expression = new parseTree::expr::Cast(
-                        *expression,
-                        constructAnnotationAST(format() << "global." << dst->getName())
-                        );
-                break;
-            case SymbolKind::TmpDomain:
-                break;
-            case SymbolKind::Variable:
-                break;
-            case SymbolKind::Error:
-                break;
-            case SymbolKind::Interface:
-                break;
-            case SymbolKind::Parameter:
-                break;
-            case SymbolKind::Array:
-                break;
-        }
-        (*expression)->type = new ExpressionType(dst,ExpressionType::rvalue,il::empty);
+//        switch (dst->getKind()) {
+//            case SymbolKind::Class:
+//                break;
+//            case SymbolKind::Enum:
+//                break;
+//            case SymbolKind::EnumMember:
+//                break;
+//            case SymbolKind::Record:
+//                break;
+//            case SymbolKind::Function:
+//                break;
+//            case SymbolKind::Module:
+//                break;
+//            case SymbolKind::Primitive:
+//                *expression = new parseTree::expr::Cast(
+//                        *expression,
+//                        constructAnnotationAST(format() << "global." << dst->getName())
+//                        );
+//                break;
+//            case SymbolKind::TmpDomain:
+//                break;
+//            case SymbolKind::Variable:
+//                break;
+//            case SymbolKind::Error:
+//                break;
+//            case SymbolKind::Interface:
+//                break;
+//            case SymbolKind::Parameter:
+//                break;
+//            case SymbolKind::Array:
+//                break;
+//        }
+//        (*expression)->type = new ExpressionType(dst,ExpressionType::rvalue,il::empty);
     }
 
 

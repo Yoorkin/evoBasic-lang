@@ -341,7 +341,6 @@ namespace evoBasic::parseTree{
                 index_,dot_,assign_,colon_
             }expression_kind = error_;
             DebugInfo *debug()override;
-            ExpressionType *type = nullptr;
         };
 
         struct Colon : Expression{

@@ -6,56 +6,56 @@
 #include "semantic.h"
 #include "logger.h"
 #include "i18n.h"
+#include "ast.h"
 
 namespace evoBasic{
     using namespace std;
     using namespace type;
-    using namespace parseTree;
-    using namespace parseTree::expr;
     using namespace i18n;
-    
-    void TypeAnalyzer::visitStatementList(parseTree::stmt::Statement *stmt_list, TypeAnalyzerArgs args) {
-        args.domain = new type::TemporaryDomain(args.domain,args.function);
-        FOR_EACH(iter,stmt_list){
-            visitStatement(iter,args);
-        }
-    }
 
     std::any TypeAnalyzer::visitArg(parseTree::expr::Callee::Argument *argument_node, TypeAnalyzerArgs args) {
         NotNull(args.checking_function);
         auto function = args.checking_function;
         type::Parameter *param = nullptr;
+        auto *ast_node = new ast::Argument;
         if(argument_node->expr->expression_kind == parseTree::expr::Expression::colon_){
             // parameter initialization
-            auto colon_node = (Colon*)(argument_node->expr);
+            ast_node->is_option = true;
+            auto colon_node = (parseTree::Colon*)(argument_node->expr);
             if(colon_node->lhs->expression_kind != parseTree::expr::Expression::ID_){
                 Logger::error(colon_node->lhs->location,lang->msgExpectedParamNameInOptInitialization());
-                return {};
+                return ast::Expression::error;
             }
-            auto init_name = getID((ID*)colon_node->lhs);
+            auto init_name = getID((parseTree::ID*)colon_node->lhs);
             auto opt_index = args.checking_function->findOptionIndex(init_name);
             if(!opt_index.has_value()){
                 Logger::error(colon_node->lhs->location,lang->fmtOptNotFoundInFtn(init_name,args.checking_function->getName()));
-                return {};
+                return ast::Expression::error;
             }
             param = args.checking_function->getArgsOptions()[opt_index.value()];
+            ast_node->parameter = param;
         }
         else{
             // regular parameter
             if(args.checking_arg_index >= function->getArgsSignature().size()){
                 if(function->getParamArray())param = function->getParamArray(); // paramArray
-                else return {};
+                else return ast::Expression::error;
             }
-            else param = function->getArgsSignature()[args.checking_arg_index];
+            else {
+                param = function->getArgsSignature()[args.checking_arg_index];
+                ast_node->parameter = param;
+            }
         }
 
 
 
         args.dot_prefix = nullptr;
-        auto arg_type = any_cast<ExpressionType*>(visitExpression(argument_node->expr, args));
-        if(arg_type->value_kind == ExpressionType::error)return {};
+        auto ast_arg = any_cast<ast::Expression*>(visitExpression(argument_node->expr, args));
+        ast_node->expr = ast_arg;
 
-        auto arg_prototype = arg_type->symbol->as<Prototype*>();
+        if(ast_arg->type->value_kind == ExpressionType::error)return ast::Expression::error;
+
+        auto arg_prototype = ast_arg->type->getPrototype();
         auto param_prototype = param->getPrototype();
 
         auto report_type_error = [&](){
@@ -72,19 +72,20 @@ namespace evoBasic{
         };
 
         /*
-         *   Param\Arg          ByVal                  ByRef            Undefined
-         *   ByVal      Yes,allow implicit conversion  Error      Yes,allow implicit conversion
-         *   ByRef      store value to tmp address,                   Error when arg
-         *              allow implicit conversion      Yes             is not lvalue
+         *   Param\Arg          ByVal                     ByRef                Undefined
+         *   ByVal      Yes,allow implicit conversion.    Error         Yes,allow implicit conversion.
+         *   ByRef      store value to tmp address,    Error when arg        Error when arg
+         *              allow implicit conversion.      is not lvalue.        is not lvalue.
          */
 
         if(param->isByval()){
             switch (argument_node->pass_kind) {
                 case parseTree::expr::Callee::Argument::undefined:
                 case parseTree::expr::Callee::Argument::byval:
-                    if(!param->getPrototype()->equal(arg_type->symbol->as<Prototype*>())){
+                    if(!param->getPrototype()->equal(ast_arg->type->getPrototype())){
                         if(!try_implicit_conversion())report_type_error();
                     }
+                    ast_node->pass_kind = ast::Argument::byval;
                     break;
                 case parseTree::expr::Callee::Argument::byref:
                     Logger::error(argument_node->location, lang->msgExpectedByValButByRef());
@@ -94,7 +95,7 @@ namespace evoBasic{
         else{
             switch (argument_node->pass_kind) {
                 case parseTree::expr::Callee::Argument::byval:
-                    if(!param->getPrototype()->equal(arg_type->symbol->as<Prototype*>())){
+                    if(!param->getPrototype()->equal(ast_arg->type->getPrototype())){
                         if(!try_implicit_conversion())report_type_error();
                     }
                     argument_node->temp_address = new type::Variable;
@@ -106,121 +107,168 @@ namespace evoBasic{
                             break;
                     }
                     args.function->addMemoryLayout(argument_node->temp_address);
+                    ast_node->pass_kind = ast::Argument::tmp_store;
                     break;
                 case parseTree::expr::Callee::Argument::byref:
-                    if(!param->getPrototype()->equal(arg_type->getPrototype())){
-                        report_type_error();
-                    }
-                    break;
                 case parseTree::expr::Callee::Argument::undefined:
-                    if(arg_type->value_kind != ExpressionType::lvalue){
+                    if(ast_arg->type->value_kind != ExpressionType::lvalue){
                         Logger::error(argument_node->location, lang->msgCannotPassTmpValByRefImplicit());
                     }
-                    else if(!param->getPrototype()->equal(arg_type->getPrototype())){
+                    else if(!param->getPrototype()->equal(ast_arg->type->getPrototype())){
                         report_type_error();
                     }
+                    ast_node->pass_kind = ast::Argument::byref;
                     break;
             }
         }
-        argument_node->expr->type = arg_type;
-        return {};
+        ast_node->type = ast_arg->type;
+        return (ast::Expression*)ast_node;
     }
 
     std::any TypeAnalyzer::visitMember(parseTree::Member *member_node, TypeAnalyzerArgs args) {
         switch ((*member_node).member_kind) {
-            case parseTree::Member::function_: return visitFunction((parseTree::Function*)member_node, args);
-            case parseTree::Member::class_:    return visitClass((parseTree::Class*)member_node, args);
-            case parseTree::Member::module_:   return visitModule((parseTree::Module*)member_node, args);
-            case parseTree::Member::type_:     return{}; //return visitType((ast::Type*)member_node,args);
-            case parseTree::Member::enum_:     return{}; //visitEnum((ast::Enum*)member_node,args);
-            case parseTree::Member::dim_:      return{}; //return visitDim((ast::Dim*)member_node,args);
-            case parseTree::Member::external_: return visitExternal((parseTree::External*)member_node, args);
-            case parseTree::Member::interface_:return{};
-            case parseTree::Member::constructor_:return visitConstructor((parseTree::Constructor*)member_node, args);
+            case parseTree::Member::function_:      return visitFunction((parseTree::Function*)member_node, args);
+            case parseTree::Member::class_:         return visitClass((parseTree::Class*)member_node, args);
+            case parseTree::Member::module_:        return visitModule((parseTree::Module*)member_node, args);
+            case parseTree::Member::type_:          return visitType((parseTree::Type*)member_node,args);
+            case parseTree::Member::enum_:          return visitEnum((parseTree::Enum*)member_node,args);
+            case parseTree::Member::dim_:           return visitDim((parseTree::Dim*)member_node,args);
+            case parseTree::Member::external_:      return visitExternal((parseTree::External*)member_node, args);
+            case parseTree::Member::interface_:     return visitInterface((parseTree::Interface*)member_node, args);
+            case parseTree::Member::constructor_:   return visitConstructor((parseTree::Constructor*)member_node, args);
         }
         PANIC;
     }
 
     std::any TypeAnalyzer::visitStatement(parseTree::stmt::Statement *stmt_node, TypeAnalyzerArgs args) {
         switch ((*stmt_node).stmt_flag) {
-            case parseTree::stmt::Statement::let_: return visitLet((parseTree::stmt::Let*)stmt_node, args);
-            case parseTree::stmt::Statement::loop_:return visitLoop((parseTree::stmt::Loop*)stmt_node, args);
-            case parseTree::stmt::Statement::if_:  return visitIf((parseTree::stmt::If*)stmt_node, args);
-            case parseTree::stmt::Statement::for_: return visitFor((parseTree::stmt::For*)stmt_node, args);
-            case parseTree::stmt::Statement::select_:return visitSelect((parseTree::stmt::Select*)stmt_node, args);
-            case parseTree::stmt::Statement::return_:return visitReturn((parseTree::stmt::Return*)stmt_node, args);
-            case parseTree::stmt::Statement::continue_:return visitContinue((parseTree::stmt::Continue*)stmt_node, args);
-            case parseTree::stmt::Statement::exit_:return visitExit((parseTree::stmt::Exit*)stmt_node, args);
-            case parseTree::stmt::Statement::expr_:return visitExprStmt((parseTree::stmt::ExprStmt*)stmt_node, args);
+            case parseTree::stmt::Statement::let_:      return visitLet((parseTree::stmt::Let*)stmt_node, args);
+            case parseTree::stmt::Statement::loop_:     return visitLoop((parseTree::stmt::Loop*)stmt_node, args);
+            case parseTree::stmt::Statement::if_:       return visitIf((parseTree::stmt::If*)stmt_node, args);
+            case parseTree::stmt::Statement::for_:      return visitFor((parseTree::stmt::For*)stmt_node, args);
+            case parseTree::stmt::Statement::select_:   return visitSelect((parseTree::stmt::Select*)stmt_node, args);
+            case parseTree::stmt::Statement::return_:   return visitReturn((parseTree::stmt::Return*)stmt_node, args);
+            case parseTree::stmt::Statement::continue_: return visitContinue((parseTree::stmt::Continue*)stmt_node, args);
+            case parseTree::stmt::Statement::exit_:     return visitExit((parseTree::stmt::Exit*)stmt_node, args);
+            case parseTree::stmt::Statement::expr_:     return visitExprStmt((parseTree::stmt::ExprStmt*)stmt_node, args);
         }
         PANIC;
     }
 
-
     std::any TypeAnalyzer::visitGlobal(parseTree::Global *global_node, TypeAnalyzerArgs args) {
-        return visitAllMember(args.context->getGlobal(),global_node->member,args);
+        auto ast_node = new ast::Global;
+        ast_node->global_symbol = args.context->getGlobal();
+        ast_node->member = visitAllMember(global_node->global_symbol,global_node->member,args);
+        return (ast::Node*)ast_node;
     }
     std::any TypeAnalyzer::visitModule(parseTree::Module *module_node, TypeAnalyzerArgs args) {
-        return visitAllMember(module_node->module_symbol,module_node->member,args);
+        auto ast_node = new ast::Module;
+        ast_node->module_symbol = module_node->module_symbol;
+        ast_node->member = visitAllMember(module_node->module_symbol,module_node->member,args);
+        return (ast::Member*)ast_node;
     }
     std::any TypeAnalyzer::visitClass(parseTree::Class *class_node, TypeAnalyzerArgs args) {
-        return visitAllMember(class_node->class_symbol,class_node->member,args);
+        auto ast_node = new ast::Class;
+        ast_node->class_symbol = class_node->class_symbol;
+        ast_node->member = visitAllMember(class_node->class_symbol,class_node->member,args);
+        return (ast::Member*)ast_node;
     }
-
-    std::any TypeAnalyzer::visitAllMember(type::Domain *domain, parseTree::Member *member, TypeAnalyzerArgs args){
+    
+    ast::Member *TypeAnalyzer::visitAllMember(type::Domain *domain, parseTree::Member *member, TypeAnalyzerArgs args) {
         args.domain = args.current_class_or_module = domain;
+        ast::Member *tail = nullptr,*head = nullptr;
         FOR_EACH(iter,member){
-            visitMember(iter,args);
+            auto ast_member = any_cast<ast::Member*>(visitMember(iter,args));
+            if(tail == nullptr){
+                head = tail = ast_member;
+            }
+            else{
+                tail->next_sibling = ast_member;
+                ast_member->prv_sibling = tail;
+                tail = ast_member;
+            }
         }
-        return {};
+        return head;
     }
 
+    ast::Statement *TypeAnalyzer::visitStatementList(parseTree::stmt::Statement *stmt_list, TypeAnalyzerArgs args) {
+        args.domain = new type::TemporaryDomain(args.domain,args.function);
+        ast::Statement *tail = nullptr,*head = nullptr;
+        FOR_EACH(iter,stmt_list){
+            auto statement = any_cast<ast::Statement*>(visitStatement(iter,args));
+            if(tail == nullptr){
+                tail = head = statement;
+            }
+            else{
+                tail->next_sibling = statement;
+                statement->prv_sibling = tail;
+                tail = statement;
+            }
+        }
+        return head;
+    }
 
     std::any TypeAnalyzer::visitFunction(parseTree::Function *function_node, TypeAnalyzerArgs args) {
+        auto ast_node = new ast::Function;
         auto function = function_node->function_symbol;
-        args.domain = args.function = function;
-        visitStatementList(function_node->statement,args);
-        return {};
-    }
+        args.domain = args.function = ast_node->function_symbol = function;
+        ast_node->statement = visitStatementList(function_node->statement,args);
+        return (ast::Member*)ast_node;
+    } 
 
     std::any TypeAnalyzer::visitConstructor(parseTree::Constructor *ctor_node, TypeAnalyzerArgs args) {
+        auto ast_node = new ast::Constructor;
         auto function = ctor_node->constructor_symbol;
-        args.domain = args.function = function;
-        visitStatementList(ctor_node->statement,args);
-        return {};
+        args.domain = args.function = ast_node->constructor_symbol = function;
+        ast_node->statement = visitStatementList(ctor_node->statement,args);
+        return (ast::Member*)ast_node;
     }
 
     std::any TypeAnalyzer::visitLet(parseTree::stmt::Let *let_node, TypeAnalyzerArgs args) {
-        for(auto iter = (*let_node).variable;iter!=nullptr;iter = iter->next_sibling){
+        auto ast_node = new ast::Let;
+        auto tail = ast_node->variable;
+        FOR_EACH(iter,let_node->variable){
             auto name = getID(iter->name);
             if(is_name_valid(name,iter->location,args.domain)){
+                auto ast_node_var = new ast::Variable;
+                if(tail == nullptr){
+                    ast_node->variable = tail = ast_node_var;
+                }
+                else{
+                    tail->next_sibling = ast_node_var;
+                    ast_node_var->prv_sibling = tail;
+                    tail = ast_node_var;
+                }
+                
                 type::Prototype *result_prototype = nullptr;
                 if(iter->initial != nullptr && iter->annotation != nullptr){
-                    auto init_type = any_cast<ExpressionType*>(visitExpression(iter->initial,args));
-                    if(init_type->value_kind == ExpressionType::error)continue;
+                    auto ast_initial = any_cast<ast::Expression*>(visitExpression(iter->initial,args));
+                    if(ast_initial->type->value_kind == ExpressionType::error)continue;
                     if(iter->annotation){
                         auto anno_prototype = any_cast<Prototype*>(visitAnnotation(iter->annotation,args));
-                        if(!init_type->getPrototype()->equal(anno_prototype)){
-                            if(args.context->getConversionRules().isImplicitCastRuleExist(init_type->getPrototype(),anno_prototype)){
+                        if(!ast_initial->type->getPrototype()->equal(anno_prototype)){
+                            if(args.context->getConversionRules().isImplicitCastRuleExist(ast_initial->type->getPrototype(),anno_prototype)){
                                 Logger::warning(iter->initial->location,
-                                                lang->fmtImplicitCvtFromAToB(init_type->getPrototype()->getName(),anno_prototype->getName()));
+                                                lang->fmtImplicitCvtFromAToB(ast_initial->type->getPrototype()->getName(),anno_prototype->getName()));
                                 args.context->getConversionRules().insertCastAST(anno_prototype,&(iter->initial));
                             }
                             else {
                                 Logger::error(iter->initial->location,
-                                              lang->fmtLetStmtVariableInitialNotMatch(init_type->getPrototype()->getName(),anno_prototype->getName()));
+                                              lang->fmtLetStmtVariableInitialNotMatch(ast_initial->type->getPrototype()->getName(),anno_prototype->getName()));
                                 continue;
                             }
                         }
                         result_prototype = anno_prototype;
                     }
                     else{
-                        result_prototype = init_type->getPrototype();
+                        result_prototype = ast_initial->type->getPrototype();
                     }
+                    ast_node_var->initial = ast_initial;
                 }
                 else if(iter->initial != nullptr){
-                    auto init_type = any_cast<ExpressionType*>(visitExpression(iter->initial,args));
-                    result_prototype = init_type->getPrototype();
+                    auto ast_initial = any_cast<ast::Expression*>(visitExpression(iter->initial,args));
+                    result_prototype = ast_initial->type->getPrototype();
+                    ast_node_var->initial = ast_initial;
                 }
                 else if(iter->annotation != nullptr){
                     result_prototype = any_cast<Prototype*>(visitAnnotation(iter->annotation,args));
@@ -240,98 +288,131 @@ namespace evoBasic{
                 field->setName(name);
                 field->setPrototype(result_prototype);
                 args.domain->add(field);
+                ast_node_var->variable_symbol = field;
             }
         }
-        return {};
+        return (ast::Member*)ast_node;
     }
 
 
     std::any TypeAnalyzer::visitSelect(parseTree::stmt::Select *select_node, TypeAnalyzerArgs args) {
-        auto condition_type = any_cast<ExpressionType*>(visitExpression((*select_node).condition,args));
+        auto ast_node = new ast::Select;
+        auto ast_condition = any_cast<ast::Expression*>(visitExpression(select_node->condition,args));
+        auto tail = ast_node->case_;
         FOR_EACH(iter,select_node->case_){
+            auto ast_case = new ast::Case;
+            if(tail == nullptr){
+                ast_node->case_ = tail = ast_case;
+            }
+            else{
+                tail->next_sibling = ast_case;
+                ast_case->prv_sibling = tail;
+                tail = ast_case;
+            }
+            
             if(iter->condition){
-                auto case_type = any_cast<ExpressionType*>(visitExpression(iter->condition,args));
-                if(!condition_type->getPrototype()->equal(case_type->getPrototype())){
-                    Logger::error(iter->location, lang->fmtSelectCaseTypeNotMatch(case_type->getPrototype()->getName(),condition_type->getPrototype()->getName()));
+                auto ast_case_condition = any_cast<ast::Expression*>(visitExpression(iter->condition,args));
+                ast_case->condition = ast_case_condition;
+                if(!ast_condition->type->getPrototype()->equal(ast_case_condition->type->getPrototype())){
+                    Logger::error(iter->location, lang->fmtSelectCaseTypeNotMatch(ast_case_condition->type->getPrototype()->getName(),ast_condition->type->getPrototype()->getName()));
                 }
             }
-            visitStatementList(iter->statement,args);
+            ast_case->statement = visitStatementList(iter->statement,args);
         }
 
-        return {};
+        return (ast::Statement*)ast_node;
     }
 
     std::any TypeAnalyzer::visitLoop(parseTree::stmt::Loop *loop_node, TypeAnalyzerArgs args) {
-        auto condition_type = any_cast<ExpressionType*>(visitExpression(loop_node->condition,args));
-        if(!condition_type->getPrototype()->equal(args.context->getBuiltIn().getPrimitive(vm::Data::boolean))){
+        auto ast_node = new ast::Loop;
+        auto ast_condition = any_cast<ast::Expression*>(visitExpression(loop_node->condition,args));
+        if(!ast_condition->type->getPrototype()->equal(args.context->getBuiltIn().getPrimitive(vm::Data::boolean))){
             Logger::error(loop_node->condition->location, lang->msgExpExpectedBoolean());
         }
-        visitStatementList(loop_node->statement,args);
-        return {};
+        ast_node->condition = ast_condition;
+        ast_node->statement = visitStatementList(loop_node->statement,args);
+        return (ast::Statement*)ast_node;
     }
 
     std::any TypeAnalyzer::visitIf(parseTree::stmt::If *ifstmt_node, TypeAnalyzerArgs args) {
+        auto ast_node = new ast::If;
+        auto tail = ast_node->case_;
         FOR_EACH(iter,ifstmt_node->case_){
+            auto ast_case = new ast::Case;
+            if(tail == nullptr){
+                ast_node->case_ = tail = ast_case;
+            }
+            else{
+                tail->next_sibling = ast_case;
+                ast_case->prv_sibling = tail;
+                tail = ast_case;
+            }
+            
             if(iter->condition){
-                auto case_type = any_cast<ExpressionType*>(visitExpression(iter->condition,args));
-                if(!case_type->getPrototype()->equal(args.context->getBuiltIn().getPrimitive(vm::Data::boolean))){
-                    Logger::error(iter->location, lang->fmtIfConditionExpectedBooleanButA(case_type->getPrototype()->getName()));
+                auto ast_case_condition = any_cast<ast::Expression*>(visitExpression(iter->condition,args));
+                ast_case->condition = ast_case_condition;
+                if(!ast_case_condition->type->getPrototype()->equal(args.context->getBuiltIn().getPrimitive(vm::Data::boolean))){
+                    Logger::error(iter->location, lang->fmtIfConditionExpectedBooleanButA(ast_case_condition->type->getPrototype()->getName()));
                 }
             }
-            visitStatementList(iter->statement,args);
+            ast_case->statement = visitStatementList(iter->statement,args);
         }
-        return {};
+        return (ast::Statement*)ast_node;
     }
 
     std::any TypeAnalyzer::visitFor(parseTree::stmt::For *forstmt_node, TypeAnalyzerArgs args) {
-        auto iterator_type = any_cast<ExpressionType*>(visitExpression((*forstmt_node).iterator,args));
-        if(iterator_type->value_kind == ExpressionType::error){
+        auto ast_node = new ast::For;
+        auto ast_iterator = any_cast<ast::Expression*>(visitExpression((*forstmt_node).iterator,args));
+        if(ast_iterator->type->value_kind == ExpressionType::error){
             Logger::error(forstmt_node->iterator->location, lang->msgForStmtIteratorNotFound());
         }
-        else if(iterator_type->value_kind != ExpressionType::lvalue){
+        else if(ast_iterator->type->value_kind != ExpressionType::lvalue){
             Logger::error(forstmt_node->iterator->location, lang->msgForStmtIteratorMustBeLValue());
         }
         else{
-            auto begin_type = any_cast<ExpressionType*>(visitExpression((*forstmt_node).begin,args)),
-                    end_type = any_cast<ExpressionType*>(visitExpression((*forstmt_node).end,args));
+            auto ast_begin = any_cast<ast::Expression*>(visitExpression((*forstmt_node).begin,args)),
+                    ast_end = any_cast<ast::Expression*>(visitExpression((*forstmt_node).end,args));
 
-            if(!begin_type->getPrototype()->equal(iterator_type->getPrototype())){
+            if(!ast_begin->type->getPrototype()->equal(ast_iterator->type->getPrototype())){
                 Logger::error(forstmt_node->begin->location,
-                              lang->fmtForStmtBeginExpNotMatch(begin_type->getPrototype()->getName(),iterator_type->getPrototype()->getName()));
+                              lang->fmtForStmtBeginExpNotMatch(ast_begin->type->getPrototype()->getName(),ast_iterator->type->getPrototype()->getName()));
             }
-            if(!end_type->getPrototype()->equal(iterator_type->getPrototype())){
+            if(!ast_end->type->getPrototype()->equal(ast_iterator->type->getPrototype())){
                 Logger::error(forstmt_node->begin->location,
-                              lang->fmtForStmtEndExpNotMatch(end_type->getPrototype()->getName(),iterator_type->getPrototype()->getName()));
+                              lang->fmtForStmtEndExpNotMatch(ast_end->type->getPrototype()->getName(),ast_iterator->type->getPrototype()->getName()));
             }
             if((*forstmt_node).step){
-                auto step_type = any_cast<ExpressionType*>(visitExpression(forstmt_node->step,args));
-                if(!step_type->getPrototype()->equal(iterator_type->getPrototype())){
+                auto ast_step = any_cast<ast::Expression*>(visitExpression(forstmt_node->step,args));
+                if(!ast_step->type->getPrototype()->equal(ast_iterator->type->getPrototype())){
                     Logger::error(forstmt_node->begin->location,
-                                  lang->fmtForStmtStepExpNotMatch(step_type->getPrototype()->getName(),iterator_type->getPrototype()->getName()));
+                                  lang->fmtForStmtStepExpNotMatch(ast_step->type->getPrototype()->getName(),ast_iterator->type->getPrototype()->getName()));
                 }
             }
         }
 
-        visitStatementList(forstmt_node->statement,args);
-        return {};
+        ast_node->statement = visitStatementList(forstmt_node->statement,args);
+        return (ast::Statement*)ast_node;
     }
 
     std::any TypeAnalyzer::visitReturn(parseTree::stmt::Return *ret_node, TypeAnalyzerArgs args) {
-        auto type = any_cast<ExpressionType*>(visitExpression((*ret_node).expr,args));
-        if(type->value_kind == ExpressionType::error)return {};
+        auto ast_node = new ast::Return;
+        auto ast_expr = any_cast<ast::Expression*>(visitExpression((*ret_node).expr,args));
+        ast_node->expr = ast_expr;
+
+        if(ast_expr->type->value_kind == ExpressionType::error)return {};
 
         auto dst_prototype = args.function->getRetSignature();
-        if(!dst_prototype->equal(type->getPrototype())){
-            if(args.context->getConversionRules().isImplicitCastRuleExist(type->getPrototype(),dst_prototype)){
-                Logger::warning(ret_node->expr->location, lang->fmtImplicitCvtFromAToB(type->getPrototype()->getName(),dst_prototype->getName()));
+        if(!dst_prototype->equal(ast_expr->type->getPrototype())){
+            if(args.context->getConversionRules().isImplicitCastRuleExist(ast_expr->type->getPrototype(),dst_prototype)){
+                Logger::warning(ret_node->expr->location, lang->fmtImplicitCvtFromAToB(ast_expr->type->getPrototype()->getName(),dst_prototype->getName()));
                 args.context->getConversionRules().insertCastAST(dst_prototype,&ret_node->expr);
             }
             else{
-                Logger::error(ret_node->location, lang->fmtCannotImplicitCvtAToB(type->getPrototype()->mangling('.'),"'Integer'"));
+                Logger::error(ret_node->location, lang->fmtCannotImplicitCvtAToB(ast_expr->type->getPrototype()->mangling('.'),"'Integer'"));
             }
         }
 
-        return {};
+        return (ast::Expression*)ast_node;
     }
 
     
@@ -352,7 +433,6 @@ namespace evoBasic{
             case exp::index_:       return visitIndex((Index*)expr_node,args);
             case exp::dot_:         return visitDot((Dot*)expr_node,args);
             case exp::callee_:      return visitCallee((Callee*)expr_node,args);
-
             case exp::ID_:          return visitID((ID*)expr_node,args);
             case exp::colon_:       return visitColon((Colon*)expr_node,args);
         }
@@ -360,40 +440,60 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitUnary(parseTree::expr::Unary *unary_node, TypeAnalyzerArgs args) {
-        return visitExpression(unary_node->terminal,args);
+        auto ast_node = new ast::Unary(
+                unary_node->op,
+                any_cast<ast::Expression*>(visitExpression(unary_node->terminal,args))
+                );
+        ast_node->type = ast_node->terminal->type;
+        ast_node->type->value_kind = ExpressionType::rvalue;
+        return (ast::Expression*)ast_node;
     }
 
     std::any TypeAnalyzer::visitDigit(parseTree::expr::Digit *digit_node, TypeAnalyzerArgs args) {
         auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::i32);
-        return digit_node->type = new ExpressionType(primitive,ExpressionType::rvalue,il::i32);
+        auto ast_node = new ast::Digit;
+        ast_node->value = digit_node->value;
+        ast_node->type = new ExpressionType(primitive,ExpressionType::rvalue);
+        return (ast::Expression*)ast_node;
     }
 
     std::any TypeAnalyzer::visitDecimal(parseTree::expr::Decimal *decimal_node, TypeAnalyzerArgs args) {
         auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::f64);
-        return decimal_node->type = new ExpressionType(primitive,ExpressionType::rvalue,il::f64);
+        auto ast_node = new ast::Decimal;
+        ast_node->value = decimal_node->value;
+        ast_node->type = new ExpressionType(primitive,ExpressionType::rvalue);
+        return (ast::Expression*)ast_node;
     }
 
     std::any TypeAnalyzer::visitBoolean(parseTree::expr::Boolean *bl_node, TypeAnalyzerArgs args) {
         auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::boolean);
-        return (*bl_node).type = new ExpressionType(primitive,ExpressionType::rvalue,il::boolean);
+        auto ast_node = new ast::Boolean;
+        ast_node->value = bl_node->value;
+        ast_node->type = new ExpressionType(primitive,ExpressionType::rvalue);
+        return (ast::Expression*)ast_node;
     }
 
     std::any TypeAnalyzer::visitChar(parseTree::expr::Char *ch_node, TypeAnalyzerArgs args) {
         auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::u16);
-        return (*ch_node).type = new ExpressionType(primitive,ExpressionType::rvalue,il::u16);
+        auto ast_node = new ast::Char;
+        ast_node->value = ch_node->value;
+        ast_node->type = new ExpressionType(primitive,ExpressionType::rvalue,il::u16);
+        return (ast::Expression*)ast_node;
     }
 
     std::any TypeAnalyzer::visitString(parseTree::expr::String *str_node, TypeAnalyzerArgs args) {
         auto cls = args.context->getBuiltIn().getStringClass();
         // todo: create string Object and push ref into operand stack
-        return (*str_node).type = new ExpressionType(cls,ExpressionType::rvalue,il::ref);
+        // return (*str_node).type = new ExpressionType(cls,ExpressionType::rvalue,il::ref);
     }
     
     std::any TypeAnalyzer::visitBinary(parseTree::expr::Binary *binary_node, TypeAnalyzerArgs args) {
-        auto lhs_type = any_cast<ExpressionType*>(visitExpression(binary_node->lhs,args));
-        auto rhs_type = any_cast<ExpressionType*>(visitExpression(binary_node->rhs,args));
-        if(lhs_type->value_kind == ExpressionType::error || rhs_type->value_kind == ExpressionType::error)
-            return ExpressionType::Error;
+        auto ast_lhs = any_cast<ast::Expression*>(visitExpression(binary_node->lhs,args));
+        auto ast_rhs = any_cast<ast::Expression*>(visitExpression(binary_node->rhs,args));
+        auto ast_node = new ast::Binary(ast_lhs,binary_node->op,ast_rhs);
+
+        if(ast_lhs->type->value_kind == ExpressionType::error || ast_rhs->type->value_kind == ExpressionType::error)
+            return ast::Expression::error;
 
         auto boolean_prototype = args.context->getBuiltIn().getPrimitive(vm::Data::i8);
         auto is_boolean = [&](ExpressionType *type,Location *location)->bool{
@@ -409,18 +509,19 @@ namespace evoBasic{
             case Op::And:
             case Op::Or:
             case Op::Xor:{
-                if(!is_boolean(lhs_type,binary_node->lhs->location) ||
-                   !is_boolean(rhs_type,binary_node->rhs->location)){
-                    return ExpressionType::Error;
+                if(!is_boolean(ast_lhs->type,binary_node->lhs->location) ||
+                   !is_boolean(ast_rhs->type,binary_node->rhs->location)){
+                    return ast::Expression::error;
                 }
-                return binary_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue,il::boolean);
-
+                ast_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue);
+                break;
             }
             case Op::Not:{
-                if(!is_boolean(rhs_type,binary_node->rhs->location)){
-                    return ExpressionType::Error;
+                if(!is_boolean(ast_rhs->type,binary_node->rhs->location)){
+                    return ast::Expression::error;
                 }
-                return binary_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue,il::boolean);
+                ast_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue);
+                break;
             }
             case Op::EQ:
             case Op::NE:
@@ -429,9 +530,10 @@ namespace evoBasic{
             case Op::GT:
             case Op::LT:{
                 if(!check_binary_op_valid(binary_node->location,args.context->getConversionRules(),
-                                          lhs_type->getPrototype(),rhs_type->getPrototype(),&binary_node->lhs,&binary_node->rhs))
-                    return ExpressionType::Error;
-                return binary_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue,il::boolean);
+                                          ast_lhs->type->getPrototype(),ast_rhs->type->getPrototype(),&binary_node->lhs,&binary_node->rhs))
+                    return ast::Expression::error;
+                ast_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue,il::boolean);
+                break;
             }
             case Op::ADD:
             case Op::MINUS:
@@ -439,56 +541,57 @@ namespace evoBasic{
             case Op::DIV:
             case Op::FDIV:{
                 auto result_type = check_binary_op_valid(binary_node->location,args.context->getConversionRules(),
-                                                         lhs_type->getPrototype(),rhs_type->getPrototype(),&binary_node->lhs,&binary_node->rhs);
-                if(!result_type) return ExpressionType::Error;
-                return binary_node->type = new ExpressionType(lhs_type->getPrototype(),ExpressionType::rvalue,mapPrototypeToIL(result_type));
+                                                         ast_lhs->type->getPrototype(),ast_rhs->type->getPrototype(),&binary_node->lhs,&binary_node->rhs);
+                if(!result_type) return ast::Expression::error;
+                ast_node->type = new ExpressionType(ast_lhs->type->getPrototype(),ExpressionType::rvalue);
+                break;
             }
             default:
                 PANIC;
         }
-    }
-
-    il::DataType TypeAnalyzer::mapPrototypeToIL(Prototype *type){
-        using data = vm::Data;
-        using kind = type::SymbolKind;
-        switch(type->getKind()){
-            case kind::Class:       return il::ref;
-            case kind::Enum:        return il::u32;
-            case kind::Record:      return il::record;
-            case kind::Array:       return il::array;
-            case kind::Function:    return il::ftn;
-            case kind::Primitive:
-                switch(type->as<Primitive*>()->getDataKind().getValue()){
-                    case data::i8:          return il::u8;
-                    case data::i16:         return il::i16;
-                    case data::i32:         return il::i32;
-                    case data::i64:         return il::i64;
-                    case data::u8:          return il::u8;
-                    case data::u16:         return il::u16;
-                    case data::u32:         return il::u32;
-                    case data::u64:         return il::u64;
-                    case data::boolean:     return il::boolean;
-                    default: PANIC;
-                }
-            default: PANIC;
-        }
+        return (ast::Expression*)ast_node;
     }
     
     std::any TypeAnalyzer::visitDot(parseTree::expr::Dot *dot_node, TypeAnalyzerArgs args) {
-        auto lhs_type = any_cast<ExpressionType*>(visitExpression(dot_node->lhs,args));
+        auto ast_lhs = any_cast<ast::Expression*>(visitExpression(dot_node->lhs,args));
 
-        switch (lhs_type->value_kind) {
+        switch (ast_lhs->type->value_kind) {
             case ExpressionType::error:
-                return lhs_type;
+                return ast::Expression::error;
             case ExpressionType::void_:
                 Logger::error(dot_node->location,lang->msgInvalidExp());
-                return ExpressionType::Error;
+                return ast::Expression::error;
         }
 
-        args.dot_prefix = lhs_type;
-        auto rhs_type = any_cast<ExpressionType*>(visitExpression(dot_node->rhs,args));
+        args.dot_prefix = ast_lhs->type;
+        auto ast_rhs = any_cast<ast::Expression*>(visitExpression(dot_node->rhs,args));
 
-        return dot_node->type = rhs_type;
+        ast::Expression *ret = nullptr;
+        switch(ast_rhs->expression_kind){
+            case ast::Expression::VFtn:{
+                auto vftn = (ast::VFtnCall*)ast_rhs;
+                vftn->ref = ast_lhs;
+                ret = vftn;
+                break;
+            }
+            case ast::Expression::Ftn:{
+                auto ftn = (ast::FtnCall*)ast_rhs;
+                ftn->ref = ast_lhs;
+                ret = ftn;
+                break;
+            }
+            case ast::Expression::Element:
+            case ast::Expression::Vector:
+            case ast::Expression::Local:
+            case ast::Expression::Arg:
+            case ast::Expression::Fld:
+            case ast::Expression::Assign:
+                ret = ast_rhs;
+                break;
+            default:
+                PANIC;
+        }
+        return ret;
     }
 
     std::any TypeAnalyzer::visitID(parseTree::expr::ID *id_node, TypeAnalyzerArgs args) {
@@ -509,23 +612,37 @@ namespace evoBasic{
             check_access(id_node->location,target,args.domain,args.current_class_or_module);
 
             switch (target->getKind()) {
-                case type::SymbolKind::Variable:
-                case type::SymbolKind::Parameter:
+                case type::SymbolKind::Variable:{
                     if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,target->isStatic());
-                    return new ExpressionType(target->as<type::Variable*>()->getPrototype(),
-                                              ExpressionType::lvalue,
-                                              mapPrototypeToIL(target->as<type::Variable*>()->getPrototype()),
-                                              target->isStatic());
-                case type::SymbolKind::Function:
+                    auto variable = target->as<type::Variable*>();
+                    auto type = new ExpressionType(variable->getPrototype(),ExpressionType::lvalue,target->isStatic());
+                    switch (variable->getVariableKind()) {
+                        case VariableKind::Local:       return new ast::Local(variable,type);
+                        case VariableKind::StaticField: return new ast::SFld(variable,type);
+                        case VariableKind::Field:       return new ast::Fld(variable,type);
+                    }
+                }
+                case type::SymbolKind::Parameter:{
                     if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,target->isStatic());
-                    return new ExpressionType(target,ExpressionType::path,il::empty,true);
+                    auto variable = target->as<type::Variable*>();
+                    auto type = new ExpressionType(variable->getPrototype(),ExpressionType::lvalue,target->isStatic());
+                    return new ast::Arg(variable,type);
+                }
+                case type::SymbolKind::Function:{
+                    if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,target->isStatic());
+                    return new ExpressionType(target,ExpressionType::path,true);
+                }
                 case type::SymbolKind::Module:
                 case type::SymbolKind::Class:
-                case type::SymbolKind::Enum:
+                case type::SymbolKind::Enum:{
                     if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,true);
-                    return new ExpressionType(target,ExpressionType::path,il::empty,true);
-                case type::SymbolKind::EnumMember:
-                    return new ExpressionType(target->getParent(),ExpressionType::rvalue,mapPrototypeToIL(target->getParent()),true);
+                    return new ExpressionType(target,ExpressionType::path,true);
+                }
+                case type::SymbolKind::EnumMember:{
+                    PANIC;
+                    //todo
+                    //return new ExpressionType(target->getParent(),ExpressionType::rvalue,true);
+                }
                 default:
                     PANIC;
             }
@@ -537,43 +654,47 @@ namespace evoBasic{
             else{
                 Logger::error(e.location, lang->fmtObjectNotFound(e.search_name));
             }
-            return ExpressionType::Error;
+            return ast::Expression::error;
         }
     }
 
     std::any TypeAnalyzer::visitAssign(parseTree::expr::Assign *assign_node, TypeAnalyzerArgs args) {
-        auto lhs_type = any_cast<ExpressionType*>(visitExpression(assign_node->lhs,args));
-        auto rhs_type = any_cast<ExpressionType*>(visitExpression(assign_node->rhs,args));
-        if(lhs_type->value_kind == ExpressionType::error || rhs_type->value_kind == ExpressionType::error)
-            return ExpressionType::Error;
+        auto ast_lhs = any_cast<ast::Expression*>(visitExpression(assign_node->lhs,args));
+        auto ast_rhs = any_cast<ast::Expression*>(visitExpression(assign_node->rhs,args));
+        auto ast_node = new ast::Assign(ast_lhs,ast_rhs);
 
-        if(lhs_type->value_kind != ExpressionType::lvalue){
+        if(ast_lhs->type->value_kind == ExpressionType::error || ast_rhs->type->value_kind == ExpressionType::error)
+            return ast::Expression::error;
+
+        if(ast_lhs->type->value_kind != ExpressionType::lvalue){
             Logger::error(assign_node->location, lang->msgAssignmentRequireLvalue());
         }
 
         check_binary_op_valid(assign_node->location,args.context->getConversionRules(),
-                              lhs_type->getPrototype(),rhs_type->getPrototype(),&assign_node->lhs,&assign_node->rhs);
+                              ast_lhs->type->getPrototype(),ast_rhs->type->getPrototype(),&assign_node->lhs,&assign_node->rhs);
 
-        return assign_node->type = lhs_type;
+        ast_node->type = ast_lhs->type;
+        return (ast::Expression*)ast_node;
     }
 
     std::any TypeAnalyzer::visitIndex(parseTree::expr::Index *index_node, TypeAnalyzerArgs args) {
-        auto target_type = any_cast<ExpressionType*>(visitExpression(index_node->target,args));
-        auto value_type = any_cast<ExpressionType*>(visitExpression(index_node->value,args));
+        auto ast_target = any_cast<ast::Expression*>(visitExpression(index_node->target,args));
+        auto ast_value = any_cast<ast::Expression*>(visitExpression(index_node->value,args));
+        auto ast_node = new ast::ArrayElement(ast_target,ast_value);
 
-        switch (target_type->value_kind) {
+        switch (ast_target->type->value_kind) {
             case ExpressionType::error:
-                return target_type;
+                return ast::Expression::error;
             case ExpressionType::void_:
                 Logger::error(index_node->location, lang->msgInvalidExp());
-                return ExpressionType::Error;
+                return ast::Expression::error;
         }
 
         Prototype *dst_prototype = nullptr,*ret_prototype = nullptr;
-        switch(target_type->getPrototype()->getKind()){
+        switch(ast_target->type->getPrototype()->getKind()){
             case SymbolKind::Array:
                 dst_prototype = args.context->getBuiltIn().getPrimitive(vm::Data::i32);
-                ret_prototype = target_type->getPrototype()->as<Array*>()->getElementPrototype();
+                ret_prototype = ast_target->type->getPrototype()->as<Array*>()->getElementPrototype();
                 break;
             case SymbolKind::Class:{
                 //TODO index operator overload
@@ -581,53 +702,70 @@ namespace evoBasic{
             }
         }
 
-        if(!dst_prototype->equal(value_type->getPrototype())){
-            if(args.context->getConversionRules().isImplicitCastRuleExist(value_type->getPrototype(),dst_prototype)){
-                Logger::warning(index_node->value->location, lang->fmtImplicitCvtFromAToB(value_type->getPrototype()->getName(),dst_prototype->getName()));
+        if(!dst_prototype->equal(ast_value->type->getPrototype())){
+            if(args.context->getConversionRules().isImplicitCastRuleExist(ast_value->type->getPrototype(),dst_prototype)){
+                Logger::warning(index_node->value->location, lang->fmtImplicitCvtFromAToB(ast_value->type->getPrototype()->getName(),dst_prototype->getName()));
                 args.context->getConversionRules().insertCastAST(dst_prototype,&index_node->value);
             }
             else{
-                Logger::error(index_node->location, lang->fmtCannotImplicitCvtAToB(value_type->getPrototype()->mangling('.'),"'Integer'"));
+                Logger::error(index_node->location, lang->fmtCannotImplicitCvtAToB(ast_value->type->getPrototype()->mangling('.'),"'Integer'"));
             }
         }
-        
-        return index_node->type = new ExpressionType(ret_prototype,ExpressionType::lvalue,mapPrototypeToIL(ret_prototype));
+
+        ast_node->type = new ExpressionType(ret_prototype,ExpressionType::lvalue);
+        return (ast::Expression*)ast_node;
     }
 
     std::any TypeAnalyzer::visitCallee(parseTree::expr::Callee *callee_node, TypeAnalyzerArgs args) {
         auto target_type = any_cast<ExpressionType*>(visitExpression(callee_node->name,args));
-        
-        if(target_type->value_kind == ExpressionType::error){
-            return target_type;
-        }
 
         auto func = target_type->getPrototype()->as<type::Function*>();
-
         if(!func){
             Logger::error(callee_node->name->location, lang->fmtNotCallableTarget(target_type->getPrototype()->getName()));
-            return ExpressionType::Error;
+            return ast::Expression::error;
         }
 
-        check_callee(callee_node->location,callee_node->argument,func,args);
+        ast::Call *ast_node = nullptr;
+
+        switch (func->getFunctionKind()) {
+            case FunctionKind::InterfaceFunction: ast_node = new ast::VFtnCall; break;
+            case FunctionKind::Constructor: ast_node = new ast::SFtnCall; break;
+            case FunctionKind::UserFunction:{
+                auto user_ftn = func->as<UserFunction*>();
+                switch(user_ftn->getFunctionFlag()){
+                    case FunctionFlag::Method: ast_node = new ast::FtnCall; break;
+                    case FunctionFlag::Static: ast_node = new ast::SFtnCall; break;
+                    case FunctionFlag::Virtual:
+                    case FunctionFlag::Override:
+                        ast_node = new ast::VFtnCall;
+                        break;
+                }
+            }
+            case FunctionKind::External: ast_node = new ast::SFtnCall; break;
+            case FunctionKind::Operator: PANIC;
+        }
+
+        check_callee(ast_node,callee_node->location,callee_node->argument,func,args);
 
         auto ret = func->getRetSignature();
         if(ret){
-            return callee_node->type = new ExpressionType(ret->as<type::Prototype*>(),ExpressionType::rvalue,mapPrototypeToIL(ret));
+            ast_node->type = new ExpressionType(ret->as<type::Prototype*>(),ExpressionType::rvalue);
         }
         else{
-            return callee_node->type = ExpressionType::Void;
+            ast_node->type = ExpressionType::Void;
         }
 
+        return (ast::Expression*)ast_node;
     }
 
 
     std::any TypeAnalyzer::visitNew(parseTree::expr::New *new_node, TypeAnalyzerArgs args) {
         auto prototype = any_cast<Prototype*>(visitAnnotation(new_node->annotation,args));
-
         auto cls = prototype->as<type::Class*>();
+
         if(!cls){
             Logger::error(new_node->location,lang->msgNotClass());
-            return ExpressionType::Error;
+            return ast::Expression::error;
         }
 
         if(cls->isAbstract()){
@@ -635,14 +773,18 @@ namespace evoBasic{
         }
 
         auto constructor = cls->getConstructor();
+
+        auto ast_node = new ast::New(cls,constructor);
+
         if(!constructor){
             Logger::error(new_node->location,lang->fmtCtorUndefined(cls->mangling('.')));
-            return ExpressionType::Error;
+            return ast::Expression::error;
         }
 
-        check_callee(new_node->location,new_node->argument,constructor,args);
+        check_callee(ast_node,new_node->location,new_node->argument,constructor,args);
 
-        return new ExpressionType(cls,ExpressionType::rvalue,il::ref);
+        ast_node->type = new ExpressionType(cls,ExpressionType::rvalue);
+        return (ast::Expression*)ast_node;
     }
 
     std::any TypeAnalyzer::visitExprStmt(parseTree::stmt::ExprStmt *expr_stmt_node, TypeAnalyzerArgs args) {
@@ -683,7 +825,7 @@ namespace evoBasic{
     }
     
     Prototype *TypeAnalyzer::check_binary_op_valid(Location *code,ConversionRules &rules,
-                                             Prototype *lhs,Prototype *rhs,Expression **lhs_node,Expression **rhs_node) {
+                                             Prototype *lhs,Prototype *rhs,parseTree::Expression **lhs_node,parseTree::Expression **rhs_node) {
         if(!rhs->equal(lhs)){
             auto result = rules.getImplicitPromotionRule(lhs,rhs);
             if(result.has_value()){
@@ -709,49 +851,10 @@ namespace evoBasic{
         }
     }
 
-    void TypeAnalyzer::check_callee(Location *location, Argument *argument, type::Function *target, TypeAnalyzerArgs args){
-        std::size_t args_count = 0;
-        auto params_count = target->getArgsSignature().size();
-
-        auto arg = argument;
-        bool opt_flag = false;
-        while(arg){
-            if(arg->expr->expression_kind != parseTree::expr::Expression::colon_){
-                if(opt_flag){
-                    Logger::error(arg->location,lang->msgRegularAppearAfterOpt());
-                }
-                args_count++;
-            }
-            else opt_flag = true;
-            arg = arg->next_sibling;
-        }
-
-        if(target->getParamArray() && args_count > params_count){
-            args_count = params_count;
-        }
-
-        if(args_count > params_count){
-            Logger::error(location,lang->fmtFtnCallTooManyArg(params_count,args_count));
-        }
-        else if(args_count < params_count){
-            Logger::error(location,lang->fmtFtnCallTooFewArg(params_count,args_count));
-        }
-        else{
-            args.checking_function = target;
-            args.checking_arg_index = 0;
-            while(argument){
-                visitArg(argument,args);
-                argument = argument->next_sibling;
-                args.checking_arg_index++;
-            }
-        }
-
-    }
-
     std::any TypeAnalyzer::visitAnnotation(parseTree::Annotation *annotation_node, TypeAnalyzerArgs args) {
         auto iter = (*annotation_node).unit;
         args.need_lookup = true;
-        args.dot_prefix = new ExpressionType(args.domain,ExpressionType::rvalue,mapPrototypeToIL(args.domain),false);
+        args.dot_prefix = new ExpressionType(args.domain,ExpressionType::rvalue,false);
         auto symbol = visitAnnotationUnit(iter,args);
         iter = iter->next_sibling;
         args.dot_prefix->symbol = any_cast<Symbol*>(symbol);
@@ -812,6 +915,54 @@ namespace evoBasic{
         else{
             return visitExpression(colon_node->rhs,args);
         }
+    }
+
+    void TypeAnalyzer::check_callee(ast::Call *ast_node, Location *location, parseTree::expr::Argument *argument, type::Function *target,
+                                    TypeAnalyzerArgs args) {
+        ast_node->function = target;
+
+        std::size_t args_count = 0;
+        auto params_count = target->getArgsSignature().size();
+        auto arg = argument;
+        bool opt_flag = false;
+
+        while(arg){
+            if(arg->expr->expression_kind != parseTree::expr::Expression::colon_){
+                if(opt_flag){
+                    Logger::error(arg->location,lang->msgRegularAppearAfterOpt());
+                }
+                args_count++;
+            }
+            else opt_flag = true;
+            arg = arg->next_sibling;
+        }
+
+        if(target->getParamArray() && args_count > params_count){
+            args_count = params_count;
+        }
+
+        if(args_count > params_count){
+            Logger::error(location,lang->fmtFtnCallTooManyArg(params_count,args_count));
+        }
+        else if(args_count < params_count){
+            Logger::error(location,lang->fmtFtnCallTooFewArg(params_count,args_count));
+        }
+        else{
+            args.checking_function = target;
+            args.checking_arg_index = 0;
+            ast::Argument *tail = nullptr;
+            FOR_EACH(iter,argument){
+                auto ast_argument = (ast::Argument*)any_cast<ast::Expression*>(visitArg(iter,args));
+                if(tail == nullptr) tail = ast_node->argument = ast_argument;
+                else{
+                    tail->next_sibling = ast_argument;
+                    ast_argument->prv_sibling = tail;
+                    tail = ast_argument;
+                }
+                args.checking_arg_index++;
+            }
+        }
+
     }
 
 

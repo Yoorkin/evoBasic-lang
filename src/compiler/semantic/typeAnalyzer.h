@@ -30,6 +30,7 @@
 #include "type.h"
 #include "context.h"
 #include "utils.h"
+#include "ast.h"
 
 namespace evoBasic{
 
@@ -38,13 +39,14 @@ namespace evoBasic{
         type::Domain *domain = nullptr;
         ExpressionType *dot_prefix = nullptr;
         type::Domain *current_class_or_module = nullptr;
+        type::Symbol *dot_expression_context = nullptr;
         type::Function *function = nullptr;
         type::Function *checking_function = nullptr;
         int checking_arg_index = 0;
         bool need_lookup = false;
     };
 
-    class TypeAnalyzer : public DefaultVisitor<TypeAnalyzerArgs>{
+    class TypeAnalyzer : public Visitor<TypeAnalyzerArgs>{
     public:
         std::any visitGlobal(parseTree::Global *global_node, TypeAnalyzerArgs args) override;
         std::any visitModule(parseTree::Module *mod_node, TypeAnalyzerArgs args) override;
@@ -77,10 +79,10 @@ namespace evoBasic{
         std::any visitAnnotation(parseTree::Annotation *anno_node, TypeAnalyzerArgs args) override;
         std::any visitAnnotationUnit(parseTree::AnnotationUnit *unit_node, TypeAnalyzerArgs args) override;
 
-        type::Prototype *check_binary_op_valid(Location *code, ConversionRules &rules,
-                                               type::Prototype *lhs, type::Prototype *rhs, parseTree::expr::Expression **lhs_node, parseTree::expr::Expression **rhs_node);
+        type::Prototype *check_binary_op_valid(Location *code,ConversionRules &rules,
+                                               type::Prototype *lhs,type::Prototype *rhs,parseTree::Expression **lhs_node,parseTree::Expression **rhs_node);
         void check_access(Location *code_location,type::Symbol *target,type::Domain *current,type::Domain *current_class_or_module);
-        void check_callee(Location *location, parseTree::expr::Argument *argument, type::Function *target, TypeAnalyzerArgs args);
+        void check_callee(ast::Call *ast_node, Location *location, parseTree::expr::Argument *argument, type::Function *target, TypeAnalyzerArgs args);
         void check_static_access(Location *code_location,ExpressionType *lhs,bool is_rhs_static);
         std::any visitDigit(parseTree::expr::Digit *digit_node, TypeAnalyzerArgs args) override;
         std::any visitDecimal(parseTree::expr::Decimal *decimal, TypeAnalyzerArgs args) override;
@@ -88,9 +90,9 @@ namespace evoBasic{
         std::any visitChar(parseTree::expr::Char *ch_node, TypeAnalyzerArgs args) override;
         std::any visitString(parseTree::expr::String *str_node, TypeAnalyzerArgs args) override;
 
-        void visitStatementList(parseTree::stmt::Statement *stmt_list, TypeAnalyzerArgs args);
+        ast::Statement *visitStatementList(parseTree::stmt::Statement *stmt_list, TypeAnalyzerArgs args);
 
-        std::any visitAllMember(type::Domain *domain, parseTree::Member *member, TypeAnalyzerArgs args);
+        ast::Member *visitAllMember(type::Domain *domain, parseTree::Member *member, TypeAnalyzerArgs args);
 
         evoBasic::il::DataType mapPrototypeToIL(type::Prototype *variable_prototype);
     };

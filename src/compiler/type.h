@@ -208,7 +208,7 @@ namespace evoBasic::type{
 
     enum class FunctionFlag{Method=0,Static,Virtual,Override};
 
-    enum class FunctionKind{Function,UserFunction,Operator,External,Constructor};
+    enum class FunctionKind{InterfaceFunction,UserFunction,Operator,External,Constructor};
 
     class Function: public Domain{
     protected:

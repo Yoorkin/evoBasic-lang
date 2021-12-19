@@ -10,7 +10,7 @@ namespace evoBasic{
 
     std::any SymbolCollector::visitGlobal(evoBasic::parseTree::Global *global, evoBasic::SymbolCollectorArgs args) {
         NotNull(global);
-        args.domain = args.context->getGlobal();
+        global->global_symbol = args.domain = args.context->getGlobal();
         args.domain->setLocation(global->location);
 
         FOR_EACH(iter,global->member){

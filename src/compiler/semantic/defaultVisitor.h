@@ -17,9 +17,7 @@ namespace evoBasic{
     class DefaultVisitor : public Visitor<ARGS> {
     private:
         bool need_lookup = false;
-        type::Symbol *dot_expression_context = nullptr;
         Context *context = nullptr;
-        type::Domain *domain = nullptr;
         Location *exception_location = nullptr;
         std::string not_found_name;
     public:
@@ -27,14 +25,14 @@ namespace evoBasic{
             auto name = getID(unit_node->name);
             type::Symbol *symbol = nullptr;
             if(need_lookup){
-                symbol = dot_expression_context->as<type::Domain*>()->lookUp(name);
+                symbol = args.dot_expression_context->template as<type::Domain*>()->lookUp(name);
             }
             else{
-                symbol = dot_expression_context->as<type::Domain*>()->find(name);
+                symbol = args.dot_expression_context->template as<type::Domain*>()->find(name);
             }
 
             if(!symbol){
-                not_found_name = dot_expression_context->mangling('.') + name;
+                not_found_name = args.dot_expression_context->mangling('.') + name;
                 exception_location = unit_node->name->location;
                 throw std::exception();
             }
@@ -44,26 +42,26 @@ namespace evoBasic{
             try{
                 auto iter = annotation_node->unit;
                 need_lookup = true;
-                dot_expression_context = domain;
+                args.dot_expression_context = args.parent_class_or_module;;
                 auto symbol = visitAnnotationUnit(iter,args);
                 iter = iter->next_sibling;
-                dot_expression_context = any_cast<type::Symbol*>(symbol);
+                args.dot_expression_context = any_cast<type::Symbol*>(symbol);
 
                 need_lookup = false;
                 while(iter!=nullptr){
                     symbol = visitAnnotationUnit(iter,args);
-                    dot_expression_context = any_cast<type::Symbol*>(symbol);
+                    args.dot_expression_context = any_cast<type::Symbol*>(symbol);
                     iter=iter->next_sibling;
                 }
 
-                auto element = dot_expression_context->as<type::Prototype*>();
+                auto element = args.dot_expression_context->template as<type::Prototype*>();
                 auto ret_prototype = element;
 
                 if(annotation_node->array_size){
                     ret_prototype = new type::Array(ret_prototype, getDigit(annotation_node->array_size));
 
                     if(element->getKind() == type::SymbolKind::Record)
-                        context->byteLengthDependencies.addDependent(ret_prototype->as<type::Domain*>(),element->as<type::Domain*>());
+                        context->byteLengthDependencies.addDependent(ret_prototype->template as<type::Domain*>(),element->template as<type::Domain*>());
                 }
 
                 return ret_prototype;

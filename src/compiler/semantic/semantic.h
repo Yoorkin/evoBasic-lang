@@ -39,16 +39,14 @@ namespace evoBasic{
          *   None-Static Function       yes                 yes
          *
          */
-        il::DataType il_type;
         bool is_static = false;
         enum ValueKind {lvalue,rvalue,path,error,void_} value_kind;
         ExpressionType()=default;
-        ExpressionType(type::Symbol *symbol,ValueKind kind,il::DataType il_type,bool is_static = false){
+        ExpressionType(type::Symbol *symbol,ValueKind kind,bool is_static = false){
             NotNull(symbol);
             this->value_kind = kind;
             this->symbol = symbol;
             this->is_static = is_static;
-            this->il_type = il_type;
         }
         type::Prototype *getPrototype(){
             auto tmp = symbol->as<type::Prototype*>();

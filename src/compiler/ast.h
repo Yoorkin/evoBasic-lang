@@ -39,8 +39,6 @@ namespace evoBasic::ast{
     struct ExprStmt;
     struct Expression;
     struct Case;
-    struct Annotation;
-    struct AnnotationUnit;
 
 
     struct Node{
@@ -64,7 +62,6 @@ namespace evoBasic::ast{
         DebugInfo *debug()override;
     };
 
-
     struct Class : Member{
         Class(){member_kind = MemberKind::class_;}
         Member *member = nullptr;
@@ -81,7 +78,7 @@ namespace evoBasic::ast{
 
     struct Import : Member{
         Import(){member_kind = MemberKind::import_;}
-        Annotation *annotation = nullptr;
+        type::Module *target = nullptr;
         DebugInfo *debug()override;
     };
 
@@ -147,7 +144,6 @@ namespace evoBasic::ast{
 
     struct Let : Statement{
         Let(){stmt_flag = let_;}
-        bool is_const = false;
         Variable* variable = nullptr;
         DebugInfo *debug()override;
     };
@@ -215,15 +211,18 @@ namespace evoBasic::ast{
         enum ExpressionKind{
             Element,Vector,Ftn,VFtn,SFtn,Local,Arg,Fld,Assign,
             SFld,Digit,Decimal,String,Boolean,Char,Unary,Binary,
-            Cast,New,Parentheses
-        }expression_kind;
+            Cast,New,Parentheses,Empty,Argument
+        }expression_kind = Empty;
+        ExpressionType *type = nullptr;
+        static Expression *error;
+        DebugInfo *debug()override;
     };
 
     struct Unary : Expression{
         Unary(){expression_kind = ExpressionKind::Unary;}
-        enum Enum{Empty,MINUS,ADD}op = Empty;
+        parseTree::Unary::Enum op = parseTree::Unary::Enum::Empty;
         Expression *terminal = nullptr;
-        Unary(Enum op,Expression *terminal):Unary(){
+        Unary(parseTree::Unary::Enum op,Expression *terminal):Unary(){
             this->op = op;
             this->terminal = terminal;
         }
@@ -232,11 +231,7 @@ namespace evoBasic::ast{
 
     struct Binary : Expression{
         Binary(){expression_kind = ExpressionKind::Binary;}
-        enum Enum{
-            Empty,And,Or,Xor,Not,EQ,NE,GE,LE,GT,LT,
-            ADD,MINUS,MUL,DIV,FDIV
-        };
-        Binary(Expression *lhs,Enum op,Expression *rhs):Binary(){
+        Binary(Expression *lhs,parseTree::Binary::Enum op,Expression *rhs):Binary(){
             NotNull(lhs);
             NotNull(rhs);
             this->lhs = lhs;
@@ -244,20 +239,20 @@ namespace evoBasic::ast{
             this->op = op;
         }
         Expression *lhs = nullptr;
-        Enum op = Empty;
+        parseTree::Binary::Enum op = parseTree::Binary::Enum::Empty;
         Expression *rhs = nullptr;
         type::Variable *temp_address = nullptr;
         DebugInfo *debug()override;
     };
 
     struct Cast : Expression{
-        Cast(Expression *expression,Annotation *annotation){
+        Cast(Expression *expression,type::Prototype *target){
             expression_kind = Expression::Cast;
             this->expr = expression;
-            this->annotation = annotation;
+            this->target = target;
         }
         Expression *expr = nullptr;
-        Annotation *annotation = nullptr;
+        type::Prototype *target = nullptr;
         DebugInfo *debug()override;
     };
 
@@ -272,21 +267,17 @@ namespace evoBasic::ast{
         DebugInfo *debug()override;
     };
 
-    struct Argument : Node{
+    struct Argument : Expression{
+        Argument(){
+            expression_kind = Expression::Argument;
+        }
         enum PassKind{byref,byval,tmp_store}pass_kind;
+        bool is_option = false;
         type::Variable *temp_address = nullptr;
+        type::Parameter *parameter = nullptr;
         Expression *expr = nullptr;
         Argument *next_sibling = nullptr,*prv_sibling = nullptr;
         DebugInfo *debug()override;
-    };
-
-    struct New : Expression{
-        New(){
-            expression_kind = Expression::New;
-        }
-        Annotation *annotation = nullptr;
-        Argument *argument = nullptr;
-        DebugInfo * debug() override;
     };
 
     struct Parentheses : Expression{
@@ -298,11 +289,13 @@ namespace evoBasic::ast{
     };
 
     struct ArrayElement : Expression{
-        ArrayElement(){
+        ArrayElement(Expression *array,Expression *offset){
             expression_kind = Expression::Element;
+            this->array = array;
+            this->offset = offset;
         }
         Expression *array = nullptr;
-        int offset = 0;
+        Expression *offset = nullptr;
         DebugInfo *debug()override;
     };
 
@@ -315,54 +308,70 @@ namespace evoBasic::ast{
         DebugInfo *debug()override;
     };
 
-    struct FtnCall : Expression{
+    struct Call : Expression{
+        type::Function *function = nullptr;
+        struct Argument *argument = nullptr;
+    };
+
+    struct New : Call{
+        New(type::Class *target,type::Function *ctor){
+            expression_kind = Expression::New;
+            this->target = target;
+            this->function = ctor;
+        }
+        type::Class *target = nullptr;
+        DebugInfo * debug() override;
+    };
+
+
+    struct FtnCall : Call{
         FtnCall(){
             expression_kind = Expression::Ftn;
         }
         Expression *ref = nullptr;
-        type::Function *function = nullptr;
-        Argument *argument = nullptr;
         DebugInfo *debug()override;
     };
 
-    struct VFtnCall : Expression{
+    struct VFtnCall : Call{
         VFtnCall(){
             expression_kind = Expression::VFtn;
         }
         Expression *ref = nullptr;
-        type::Function *function = nullptr;
-        Argument *argument = nullptr;
         DebugInfo *debug()override;
     };
 
-    struct SFtnCall : Expression{
+    struct SFtnCall : Call{
         SFtnCall(){
             expression_kind = Expression::SFtn;
         }
-        type::Function *function = nullptr;
-        Argument *argument = nullptr;
         DebugInfo *debug()override;
     };
 
     struct Local : Expression{
-        Local(){
+        Local(type::Variable *variable,ExpressionType *type){
             expression_kind = Expression::Local;
+            this->variable = variable;
+            this->type = type;
         }
         type::Variable *variable = nullptr;
         DebugInfo *debug()override;
     };
 
     struct Arg : Expression{
-        Arg(){
+        Arg(type::Variable *variable,ExpressionType *type){
             expression_kind = Expression::Arg;
+            this->variable = variable;
+            this->type = type;
         }
         type::Variable *variable = nullptr;
         DebugInfo *debug()override;
     };
 
     struct Fld : Expression{
-        Fld(){
+        Fld(type::Variable *variable,ExpressionType *type){
             expression_kind = Expression::Fld;
+            this->variable = variable;
+            this->type = type;
         }
         Expression *ref = nullptr;
         type::Variable *variable = nullptr;
@@ -370,8 +379,10 @@ namespace evoBasic::ast{
     };
 
     struct SFld : Expression{
-        SFld(){
+        SFld(type::Variable *variable,ExpressionType *type){
             expression_kind = Expression::SFld;
+            this->variable = variable;
+            this->type = type;
         }
         type::Variable *variable = nullptr;
         DebugInfo *debug()override;

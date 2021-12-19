@@ -224,7 +224,7 @@ namespace evoBasic::type{
     }
 
     FunctionKind Function::getFunctionKind() {
-        return FunctionKind::Function;
+        return FunctionKind::InterfaceFunction;
     }
 
     UserFunction::UserFunction(FunctionFlag flag, parseTree::Function *function_node)
@@ -568,7 +568,7 @@ namespace evoBasic::type{
             auto function = member->as<Function*>();
             if(!function)continue;
             switch(function->getFunctionKind()){
-                case FunctionKind::Function:{
+                case FunctionKind::InterfaceFunction:{
                     vtable->addSlot(function);
                     break;
                 }
@@ -762,6 +762,14 @@ namespace evoBasic::type{
 
     std::size_t Variable::getLayoutIndex(){
         return layout_index;
+    }
+
+    VariableKind Variable::getVariableKind() {
+        return VariableKind::Field;
+    }
+
+    void Variable::setVariableKind(VariableKind kind) {
+
     }
 
     std::string EnumMember::debug(int indent) {
