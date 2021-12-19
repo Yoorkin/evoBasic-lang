@@ -88,11 +88,16 @@ namespace evoBasic::ast{
     struct Dim : Member{
         Dim(){member_kind = MemberKind::dim_;}
         bool is_const = false;
-        Variable* variable;
+        Variable* variable = nullptr;
         DebugInfo *debug()override;
     };
 
     struct Variable : Node{
+        Variable(type::Variable *variable,Expression *initial){
+            this->variable_symbol = variable;
+            this->initial = initial;
+        }
+        Variable(){}
         type::Variable *variable_symbol = nullptr;
         Expression *initial = nullptr;
         Variable *next_sibling = nullptr,*prv_sibling = nullptr;
@@ -204,7 +209,10 @@ namespace evoBasic::ast{
     };
 
     struct ExprStmt : Statement{
-        ExprStmt(){stmt_flag = expr_;}
+        ExprStmt(Expression *expr){
+            stmt_flag = expr_;
+            this->expr = expr;
+        }
         Expression *expr;
         DebugInfo *debug()override;
     };
@@ -220,11 +228,18 @@ namespace evoBasic::ast{
         enum ExpressionKind{
             Element,Vector,Ftn,VFtn,SFtn,Local,Arg,Fld,Assign,
             SFld,Digit,Decimal,String,Boolean,Char,Unary,Binary,
-            Cast,New,Parentheses,Empty,Argument
+            Cast,New,Parentheses,Empty,Argument,TmpPath
         }expression_kind = Empty;
         ExpressionType *type = nullptr;
         static Expression *error;
         DebugInfo *debug()override;
+    };
+
+    struct TmpPath : Expression{
+        TmpPath(ExpressionType *type){
+            expression_kind = Expression::TmpPath;
+            this->type = type;
+        }
     };
 
     struct Unary : Expression{

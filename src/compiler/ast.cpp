@@ -283,4 +283,12 @@ namespace evoBasic::ast{
     DebugInfo *Boolean::debug() {
         return new DebugInfo{format() << "Boolean " << (value ? "true" : "false")};
     }
+
+    DebugInfo *Dim::debug() {
+        auto ret = new DebugInfo{"Dim"};
+        FOR_EACH(iter,variable){
+            ret->childs.push_back(iter->debug());
+        }
+        return ret;
+    }
 };

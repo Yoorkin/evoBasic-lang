@@ -637,13 +637,13 @@ namespace evoBasic{
                 }
                 case type::SymbolKind::Function:{
                     if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,target->isStatic());
-                    return new ExpressionType(target,ExpressionType::path,true);
+                    return (ast::Expression*)new ast::TmpPath(new ExpressionType(target,ExpressionType::path,true));
                 }
                 case type::SymbolKind::Module:
                 case type::SymbolKind::Class:
                 case type::SymbolKind::Enum:{
                     if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,true);
-                    return new ExpressionType(target,ExpressionType::path,true);
+                    return (ast::Expression*)new ast::TmpPath(new ExpressionType(target,ExpressionType::path,true));
                 }
                 case type::SymbolKind::EnumMember:{
                     PANIC;
@@ -724,11 +724,11 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitCallee(parseTree::expr::Callee *callee_node, TypeAnalyzerArgs args) {
-        auto target_type = any_cast<ExpressionType*>(visitExpression(callee_node->name,args));
+        auto ast_path = any_cast<ast::Expression*>(visitExpression(callee_node->name,args));
 
-        auto func = target_type->getPrototype()->as<type::Function*>();
+        auto func = ast_path->type->getPrototype()->as<type::Function*>();
         if(!func){
-            Logger::error(callee_node->name->location, lang->fmtNotCallableTarget(target_type->getPrototype()->getName()));
+            Logger::error(callee_node->name->location, lang->fmtNotCallableTarget(ast_path->type->getPrototype()->getName()));
             return ast::Expression::error;
         }
 
@@ -797,7 +797,8 @@ namespace evoBasic{
 
     std::any TypeAnalyzer::visitExprStmt(parseTree::stmt::ExprStmt *expr_stmt_node, TypeAnalyzerArgs args) {
         args.dot_prefix = nullptr;
-        return visitExpression(expr_stmt_node->expr,args);
+        ast::Statement *statement = new ast::ExprStmt(any_cast<ast::Expression*>(visitExpression(expr_stmt_node->expr,args)));
+        return statement;
     }
 
     std::any TypeAnalyzer::visitParentheses(parseTree::expr::Parentheses *parentheses_node, TypeAnalyzerArgs args) {
@@ -983,12 +984,35 @@ namespace evoBasic{
 
     std::any TypeAnalyzer::visitDim(parseTree::Dim *dim_node, TypeAnalyzerArgs args) {
        // return (ast::Member*)new ast::Dim(dim_node->);
-       return ast::Expression::error;
+        auto ast_node = new ast::Dim;
+        auto tail = ast_node->variable;
+        FOR_EACH(iter,dim_node->variable){
+            auto ast_var = any_cast<ast::Variable*>(visitVariable(iter,args));
+            if(tail == nullptr){
+                tail = ast_node->variable = ast_var;
+            }
+            else{
+                tail->next_sibling = ast_var;
+                ast_var->prv_sibling = tail;
+                tail = ast_var;
+            }
+        }
+        return (ast::Member*)ast_node;
+    }
+
+    std::any TypeAnalyzer::visitVariable(parseTree::Variable *var_node, TypeAnalyzerArgs args) {
+        if(var_node->initial){
+            return new ast::Variable(var_node->variable_symbol,any_cast<ast::Expression*>(visitExpression(var_node->initial,args)));
+        }
+        else{
+            return new ast::Variable(var_node->variable_symbol,nullptr);
+        }
     }
 
     std::any TypeAnalyzer::visitInterface(parseTree::Interface *interface_node, TypeAnalyzerArgs args) {
         //return (ast::Member*)new ast::Interface(interface_node->interface_symbol);
         return ast::Expression::error;
     }
+
 
 }

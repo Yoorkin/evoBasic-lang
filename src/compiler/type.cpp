@@ -774,7 +774,7 @@ namespace evoBasic::type{
                 return VariableKind::Field;
             case SymbolKind::Module:
                 return VariableKind::StaticField;
-            case SymbolKind::Function:
+            case SymbolKind::TmpDomain: // in function/sub/constructor
                 if(isParameter()) return VariableKind::Parameter;
                 else              return VariableKind::Local;
         }
