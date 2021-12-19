@@ -7,6 +7,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include "ast.h"
 
 using namespace std;
 namespace evoBasic::parseTree{
@@ -17,7 +18,7 @@ namespace evoBasic::parseTree{
     const std::string prefix_unit = "\033[32m│  \033[0m";
 
 
-    void debugAST(ostream &stream,DebugInfo *info,string prefix,bool is_last){
+    void debugTree(ostream &stream,DebugInfo *info,string prefix,bool is_last){
         const string indent_unit = "\t";
         stream<<prefix;
         if(is_last)stream<<"└─";else stream<<"├─";
@@ -26,18 +27,17 @@ namespace evoBasic::parseTree{
         for(int i=0;i<info->text.size()/2+1;i++)prefix+=' ';
 
         for(auto iter:info->childs){
-            debugAST(stream,iter,prefix,(iter == info->childs.back()));
+            debugTree(stream,iter,prefix,(iter == info->childs.back()));
         }
     }
 
-    string debugAST(Node *ast){
+    string debugParseTree(parseTree::Node *ast){
         stringstream stream;
         auto info = ast->debug();
-        debugAST(stream,info,"",true);
+        debugTree(stream,info,"",true);
         delete info;
         return stream.str();
     }
-
 
     DebugInfo *Global::debug() {
         auto ret = new DebugInfo{"Global"};

@@ -159,7 +159,7 @@ namespace evoBasic{
         auto ast_node = new ast::Global;
         ast_node->global_symbol = args.context->getGlobal();
         ast_node->member = visitAllMember(global_node->global_symbol,global_node->member,args);
-        return (ast::Node*)ast_node;
+        return ast_node;
     }
     std::any TypeAnalyzer::visitModule(parseTree::Module *module_node, TypeAnalyzerArgs args) {
         auto ast_node = new ast::Module;
@@ -291,7 +291,7 @@ namespace evoBasic{
                 ast_node_var->variable_symbol = field;
             }
         }
-        return (ast::Member*)ast_node;
+        return (ast::Statement*)ast_node;
     }
 
 
@@ -412,7 +412,7 @@ namespace evoBasic{
             }
         }
 
-        return (ast::Expression*)ast_node;
+        return (ast::Statement*)ast_node;
     }
 
     
@@ -580,11 +580,18 @@ namespace evoBasic{
                 ret = ftn;
                 break;
             }
+            case ast::Expression::Fld:{
+                auto fld = (ast::Fld*)ast_rhs;
+                fld->ref = ast_lhs;
+                ret = fld;
+                break;
+            }
+            case ast::Expression::SFtn:
             case ast::Expression::Element:
             case ast::Expression::Vector:
             case ast::Expression::Local:
             case ast::Expression::Arg:
-            case ast::Expression::Fld:
+            case ast::Expression::SFld:
             case ast::Expression::Assign:
                 ret = ast_rhs;
                 break;
@@ -617,16 +624,16 @@ namespace evoBasic{
                     auto variable = target->as<type::Variable*>();
                     auto type = new ExpressionType(variable->getPrototype(),ExpressionType::lvalue,target->isStatic());
                     switch (variable->getVariableKind()) {
-                        case VariableKind::Local:       return new ast::Local(variable,type);
-                        case VariableKind::StaticField: return new ast::SFld(variable,type);
-                        case VariableKind::Field:       return new ast::Fld(variable,type);
+                        case VariableKind::Local:       return (ast::Expression*)new ast::Local(variable,type);
+                        case VariableKind::StaticField: return (ast::Expression*)new ast::SFld(variable,type);
+                        case VariableKind::Field:       return (ast::Expression*)new ast::Fld(variable,type);
                     }
                 }
                 case type::SymbolKind::Parameter:{
                     if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,target->isStatic());
                     auto variable = target->as<type::Variable*>();
                     auto type = new ExpressionType(variable->getPrototype(),ExpressionType::lvalue,target->isStatic());
-                    return new ast::Arg(variable,type);
+                    return (ast::Expression*)new ast::Arg(variable,type);
                 }
                 case type::SymbolKind::Function:{
                     if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,target->isStatic());
@@ -740,6 +747,7 @@ namespace evoBasic{
                         ast_node = new ast::VFtnCall;
                         break;
                 }
+                break;
             }
             case FunctionKind::External: ast_node = new ast::SFtnCall; break;
             case FunctionKind::Operator: PANIC;
@@ -965,5 +973,22 @@ namespace evoBasic{
 
     }
 
+    std::any TypeAnalyzer::visitType(parseTree::Type *ty_node, TypeAnalyzerArgs args) {
+        return (ast::Member*)new ast::Type(ty_node->type_symbol);
+    }
+
+    std::any TypeAnalyzer::visitEnum(parseTree::Enum *em_node, TypeAnalyzerArgs args) {
+        return (ast::Member*)new ast::Enum(em_node->enum_symbol);
+    }
+
+    std::any TypeAnalyzer::visitDim(parseTree::Dim *dim_node, TypeAnalyzerArgs args) {
+       // return (ast::Member*)new ast::Dim(dim_node->);
+       return ast::Expression::error;
+    }
+
+    std::any TypeAnalyzer::visitInterface(parseTree::Interface *interface_node, TypeAnalyzerArgs args) {
+        //return (ast::Member*)new ast::Interface(interface_node->interface_symbol);
+        return ast::Expression::error;
+    }
 
 }

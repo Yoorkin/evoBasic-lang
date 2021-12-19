@@ -5,6 +5,8 @@
 #include "lexer.h"
 #include "parser.h"
 #include "logger.h"
+#include "dependencies.h"
+#include "context.h"
 
 using namespace evoBasic;
 using namespace evoBasic::type;
@@ -186,7 +188,7 @@ void IS_CODE_NO_ERROR(string code){
     Semantic::collectSymbol(ast,&context);
     Semantic::collectDetail(ast,&context);
     Semantic::typeCheck(ast,&context);
-    Logger::dev(debugAST(ast));
+    Logger::dev(debugParseTree(ast));
     Logger::dev(context.getGlobal()->debug(0));
     ASSERT_TRUE(Logger::errorCount == 0)<<stream.str();
 }

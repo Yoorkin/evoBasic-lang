@@ -82,7 +82,7 @@ int main(int argc,char *argv[]) {
     }
 
     auto context = new Context;
-    list<parseTree::Global*> asts;
+    list<parseTree::Global*> trees;
 
     if(!enable_compile)return 0;
 
@@ -95,9 +95,9 @@ int main(int argc,char *argv[]) {
         Lexer lexer(source);
         Parser parser(&lexer);
         auto ast = parser.parseGlobal();
-        asts.push_back(ast);
+        trees.push_back(ast);
 
-        Logger::dev(debugAST(ast));
+        Logger::dev(debugParseTree(ast));
 
         Semantic::collectSymbol(ast,context);
         Semantic::collectDetail(ast,context);
@@ -105,15 +105,15 @@ int main(int argc,char *argv[]) {
 
     Semantic::solveInheritDependencies(context);
 
-    for(auto ast : asts){
-        Semantic::typeCheck(ast,context);
+    for(auto tree : trees){
+        auto ast = Semantic::typeCheck(tree,context);
         Logger::dev(debugAST(ast));
     }
 
     Logger::dev(context->getGlobal()->debug(0));
 
 //    if(Logger::errorCount == 0){
-//        for(auto ast : asts){
+//        for(auto ast : trees){
 //            Semantic::solveByteLengthDependencies(context);
 //            IRGen gen;
 //

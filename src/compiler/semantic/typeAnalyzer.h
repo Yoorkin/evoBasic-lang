@@ -53,6 +53,12 @@ namespace evoBasic{
         std::any visitClass(parseTree::Class *cls_node, TypeAnalyzerArgs args) override;
         std::any visitFunction(parseTree::Function *func_node, TypeAnalyzerArgs args) override;
         std::any visitConstructor(parseTree::Constructor *constructor_node, TypeAnalyzerArgs args) override;
+        std::any visitType(parseTree::Type *ty_node, TypeAnalyzerArgs args) override;
+        std::any visitEnum(parseTree::Enum *em_node, TypeAnalyzerArgs args) override;
+        std::any visitDim(parseTree::Dim *dim_node, TypeAnalyzerArgs args) override;
+        std::any visitInterface(parseTree::Interface *interface_node, TypeAnalyzerArgs args) override;
+
+
         std::any visitMember(parseTree::Member *member_node, TypeAnalyzerArgs args) override;
         std::any visitStatement(parseTree::stmt::Statement *stmt_node, TypeAnalyzerArgs args) override;
 

@@ -40,6 +40,9 @@ namespace evoBasic::ast{
     struct Expression;
     struct Case;
 
+    using AST = Global;
+
+    std::string debugAST(ast::Node *ast);
 
     struct Node{
         virtual DebugInfo *debug()=0;
@@ -124,13 +127,19 @@ namespace evoBasic::ast{
     };
 
     struct Enum : Member{
-        Enum(){member_kind = MemberKind::enum_;}
+        Enum(type::Enumeration *symbol){
+            member_kind = MemberKind::enum_;
+            this->enum_symbol = symbol;
+        }
         type::Enumeration *enum_symbol = nullptr;
         DebugInfo *debug()override;
     };
 
     struct Type : Member{
-        Type(){member_kind = MemberKind::type_;}
+        Type(type::Record *symbol){
+            member_kind = MemberKind::type_;
+            this->type_symbol = symbol;
+        }
         type::Record *type_symbol = nullptr;
         DebugInfo *debug()override;
     };

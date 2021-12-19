@@ -74,6 +74,7 @@ namespace evoBasic::type{
         setName(move(name));
         if(isParamArray)is_byval = true;
         if(prototype)setPrototype(prototype);
+        toggleParameter();
     }
 
     bool Parameter::isByval() {
@@ -765,11 +766,28 @@ namespace evoBasic::type{
     }
 
     VariableKind Variable::getVariableKind() {
-        return VariableKind::Field;
+        switch(getParent()->getKind()){
+            case SymbolKind::Class:
+                if(isStatic())return VariableKind::StaticField;
+                else          return VariableKind::Field;
+            case SymbolKind::Record:
+                return VariableKind::Field;
+            case SymbolKind::Module:
+                return VariableKind::StaticField;
+            case SymbolKind::Function:
+                if(isParameter()) return VariableKind::Parameter;
+                else              return VariableKind::Local;
+        }
+        PANIC;
     }
 
-    void Variable::setVariableKind(VariableKind kind) {
 
+    bool Variable::isParameter() {
+        return is_parameter;
+    }
+
+    void Variable::toggleParameter() {
+        is_parameter = !is_parameter;
     }
 
     std::string EnumMember::debug(int indent) {

@@ -8,17 +8,18 @@
 #include "type.h"
 #include "utils.h"
 #include "il.h"
+#include "ast.h"
 
 namespace evoBasic{
     class Context;
 
-    using AST = parseTree::Global;
+    using ParseTree = parseTree::Global;
 
     class Semantic {
     public:
-        static void collectSymbol(AST *ast,Context *context);
-        static void collectDetail(AST *ast,Context *context);
-        static void typeCheck(AST *ast,Context *context);
+        static void collectSymbol(ParseTree *parse_tree, Context *context);
+        static void collectDetail(ParseTree *parse_tree, Context *context);
+        static ast::AST *typeCheck(ParseTree *parse_tree, Context *context);
         static bool solveTypeInferenceDependencies(Context *context);
         static bool solveInheritDependencies(Context *context);
         static bool solveByteLengthDependencies(Context *context);

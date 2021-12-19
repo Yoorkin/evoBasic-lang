@@ -117,16 +117,16 @@ namespace evoBasic::type{
         }
     };
 
-    enum class VariableKind{Local,Field,StaticField,Parameter};
+    enum class VariableKind{Undefined,Local,Field,StaticField,Parameter};
 
     class Variable : public Symbol{
         friend class Record;
-        Prototype *prototype{nullptr};
+        Prototype *prototype= nullptr;
         bool is_const = false;
-        bool is_global = false;
+        bool is_parameter = false;
         std::size_t offset = -1;
         std::size_t layout_index = -1;
-        VariableKind var_kind;
+
     public:
         Variable();
         explicit Variable(SymbolKind kind);
@@ -139,10 +139,10 @@ namespace evoBasic::type{
         void setLayoutIndex(std::size_t index);
         std::size_t getLayoutIndex();
         void setOffset(std::size_t value);
+        bool isParameter();
+        void toggleParameter();
         virtual data::ptr getRealByteLength();
-        
         VariableKind getVariableKind();
-        void setVariableKind(VariableKind kind);
     };
 
     //domain interface

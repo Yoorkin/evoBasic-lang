@@ -34,6 +34,7 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/src/compiler/token.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/type.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/visitor.cpp
+    ${CMAKE_SOURCE_DIR}/src/compiler/parseTree.cpp
     compileHelper.h
         ../src/compiler/ast.cpp ../src/compiler/ast.h)
 

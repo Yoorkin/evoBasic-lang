@@ -20,28 +20,28 @@ namespace evoBasic{
     ExpressionType *ExpressionType::Error = new ExpressionType(new type::Error,error,il::empty);
     ExpressionType *ExpressionType::Void = new ExpressionType(new type::Error,void_,il::empty);
 
-    void Semantic::collectSymbol(AST *ast, Context *context) {
+    void Semantic::collectSymbol(ParseTree *parse_tree, Context *context) {
         SymbolCollector collector;
         SymbolCollectorArgs args;
         args.context = context;
         args.domain = context->getGlobal();
-        collector.visitGlobal(ast,args);
+        collector.visitGlobal(parse_tree, args);
     }
 
-    void Semantic::collectDetail(AST *ast, Context *context) {
+    void Semantic::collectDetail(ParseTree *parse_tree, Context *context) {
         DetailCollector collector;
         DetailArgs args;
         args.domain = context->getGlobal();
         args.context = context;
-        collector.visitGlobal(ast,args);
+        collector.visitGlobal(parse_tree, args);
     }
 
-    void Semantic::typeCheck(AST *ast, Context *context) {
+    ast::AST *Semantic::typeCheck(ParseTree *parse_tree, Context *context) {
         TypeAnalyzer analyzer;
         TypeAnalyzerArgs args;
         args.domain = context->getGlobal();
         args.context = context;
-        analyzer.visitGlobal(ast,args);
+        return any_cast<ast::Global*>(analyzer.visitGlobal(parse_tree, args));
     }
 
     bool Semantic::solveTypeInferenceDependencies(Context *context) {

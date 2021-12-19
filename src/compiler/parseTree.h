@@ -92,8 +92,7 @@ namespace evoBasic::parseTree{
     using namespace expr;
 
 
-
-    std::string debugAST(Node *ast);
+    std::string debugParseTree(Node *ast);
 
     using Expr = expr::Expression;
 
