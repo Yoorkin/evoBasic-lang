@@ -23,7 +23,8 @@ namespace evoBasic::il{
     class Block;
 
     enum DataType{
-        empty,i8,i16,i32,i64,u8,u16,u32,u64,f32,f64,ref,ftn,vftn,sftn,record,array,boolean,character
+        empty,i8,i16,i32,i64,u8,u16,u32,u64,f32,f64,
+        ref,ftn,vftn,sftn,record,array,boolean,character,delegate
     };
 
     class Node {
@@ -356,7 +357,7 @@ namespace evoBasic::il{
         Block &Dup(DataType data);
         Block &Ret();
         Block &Push(DataType data, std::any value);
-        Block &Ldc(ConstructedToken *token);
+        Block &Ldc(Token *token);
         Block &Ldftn(Ftn *ftn);
         Block &Ldsftn(SFtn *sftn);
         Block &Ldvftn(VFtn *vftn);

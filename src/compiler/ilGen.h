@@ -25,6 +25,8 @@ namespace evoBasic{
 
 #define Visit(RETURN,AST,VAR,...) RETURN visit##AST(ast::AST *VAR##_node,##__VA_ARGS__);
     class ILGen{
+        il::ILFactory *factory = nullptr;
+    public:
         Visit(il::IL*,Global,global)
         Visit(il::Class*,Class,class)
         Visit(il::Module*,Module,module)

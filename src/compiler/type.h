@@ -21,6 +21,11 @@
 #include "bytecode.h"
 #include "ir.h"
 
+namespace evoBasic::il{
+    class ILFactory;
+    class Token;
+}
+
 namespace evoBasic::type{
 
     enum class FunctionEnum{User,External,Intrinsic};
@@ -93,11 +98,13 @@ namespace evoBasic::type{
         void setStatic(bool value);
 
         bool isExtern();
+        il::Token *getToken(il::ILFactory *factory);
     };
 
 
     class Prototype : public Symbol{
         data::ptr byte_length = 0;
+
     public:
         Prototype(const Prototype&)=delete;
         explicit Prototype(SymbolKind kind): Symbol(kind){};
