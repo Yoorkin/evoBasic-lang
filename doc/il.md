@@ -14,9 +14,9 @@
 
     reference to class object/array/field/record
 
-- ftn
+- delegate
 
-    reference to function
+    reference to wrapped function
 
 - vftn
 
@@ -48,23 +48,53 @@
 
     transform: ..., vftn,ref -> ...
 
-- callext
+- callstatic
 
-    format: `callext <ExtFtnDecl>`
-
-    transform: ... -> ..., `function return`
-
-- calls
-
-    format: `calls`
+    format: `callstatic`
 
     transform: ..., sftn -> ... 
 
-- call
+- calldlg
 
-    format: `call`
+    format: `calldlg`
 
-    transform: ..., ftn,ref -> ...
+    transform: ..., delegate -> ...
+
+- invoke
+
+    format: `invoke <ExtFtnDecl>`
+
+    transform: ... -> ..., `function return`
+
+- ldsftn
+
+    format: `ldsftn <staticFunctionDecl>`
+
+    transform: ... -> ..., sftn
+
+- ldvirtftn
+
+    format: `ldvftn <virtualFunctionDecl>`
+    
+    transform: ... -> ..., vftn
+
+- wrapvftn
+
+    format: `wrapvftn`
+
+    transform: ...,ref,vftn -> ...,delegate
+
+- wrapsftn
+
+    format: `wrapsftn`
+
+    transform: ..., sftn -> ..., delegate
+
+- wrapext
+
+    format: `wrapext <ExtFtnDecl>`
+
+    transform: ... -> ..., delegate
 
 - jif
 
@@ -96,24 +126,6 @@
     format: `ldc <constDecl>`
 
     transform: ... -> ..., `value of constDecl`
-
-- ldftn
-
-    format: `ldftn <functionDecl>`
-
-    transform: ... -> ..., ftn
-
-- ldsftn
-
-    format: `ldsftn <staticFunctionDecl>`
-
-    transform: ... -> ..., sftn
-
-- ldvirtftn
-
-    format: `ldvftn <virtualFunctionDecl>`
-    
-    transform: ... -> ..., vftn
 
 - ldarg
 

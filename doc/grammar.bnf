@@ -40,8 +40,8 @@ functionInterface ::= "Function" ID "(" [parameterList] ")" "As" annotation;
 subInterface ::= "Sub" ID "(" [parameterList] ")";
 
 externalDecl ::= "Declare" externalFunc | externalSub;
-externalFunc ::= "Function" ["Lib" String] ["Alias" String] ID "(" [parameterList] ")" "As" annotation;
-externalSub ::= "Sub" ID ["Lib" String] ["Alias" String] "(" [parameterList] ")"
+externalFunc ::= "Function" ID ["Lib" String] ["Alias" String]  "(" [parameterList] ")" "As" annotation;
+externalSub ::= "Sub" ID ["Lib" String] ["Alias" String]  "(" [parameterList] ")"
 
 importDecl ::= "Import" annotation;
 
@@ -112,7 +112,12 @@ argsBody ::= ["(" [argList] ")"] ["[" expr "]"];
 argList ::= argument {"," argument};
 argument ::= ["Byval"|"Byref"] expr;
 
-annotation ::= annotationUnit {"." annotationUnit} ["[]"];
+annotation ::= annotationUnit {"." annotationUnit} ["[]"]
+             | "Function" "(" delegate-param {"," delegate-param} ")" "As" annotation
+             | "Sub"      "(" delegate-param {"," delegate-param} ")"
+             ;
+delegate-param ::= ["Optional"|"ParamArray"] ["Byval"|"Byref"] [ID "As"] annotation;
+
 annotationUnit ::= ID;
 
 

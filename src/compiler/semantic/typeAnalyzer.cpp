@@ -586,6 +586,12 @@ namespace evoBasic{
                 ret = fld;
                 break;
             }
+            case ast::Expression::Delegate:{
+                auto delegate = (ast::Delegate*)ast_rhs;
+                if(!delegate->is_static)delegate->ref = ast_lhs;
+                ret = delegate;
+                break;
+            }
             case ast::Expression::SFtn:
             case ast::Expression::Element:
             case ast::Expression::Vector:
@@ -637,7 +643,8 @@ namespace evoBasic{
                 }
                 case type::SymbolKind::Function:{
                     if(args.dot_prefix)check_static_access(id_node->location,args.dot_prefix,target->isStatic());
-                    return (ast::Expression*)new ast::TmpPath(new ExpressionType(target,ExpressionType::path,true));
+                    auto type = new ExpressionType(target, ExpressionType::path, target->isStatic());
+                    return (ast::Expression*)new ast::Delegate(target->as<Function*>(),target->isStatic(),type);
                 }
                 case type::SymbolKind::Module:
                 case type::SymbolKind::Class:
@@ -749,7 +756,7 @@ namespace evoBasic{
                 }
                 break;
             }
-            case FunctionKind::External: ast_node = new ast::SFtnCall; break;
+            case FunctionKind::External: ast_node = new ast::ExtCall; break;
             case FunctionKind::Operator: PANIC;
         }
 
@@ -1010,8 +1017,11 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitInterface(parseTree::Interface *interface_node, TypeAnalyzerArgs args) {
-        //return (ast::Member*)new ast::Interface(interface_node->interface_symbol);
-        return ast::Expression::error;
+        return (ast::Member*)new ast::Interface(interface_node->interface_symbol);
+    }
+
+    std::any TypeAnalyzer::visitExternal(parseTree::External *ext_node, TypeAnalyzerArgs args) {
+        return (ast::Member*)new ast::External(ext_node->function_symbol);
     }
 
 

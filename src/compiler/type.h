@@ -151,6 +151,7 @@ namespace evoBasic::type{
         MemberMap childs;
     protected:
         std::vector<Variable*> memory_layout;
+        int local_count = 0,param_count = 0;
     public:
         class iterator : public std::iterator<std::input_iterator_tag,
                                                     Symbol*,

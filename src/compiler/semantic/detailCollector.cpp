@@ -252,6 +252,7 @@ namespace evoBasic{
             FOR_EACH(parameter,external_node->parameter){
                 visitParameter(parameter,args); 
             }
+            external_node->function_symbol = function;
         }
         return {};
     }

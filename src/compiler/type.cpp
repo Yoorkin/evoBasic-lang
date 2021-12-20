@@ -367,11 +367,11 @@ namespace evoBasic::type{
 
     std::string Symbol::mangling(char separator) {
         if(mangling_name.empty()){
-            if(parent==nullptr || parent->getName() == "global") {
+            if(getParent()==nullptr || getParent()->getName() == "global" || getParent()->getKind() == SymbolKind::TmpDomain) {
                 return mangling_name = getName();
             }
             else{
-                return mangling_name = parent->mangling() + separator + getName();
+                return mangling_name = parent->mangling(separator) + separator + getName();
             }
         }
         else return mangling_name;
@@ -441,7 +441,12 @@ namespace evoBasic::type{
     }
 
     void Domain::addMemoryLayout(Variable *variable) {
-        variable->setLayoutIndex(memory_layout.size());
+        if(variable->isParameter()){
+            variable->setLayoutIndex(param_count++);
+        }
+        else{
+            variable->setLayoutIndex(local_count++);
+        }
         memory_layout.push_back(variable);
     }
 

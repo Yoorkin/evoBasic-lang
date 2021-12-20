@@ -119,14 +119,19 @@ namespace evoBasic::ast{
     };
 
     struct External : Member{
-        External(){member_kind = MemberKind::external_;}
+        External(type::ExternalFunction *symbol){
+            member_kind = MemberKind::external_;
+            this->function_symbol = symbol;
+        }
         type::ExternalFunction *function_symbol = nullptr;
         DebugInfo *debug()override;
     };
 
     struct Interface : Member {
-        Interface(){member_kind = interface_;}
-        Function *function = nullptr;
+        Interface(type::Interface *symbol){
+            member_kind = interface_;
+            this->interface_symbol = symbol;
+        }
         type::Interface *interface_symbol = nullptr;
         DebugInfo *debug()override;
     };
@@ -228,7 +233,7 @@ namespace evoBasic::ast{
         enum ExpressionKind{
             Element,Vector,Ftn,VFtn,SFtn,Local,Arg,Fld,Assign,
             SFld,Digit,Decimal,String,Boolean,Char,Unary,Binary,
-            Cast,New,Parentheses,Empty,Argument,TmpPath
+            Cast,New,Parentheses,Empty,Argument,TmpPath,Ext,Delegate
         }expression_kind = Empty;
         ExpressionType *type = nullptr;
         static Expression *error;
@@ -332,6 +337,19 @@ namespace evoBasic::ast{
         DebugInfo *debug()override;
     };
 
+    struct Delegate : Expression{
+        Delegate(type::Function *target,bool is_static,ExpressionType *type){
+            expression_kind = Expression::Delegate;
+            this->target = target;
+            this->type = type;
+            this->is_static = is_static;
+        }
+        bool is_static;
+        Expression *ref = nullptr;
+        type::Function *target = nullptr;
+        DebugInfo *debug()override;
+    };
+
     struct Call : Expression{
         type::Function *function = nullptr;
         struct Argument *argument = nullptr;
@@ -367,6 +385,13 @@ namespace evoBasic::ast{
     struct SFtnCall : Call{
         SFtnCall(){
             expression_kind = Expression::SFtn;
+        }
+        DebugInfo *debug()override;
+    };
+
+    struct ExtCall : Call{
+        ExtCall(){
+            expression_kind = Expression::Ext;
         }
         DebugInfo *debug()override;
     };
