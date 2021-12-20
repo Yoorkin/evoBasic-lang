@@ -485,6 +485,7 @@ namespace evoBasic{
         auto cls = args.context->getBuiltIn().getStringClass();
         // todo: create string Object and push ref into operand stack
         // return (*str_node).type = new ExpressionType(cls,ExpressionType::rvalue,il::ref);
+        return {};
     }
     
     std::any TypeAnalyzer::visitBinary(parseTree::expr::Binary *binary_node, TypeAnalyzerArgs args) {
@@ -912,6 +913,7 @@ namespace evoBasic{
     }
 
     void TypeAnalyzer::check_static_access(Location *code_location, ExpressionType *lhs, bool is_rhs_static) {
+
         if(lhs->is_static xor is_rhs_static){
             auto lhs_state = lhs->is_static ? "Static" : "Non-static";
             auto rhs_state = is_rhs_static ? "Static" : "Non-static";

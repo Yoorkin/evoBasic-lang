@@ -272,6 +272,7 @@ namespace evoBasic{
                     auto constructor = new type::Constructor(ctor_node);
                     constructor->setLocation(ctor_node->location);
                     cls->setConstructor(constructor);
+                    ctor_node->constructor_symbol = constructor;
                 }
             }
         }

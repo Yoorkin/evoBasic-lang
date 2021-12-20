@@ -47,7 +47,7 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Class::debug() {
-        auto ret = new DebugInfo{format()<<"<Class> "<<class_symbol->getName()};
+        auto ret = new DebugInfo{Format() << "<Class> " << class_symbol->getName()};
         FOR_EACH(iter,member){
             ret->childs.push_back(iter->debug());
         }
@@ -55,7 +55,7 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Module::debug() {
-        auto ret = new DebugInfo{format()<<"<Module> "<<module_symbol->getName()};
+        auto ret = new DebugInfo{Format() << "<Module> " << module_symbol->getName()};
         FOR_EACH(iter,member){
             ret->childs.push_back(iter->debug());
         }
@@ -63,13 +63,13 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Variable::debug() {
-        auto ret = new DebugInfo{format()<<"<Variable> "<<variable_symbol->getName()};
+        auto ret = new DebugInfo{Format() << "<Variable> " << variable_symbol->getName()};
         if(this->initial)ret->childs.push_back(initial->debug());
         return ret;
     }
 
     DebugInfo *Function::debug() {
-        auto ret = new DebugInfo{format()<<"<Function> "<<function_symbol->getName()};
+        auto ret = new DebugInfo{Format() << "<Function> " << function_symbol->getName()};
         FOR_EACH(iter,statement){
             ret->childs.push_back(iter->debug());
         }
@@ -77,7 +77,7 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Constructor::debug() {
-        auto ret = new DebugInfo{format()<<"<Constructor> "<<constructor_symbol->getName()};
+        auto ret = new DebugInfo{Format() << "<Constructor> " << constructor_symbol->getName()};
         FOR_EACH(iter,statement){
             ret->childs.push_back(iter->debug());
         }
@@ -85,19 +85,19 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *External::debug() {
-        return new DebugInfo{format()<<"<External> "<<function_symbol->getName()};
+        return new DebugInfo{Format() << "<External> " << function_symbol->getName()};
     }
 
     DebugInfo *Interface::debug() {
-        return new DebugInfo{format()<<"<Interface> "<<interface_symbol->getName()};
+        return new DebugInfo{Format() << "<Interface> " << interface_symbol->getName()};
     }
 
     DebugInfo *Enum::debug() {
-        return new DebugInfo{format()<<"<Enum> "<<enum_symbol->getName()};
+        return new DebugInfo{Format() << "<Enum> " << enum_symbol->getName()};
     }
 
     DebugInfo *Type::debug() {
-        return new DebugInfo{format()<<"<Type> "<<type_symbol->getName()};
+        return new DebugInfo{Format() << "<Type> " << type_symbol->getName()};
     }
 
     DebugInfo *Let::debug() {
@@ -151,7 +151,7 @@ namespace evoBasic::ast{
 
     DebugInfo *Exit::debug() {
         vector<string> flag = {"For","While","Sub"};
-        return new DebugInfo{format() << "<Exit> " << flag[exit_flag]};
+        return new DebugInfo{Format() << "<Exit> " << flag[exit_flag]};
     }
 
     DebugInfo *Continue::debug() {
@@ -175,7 +175,7 @@ namespace evoBasic::ast{
 
     DebugInfo *Unary::debug() {
         vector<string> OpStr = {"Empty","'-'","'+'"};
-        return new DebugInfo{format() << "Unary " << OpStr[op], {terminal->debug()}};
+        return new DebugInfo{Format() << "Unary " << OpStr[op], {terminal->debug()}};
     }
 
     DebugInfo *Binary::debug() {
@@ -185,7 +185,7 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Cast::debug() {
-        return new DebugInfo{format()<<"<Cast> "<<target->getName(),{expr->debug()}};
+        return new DebugInfo{Format() << "<Cast> " << target->getName(), {expr->debug()}};
     }
 
     DebugInfo *Assign::debug() {
@@ -194,11 +194,11 @@ namespace evoBasic::ast{
 
     DebugInfo *Argument::debug() {
         vector<string> PassKindStr{"Undefined","ByRef","ByVal"};
-        return new DebugInfo{format() << "<Parameter> " << PassKindStr[pass_kind], {expr->debug()}};
+        return new DebugInfo{Format() << "<Parameter> " << PassKindStr[pass_kind], {expr->debug()}};
     }
 
     DebugInfo *New::debug() {
-        auto ret = new DebugInfo{format()<<"<New> "<<target->mangling('.')};
+        auto ret = new DebugInfo{Format() << "<New> " << target->mangling('.')};
         auto iter = argument;
         while(iter){
             ret->childs.push_back(iter->debug());
@@ -219,13 +219,13 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *RecordVector::debug() {
-        return new DebugInfo{format()<<"<Record-Vector> "<<vector->mangling('.'),{
+        return new DebugInfo{Format() << "<Record-Vector> " << vector->mangling('.'), {
            record->debug()
         }};
     }
 
     DebugInfo *FtnCall::debug() {
-        auto ret = new DebugInfo{format()<<"<FtnCall> "<<function->mangling('.'),{ref->debug()}};
+        auto ret = new DebugInfo{Format() << "<FtnCall> " << function->mangling('.'), {ref->debug()}};
         FOR_EACH(iter,argument){
             ret->childs.push_back(iter->debug());
         }
@@ -233,7 +233,7 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *VFtnCall::debug() {
-        auto ret = new DebugInfo{format()<<"<VFtnCall> "<<function->mangling('.'),{ref->debug()}};
+        auto ret = new DebugInfo{Format() << "<VFtnCall> " << function->mangling('.'), {ref->debug()}};
         FOR_EACH(iter,argument){
             ret->childs.push_back(iter->debug());
         }
@@ -241,7 +241,7 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *SFtnCall::debug() {
-        auto ret = new DebugInfo{format()<<"<SFtnCall> "<<function->mangling('.')};
+        auto ret = new DebugInfo{Format() << "<SFtnCall> " << function->mangling('.')};
         FOR_EACH(iter,argument){
             ret->childs.push_back(iter->debug());
         }
@@ -249,7 +249,7 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *ExtCall::debug() {
-        auto ret = new DebugInfo{format()<<"<ExtCall> "<<function->mangling('.')};
+        auto ret = new DebugInfo{Format() << "<ExtCall> " << function->mangling('.')};
         FOR_EACH(iter,argument){
             ret->childs.push_back(iter->debug());
         }
@@ -257,39 +257,39 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Local::debug() {
-        return new DebugInfo{format()<<"<Local> "<<variable->mangling('.')<<'@'<<variable->getLayoutIndex()};
+        return new DebugInfo{Format() << "<Local> " << variable->mangling('.') << '@' << variable->getLayoutIndex()};
     }
 
     DebugInfo *Arg::debug() {
-        return new DebugInfo{format()<<"<Arg> "<<variable->mangling('.')<<'@'<<variable->getLayoutIndex()};
+        return new DebugInfo{Format() << "<Arg> " << variable->mangling('.') << '@' << variable->getLayoutIndex()};
     }
 
     DebugInfo *Fld::debug() {
-        return new DebugInfo{format()<<"<Fld> "<<variable->mangling('.'),{ref->debug()}};
+        return new DebugInfo{Format() << "<Fld> " << variable->mangling('.'), {ref->debug()}};
     }
 
     DebugInfo *SFld::debug() {
-        return new DebugInfo{format()<<"<SFld> "<<variable->mangling('.')};
+        return new DebugInfo{Format() << "<SFld> " << variable->mangling('.')};
     }
 
     DebugInfo *Digit::debug() {
-        return new DebugInfo{format() << "<Digit> " << value};
+        return new DebugInfo{Format() << "<Digit> " << value};
     }
 
     DebugInfo *Decimal::debug() {
-        return new DebugInfo{format() << "<Decimal> " << value};
+        return new DebugInfo{Format() << "<Decimal> " << value};
     }
 
     DebugInfo *String::debug() {
-        return new DebugInfo{format() << "<String> " << value << "\""};
+        return new DebugInfo{Format() << "<String> " << value << "\""};
     }
 
     DebugInfo *Char::debug() {
-        return new DebugInfo{format() << "<Char> '" << value << "'"};
+        return new DebugInfo{Format() << "<Char> '" << value << "'"};
     }
 
     DebugInfo *Boolean::debug() {
-        return new DebugInfo{format() << "<Boolean> " << (value ? "true" : "false")};
+        return new DebugInfo{Format() << "<Boolean> " << (value ? "true" : "false")};
     }
 
     DebugInfo *Dim::debug() {
@@ -301,7 +301,7 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Delegate::debug() {
-        auto ret = new DebugInfo{format()<<"<Delegate> "<<target->mangling('.')};
+        auto ret = new DebugInfo{Format() << "<Delegate> " << target->mangling('.')};
         if(ref)ret->childs.push_back(ref->debug());
         return ret;
     }

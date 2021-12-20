@@ -25,7 +25,7 @@ void addSources(string path){
         sources.push_back(new FileSource(path));
     }
     else{
-        Logger::error(format() << "cannot find file '" << path << "'");
+        Logger::error(Format() << "cannot find file '" << path << "'");
         enable_compile = false;
     }
 }
@@ -62,7 +62,7 @@ void printVersionInfo(string){
 }
 
 void unmatched(string str){
-    Logger::error(format() << "unsupported option '" << str << "'");
+    Logger::error(Format() << "unsupported option '" << str << "'");
     enable_compile = false;
 }
 

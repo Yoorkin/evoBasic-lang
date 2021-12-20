@@ -7,11 +7,11 @@
 #include<sstream>
 #include<string>
 
-class format{
+class Format{
 public:
     std::stringstream stream;
     template<typename T>
-    format & operator<<(T t){
+    Format & operator<<(T t){
         stream<<t;
         return *this;
     }

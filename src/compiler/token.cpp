@@ -82,7 +82,7 @@ namespace evoBasic{
     }
 
     std::string Location::toString() const {
-        return format() << '('
+        return Format() << '('
                         << "x:" << to_string(begin_x)
                         << ",y:" << to_string(begin_y)
                         << ",w:" << to_string(end_x - begin_x) << ')';
@@ -179,7 +179,7 @@ namespace evoBasic{
     }
 
     std::string Token::toString() {
-        return format() << setiosflags(ios::left)
+        return Format() << setiosflags(ios::left)
                         << setw(15) << enum_to_string[(int)kind_]
                         << setw(20) << lexeme_
                         << setw(20) << location_.toString();

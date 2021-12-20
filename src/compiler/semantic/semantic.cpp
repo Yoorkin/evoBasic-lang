@@ -53,13 +53,13 @@ namespace evoBasic{
             Logger::dev("update memory layout topo order: ");
             for(auto &domain : context->byteLengthDependencies.getTopologicalOrder()){
                 domain->updateMemoryLayout();
-                Logger::dev(format() << " -> " << domain->mangling() << "{" << domain->getByteLength() << "}");
+                Logger::dev(Format() << " -> " << domain->mangling() << "{" << domain->getByteLength() << "}");
             }
             Logger::dev("\n");
             return true;
         }
         else{
-            format msg;
+            Format msg;
             msg<<"Recursive declaration in Type.The recursive paths is \n";
             for(auto & circle : context->byteLengthDependencies.getCircles()){
                 msg<<"\t";

@@ -9,6 +9,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <algorithm>
 #include "logger.h"
 
 using namespace std;
@@ -197,7 +198,7 @@ namespace evoBasic::type{
                 addMemoryLayout(symbol->as<Variable*>());
                 break;
             case SymbolKind::TmpDomain:
-                symbol->setName(format() << "#" << tmp_domain_count);
+                symbol->setName(Format() << "#" << tmp_domain_count);
                 tmp_domain_count++;
                 break;
         }
@@ -836,7 +837,7 @@ namespace evoBasic::type{
 
     Array::Array(Prototype *element,data::u32 size)
         : Class(SymbolKind::Array),element_type(element),size_(size){
-        setName(format() << element->getName() << "[" << size << "]");
+        setName(Format() << element->getName() << "[" << size << "]");
     }
 
     Prototype *Array::getElementPrototype() {
@@ -851,7 +852,7 @@ namespace evoBasic::type{
     }
 
     std::string Array::debug(int indent) {
-        return format() << "Ptr<" << element_type->getName() << ">";
+        return Format() << "Ptr<" << element_type->getName() << ">";
     }
 
     data::ptr Array::getByteLength() {
@@ -869,7 +870,7 @@ namespace evoBasic::type{
     vector<string> Operator::KindString = {"Get","Compare","Times","Div","Plus","Minus","UnaryPlus","UnaryMinus","Invoke"};
 
     std::string Operator::getName() {
-        auto str = format();
+        auto str = Format();
         str<<KindString[(int)kind];
         for(auto parameter : getArgsSignature()){
             str<< '-' << parameter->getName();
@@ -910,7 +911,7 @@ namespace evoBasic::type{
         }
         else{
             auto tmp = slot[conflict->second].first;
-            Logger::error({tmp->getLocation(),function->getLocation()}, format() << "naming conflict with '"
+            Logger::error({tmp->getLocation(),function->getLocation()}, Format() << "naming conflict with '"
                                                                                  << tmp->mangling('.') << "' and '" << function->mangling('.') << "'");
         }
     }
@@ -925,7 +926,7 @@ namespace evoBasic::type{
         auto target = this->slot[slot].first;
         if(!target->equal(function)){
             Logger::error({function->getLocation(),target->getLocation()},
-                          format() << "override method '"
+                          Format() << "override method '"
                                 <<target->mangling('.')<<"' and '"
                                 <<function->mangling('.')
                                 <<"' have different parameters or return type");

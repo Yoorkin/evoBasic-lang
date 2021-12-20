@@ -11,8 +11,8 @@
 
 namespace evoBasic::i18n{
 
-#define Fmt(Name,Stream) virtual std::string fmt##Name(Var##Name){return format() << Stream;}
-#define Msg(Name,Stream) virtual std::string msg##Name(){return format() << Stream;}
+#define Fmt(Name,Stream) virtual std::string fmt##Name(Var##Name){return Format() << Stream;}
+#define Msg(Name,Stream) virtual std::string msg##Name(){return Format() << Stream;}
 
 
 #define VarObjectNotFound                   std::string target
