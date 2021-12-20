@@ -177,7 +177,6 @@ namespace evoBasic{
         Transform(New,new)
     };
 #undef Transform
-
 }
 
 
