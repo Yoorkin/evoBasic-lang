@@ -115,6 +115,16 @@ namespace evoBasic::type{
         return true;
     }
 
+    ast::Expression *Parameter::getInitial(){
+        NotNull(initial);
+        return initial;
+    }
+
+    void Parameter::setInitial(ast::Expression *initial) {
+        ASSERT(!is_optional,"setInitial failed.Parameter should be optional");
+        this->initial = initial;
+    }
+
     Prototype *Function::getRetSignature() {
         return this->ret_signature;
     }
@@ -229,8 +239,7 @@ namespace evoBasic::type{
         return FunctionKind::InterfaceFunction;
     }
 
-    UserFunction::UserFunction(FunctionFlag flag, parseTree::Function *function_node)
-        :function_node(function_node),flag(flag){
+    UserFunction::UserFunction(FunctionFlag flag):flag(flag){
         switch (flag) {
             case FunctionFlag::Method:
             case FunctionFlag::Virtual:
@@ -241,10 +250,6 @@ namespace evoBasic::type{
             case FunctionFlag::Static:
                 break;
         }
-    }
-
-    parseTree::Function* UserFunction::getFunctionNode() {
-        return this->function_node;
     }
 
 
@@ -396,6 +401,10 @@ namespace evoBasic::type{
         if(getParent()) ls = move(getParent()->getFullName());
         ls.push_back(getName());
         return ls;
+    }
+
+    il::Token *Symbol::getToken(il::ILFactory *factory) {
+        return nullptr;
     }
 
 

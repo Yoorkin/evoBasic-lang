@@ -26,6 +26,10 @@ namespace evoBasic::il{
     class Token;
 }
 
+namespace evoBasic::ast{
+    class Expression;
+}
+
 namespace evoBasic::type{
 
     enum class FunctionEnum{User,External,Intrinsic};
@@ -268,20 +272,17 @@ namespace evoBasic::type{
     };
 
     class UserFunction : public Function{
-        parseTree::Function *function_node;
         FunctionFlag flag = FunctionFlag::Method;
         Parameter *self = nullptr;
     public:
         UserFunction(const UserFunction&)=delete;
-        UserFunction(FunctionFlag flag, parseTree::Function *function_node);
-        parseTree::Function *getFunctionNode();
+        UserFunction(FunctionFlag flag);
         virtual FunctionFlag getFunctionFlag();
         void setFunctionFlag(FunctionFlag flag);
         bool isStatic()override;
         void setParent(Domain *parent)override;
         std::string debug(int indent)override;
         FunctionKind getFunctionKind()override;
-        
     };
 
 
@@ -412,6 +413,7 @@ namespace evoBasic::type{
 
     class Parameter : public Variable{
         bool is_byval,is_optional,is_param_array;
+        ast::Expression *initial = nullptr;
     public:
         Parameter(std::string name, Prototype *prototype, bool isByval, bool isOptional, bool isParamArray = false);
         std::string debug(int indent)override;
@@ -420,7 +422,8 @@ namespace evoBasic::type{
         bool isParamArray();
         data::ptr getRealByteLength()override;
         bool equal(Parameter* ptr);
-        
+        ast::Expression *getInitial();
+        void setInitial(ast::Expression *initial);
     };
 
     class Array : public Class{

@@ -58,6 +58,7 @@ namespace evoBasic{
         Visit(void,ArrayElement,element,    il::Block *current)
         Visit(void,RecordVector,vector,     il::Block *current)
         Visit(void,Delegate,delegate,       il::Block *current)
+        Visit(void,Argument,argument,       il::Block *current)
         Visit(void,New,new,                 il::Block *current)
         Visit(void,SFtnCall,sftn,           il::Block *current)
         Visit(void,VFtnCall,vftn,           il::Block *current)

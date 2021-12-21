@@ -13,7 +13,7 @@ namespace evoBasic{
     using namespace type;
     using namespace i18n;
 
-    std::any TypeAnalyzer::visitArg(parseTree::expr::Callee::Argument *argument_node, TypeAnalyzerArgs args) {
+    std::any TypeAnalyzer::visitArg(parseTree::expr::Argument *argument_node, TypeAnalyzerArgs args) {
         NotNull(args.checking_function);
         auto function = args.checking_function;
         type::Parameter *param = nullptr;
@@ -80,21 +80,21 @@ namespace evoBasic{
 
         if(param->isByval()){
             switch (argument_node->pass_kind) {
-                case parseTree::expr::Callee::Argument::undefined:
-                case parseTree::expr::Callee::Argument::byval:
+                case parseTree::expr::Argument::undefined:
+                case parseTree::expr::Argument::byval:
                     if(!param->getPrototype()->equal(ast_arg->type->getPrototype())){
                         if(!try_implicit_conversion())report_type_error();
                     }
                     ast_node->pass_kind = ast::Argument::byval;
                     break;
-                case parseTree::expr::Callee::Argument::byref:
+                case parseTree::expr::Argument::byref:
                     Logger::error(argument_node->location, lang->msgExpectedByValButByRef());
                     break;
             }
         }
         else{
             switch (argument_node->pass_kind) {
-                case parseTree::expr::Callee::Argument::byval:
+                case parseTree::expr::Argument::byval:
                     if(!param->getPrototype()->equal(ast_arg->type->getPrototype())){
                         if(!try_implicit_conversion())report_type_error();
                     }
@@ -109,8 +109,8 @@ namespace evoBasic{
                     args.function->addMemoryLayout(argument_node->temp_address);
                     ast_node->pass_kind = ast::Argument::tmp_store;
                     break;
-                case parseTree::expr::Callee::Argument::byref:
-                case parseTree::expr::Callee::Argument::undefined:
+                case parseTree::expr::Argument::byref:
+                case parseTree::expr::Argument::undefined:
                     if(ast_arg->type->value_kind != ExpressionType::lvalue){
                         Logger::error(argument_node->location, lang->msgCannotPassTmpValByRefImplicit());
                     }
@@ -212,6 +212,15 @@ namespace evoBasic{
         auto ast_node = new ast::Function;
         auto function = function_node->function_symbol;
         args.domain = args.function = ast_node->function_symbol = function;
+        //verify default expression of optional parameter
+        args.checking_arg_index = 0;
+        args.checking_function = function;
+        FOR_EACH(iter,function_node->parameter){
+            if(iter->is_optional){
+                visitParameter(iter,args);
+                args.checking_arg_index++;
+            }
+        }
         ast_node->statement = visitStatementList(function_node->statement,args);
         return (ast::Member*)ast_node;
     } 
@@ -924,11 +933,11 @@ namespace evoBasic{
     std::any TypeAnalyzer::visitColon(parseTree::expr::Colon *colon_node, TypeAnalyzerArgs args) {
         if(colon_node->lhs->expression_kind != parseTree::expr::Expression::ID_){
             Logger::error(colon_node->location,lang->msgParamInitialExpectedIDInLhs());
-            return ExpressionType::Error;
+            return ast::Expression::error;
         }
         if(!args.checking_function){
             Logger::error(colon_node->location,lang->msgParamInitialNotAllowed());
-            return ExpressionType::Error;
+            return ast::Expression::error;
         }
         else{
             return visitExpression(colon_node->rhs,args);
@@ -1018,6 +1027,15 @@ namespace evoBasic{
         }
     }
 
+    std::any TypeAnalyzer::visitParameter(parseTree::Parameter *param_node, TypeAnalyzerArgs args) {
+        if(param_node->is_optional){
+            auto ast_exp = any_cast<ast::Expression*>(visitExpression(param_node->initial,args));
+            args.checking_function->getArgsOptions()[args.checking_arg_index]->setInitial(ast_exp);
+            return ast_exp;
+        }
+        return {};
+    }
+
     std::any TypeAnalyzer::visitInterface(parseTree::Interface *interface_node, TypeAnalyzerArgs args) {
         return (ast::Member*)new ast::Interface(interface_node->interface_symbol);
     }
@@ -1025,6 +1043,8 @@ namespace evoBasic{
     std::any TypeAnalyzer::visitExternal(parseTree::External *ext_node, TypeAnalyzerArgs args) {
         return (ast::Member*)new ast::External(ext_node->function_symbol);
     }
+
+
 
 
 }

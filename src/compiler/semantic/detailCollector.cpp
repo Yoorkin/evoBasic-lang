@@ -205,7 +205,7 @@ namespace evoBasic{
                     break;
             }
 
-            function = new type::UserFunction(flag, function_node);
+            function = new type::UserFunction(flag);
             function->setStatic(function_node->is_static);
             function->setLocation(function_node->name->location);
             function->setName(name);

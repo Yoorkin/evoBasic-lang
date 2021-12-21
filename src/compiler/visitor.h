@@ -46,7 +46,7 @@ namespace evoBasic{
         virtual std::any visitColon(parseTree::expr::Colon *colon_node, ARGS args){PANIC;}
 
         virtual std::any visitCallee(parseTree::expr::Callee *callee_node, ARGS args){PANIC;}
-        virtual std::any visitArg(parseTree::expr::Callee::Argument *arg_node, ARGS args){PANIC;}
+        virtual std::any visitArg(parseTree::expr::Argument *arg_node, ARGS args){PANIC;}
 
         virtual std::any visitID(parseTree::expr::ID *id_node, ARGS args){PANIC;}
         virtual std::any visitDigit(parseTree::expr::Digit *digit_node, ARGS args){PANIC;}
@@ -104,7 +104,7 @@ namespace evoBasic{
         virtual std::any visitCast(parseTree::expr::Cast **cast_node, ARGS args){PANIC;}
 
         virtual std::any visitCallee(parseTree::expr::Callee **callee_node, ARGS args){PANIC;}
-        virtual std::any visitArg(parseTree::expr::Callee::Argument **arg_node, ARGS args){PANIC;}
+        virtual std::any visitArg(parseTree::expr::Argument **arg_node, ARGS args){PANIC;}
 
         virtual std::any visitID(parseTree::expr::ID **id_node, ARGS args){PANIC;}
         virtual std::any visitDigit(parseTree::expr::Digit **digit_node, ARGS args){PANIC;}

@@ -59,6 +59,7 @@ namespace evoBasic{
         std::any visitInterface(parseTree::Interface *interface_node, TypeAnalyzerArgs args) override;
         std::any visitExternal(parseTree::External *ext_node, TypeAnalyzerArgs args) override;
         std::any visitVariable(parseTree::Variable *var_node, TypeAnalyzerArgs args) override;
+        std::any visitParameter(parseTree::Parameter *param_node, TypeAnalyzerArgs args) override;
 
         std::any visitMember(parseTree::Member *member_node, TypeAnalyzerArgs args) override;
         std::any visitStatement(parseTree::stmt::Statement *stmt_node, TypeAnalyzerArgs args) override;
@@ -81,7 +82,7 @@ namespace evoBasic{
         std::any visitAssign(parseTree::expr::Assign *assign_node, TypeAnalyzerArgs args) override;
         std::any visitColon(parseTree::expr::Colon *colon_node, TypeAnalyzerArgs args) override;
         std::any visitCallee(parseTree::expr::Callee *callee_node, TypeAnalyzerArgs args) override;
-        std::any visitArg(parseTree::expr::Callee::Argument *arg_node, TypeAnalyzerArgs args) override;
+        std::any visitArg(parseTree::expr::Argument *arg_node, TypeAnalyzerArgs args) override;
         std::any visitNew(parseTree::expr::New *new_node, TypeAnalyzerArgs args) override;
         std::any visitAnnotation(parseTree::Annotation *anno_node, TypeAnalyzerArgs args) override;
         std::any visitAnnotationUnit(parseTree::AnnotationUnit *unit_node, TypeAnalyzerArgs args) override;

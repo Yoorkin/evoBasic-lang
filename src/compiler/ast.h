@@ -104,6 +104,7 @@ namespace evoBasic::ast{
         DebugInfo *debug()override;
     };
 
+
     struct Function : Member{
         Function(){member_kind = MemberKind::function_;}
         Statement* statement = nullptr;

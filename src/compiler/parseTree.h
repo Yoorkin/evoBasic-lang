@@ -465,7 +465,6 @@ namespace evoBasic::parseTree{
         };
 
         struct Callee : Expression{
-            using Argument = Argument;//TODO remove it
             Callee(){
                 expression_kind = ExpressionKind::callee_;
             }

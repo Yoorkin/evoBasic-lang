@@ -11,24 +11,29 @@ namespace evoBasic{
 
     DataType mapILType(type::Prototype *type){
         switch(type->getKind()){
-            case type::SymbolKind::Module:
-            case type::SymbolKind::EnumMember:
-            case type::SymbolKind::TmpDomain:
-            case type::SymbolKind::Variable:
-            case type::SymbolKind::Parameter:
-            case type::SymbolKind::Interface:
-            case type::SymbolKind::Error: PANIC;
-            case type::SymbolKind::Class: return il::ref;
-            case type::SymbolKind::Enum:  return il::u32;
-            case type::SymbolKind::Record: return il::record;
-            case type::SymbolKind::Function: return il::delegate;
-            case type::SymbolKind::Array: return il::array;
+            case type::SymbolKind::Class:       return il::ref;
+            case type::SymbolKind::Enum:        return il::u32;
+            case type::SymbolKind::Record:      return il::record;
+            case type::SymbolKind::Function:    return il::delegate;
+            case type::SymbolKind::Array:       return il::array;
             case type::SymbolKind::Primitive:{
                 auto primitive = type->as<type::Primitive*>();
-                switch(primitive->getDataKind()){
-
+                switch(primitive->getDataKind().getValue()){
+                    case vm::Data::i8:      return il::i8;
+                    case vm::Data::i16:     return il::i16;
+                    case vm::Data::i32:     return il::i32;
+                    case vm::Data::i64:     return il::i64;
+                    case vm::Data::u8:      return il::u8;
+                    case vm::Data::u16:     return il::u16;
+                    case vm::Data::u32:     return il::u32;
+                    case vm::Data::u64:     return il::u64;
+                    case vm::Data::f32:     return il::f32;
+                    case vm::Data::f64:     return il::f64;
+                    case vm::Data::boolean: return il::boolean;
+                    default: PANIC;
                 }
             }
+            default: PANIC;
         }
     }
 
@@ -141,6 +146,10 @@ namespace evoBasic{
 
     }
 
+    Visit(void,Argument,argument,       il::Block *current){
+
+    }
+
     Visit(void,New,new,                 il::Block *current){
 
     }
@@ -150,17 +159,21 @@ namespace evoBasic{
     }
 
     Visit(void,VFtnCall,vftn, il::Block *current){
+        visitExpression(vftn_node->ref,current);
+        auto token = vftn_node->function->getToken(factory);
+        FOR_EACH(iter,vftn_node->argument){
 
+        }
     }
 
     Visit(void,ExtCall,ext, il::Block *current){
         auto token = ext_node->function->getToken(factory);
-        current->Ldfld(,token);
+        //current->Ldfld(,token);
     }
 
     Visit(void,SFld,sfld, il::Block *current){
         auto token = sfld_node->variable->getToken(factory);
-        current->Ldsfld(,token);
+        //current->Ldsfld(,token);
     }
 
     Visit(void,Fld,fld, il::Block *current){
@@ -173,7 +186,7 @@ namespace evoBasic{
 
     Visit(void,Local,local, il::Block *current){
         auto index = local_node->variable->getLayoutIndex();
-        current->Push(DataType::u16,(data::u16),index);
+        //current->Push(DataType::u16,(data::u16),index);
         current->Ldloc(mapILType(local_node->variable->getPrototype()));
     }
 

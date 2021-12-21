@@ -309,7 +309,7 @@ namespace evoBasic::parseTree{
         return new DebugInfo{Format() << "ID '" << lexeme << "'"};
     }
 
-    DebugInfo *expr::Callee::Argument::debug() {
+    DebugInfo *expr::Argument::debug() {
         vector<string> PassKindStr{"Undefined","ByRef","ByVal"};
         return new DebugInfo{Format() << "Parameter " << PassKindStr[pass_kind], {expr->debug()}};
     }

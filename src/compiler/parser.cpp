@@ -966,11 +966,11 @@ namespace evoBasic{
     }
 
 
-    parseTree::expr::Callee::Argument* Parser::parseArgsList(Follows follows){
+    parseTree::expr::Argument* Parser::parseArgsList(Follows follows){
         auto addition_follows = combine(follows,{Token::COMMA});
 
         lexer->match(Token::LP);
-        Callee::Argument *tail = nullptr,*head = nullptr;
+        Argument *tail = nullptr,*head = nullptr;
 
         if(!lexer->predict(Token::RP)){
             tail = head = parseArg(addition_follows);
@@ -989,17 +989,17 @@ namespace evoBasic{
     }
 
 
-    parseTree::expr::Callee::Argument *Parser::parseArg(Follows follows) {
-        auto arg = new Callee::Argument;
+    parseTree::expr::Argument *Parser::parseArg(Follows follows) {
+        auto arg = new Argument;
         auto begin_location = lexer->getNextToken()->getLocation();
 
         if(lexer->predict(Token::byval_)){
             lexer->match(Token::byval_);
-            arg->pass_kind = parseTree::expr::Callee::Argument::byval;
+            arg->pass_kind = parseTree::expr::Argument::byval;
         }
         else if(lexer->predict(Token::byref_)){
             lexer->match(Token::byref_);
-            arg->pass_kind = parseTree::expr::Callee::Argument::byref;
+            arg->pass_kind = parseTree::expr::Argument::byref;
         }
         arg->expr = parseLogic(follows);
         arg->location = new Location(begin_location,lexer->getToken()->getLocation());

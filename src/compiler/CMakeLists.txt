@@ -12,6 +12,7 @@ file(GLOB COMPILER_SOURCE
         parseTree.cpp
         ast.cpp
         ilGen.cpp
+        il.cpp
         semantic/defaultVisitor.cpp
         semantic/symbolCollector.cpp
         semantic/detailCollector.cpp

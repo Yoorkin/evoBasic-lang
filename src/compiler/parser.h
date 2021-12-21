@@ -61,7 +61,7 @@ namespace evoBasic{
 
         //callee\id\index
         parseTree::expr::Expression *parseUnit(Follows follows);
-        parseTree::expr::Callee::Argument *parseArg(Follows follows);
+        parseTree::expr::Argument *parseArg(Follows follows);
 
         parseTree::expr::Digit *parseDigit(Follows follows);
         parseTree::expr::Decimal *parseDecimal(Follows follows);
@@ -72,7 +72,7 @@ namespace evoBasic{
 
         parseTree::Parameter *parseParameterList(Follows follows);
         parseTree::stmt::Statement *parseStmtList(Follows follows);
-        parseTree::expr::Callee::Argument* parseArgsList(Follows follows);
+        parseTree::expr::Argument* parseArgsList(Follows follows);
         parseTree::expr::New *parseNew(Follows follows);
     };
 
