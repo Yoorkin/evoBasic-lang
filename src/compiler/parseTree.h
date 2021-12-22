@@ -458,7 +458,6 @@ namespace evoBasic::parseTree{
 
         struct Argument : Node{
             enum PassKind{undefined,byref,byval}pass_kind = undefined;
-            type::Variable *temp_address = nullptr;
             expr::Expression *expr = nullptr;
             Argument *next_sibling = nullptr,*prv_sibling = nullptr;
             DebugInfo *debug()override;

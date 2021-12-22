@@ -57,7 +57,7 @@ namespace evoBasic{
         bool isExplicitCastRuleExist(Ptr src, Ptr dst)const;
         bool isImplicitCastRuleExist(Ptr src, Ptr dst)const;
         std::optional<Rule> getImplicitPromotionRule(Ptr lhs, Ptr rhs)const;
-        void insertCastAST(Value dst, parseTree::expr::Expression **expression);
+        void insertCastAST(Value dst, ast::Expression **expression);
     };
 
     class Context{

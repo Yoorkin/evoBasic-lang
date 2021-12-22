@@ -198,7 +198,7 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Argument::debug() {
-        return new DebugInfo{Format() << "<Argument>", {expr->debug()}};
+        return new DebugInfo{Format() << "<Argument>" << (byval ? "" : " ref"), {expr->debug()}};
     }
 
     DebugInfo *New::debug() {

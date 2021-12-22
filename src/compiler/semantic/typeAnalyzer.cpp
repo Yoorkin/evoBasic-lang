@@ -23,21 +23,20 @@ namespace evoBasic{
      *   ============================================================================================
      */
 
-    bool try_implicit_conversion(parseTree::Argument *argument_node,ast::Argument *ast_node,Context *context){
-        auto arg_prototype = ast_node->expr->type->getPrototype();
-        auto param_prototype = ast_node->parameter->getPrototype();
-        if(context->getConversionRules().isImplicitCastRuleExist(arg_prototype,param_prototype)){
-            Logger::warning(argument_node->location,lang->fmtImplicitCvtFromAToB(arg_prototype->getName(),param_prototype->getName()));
-            context->getConversionRules().insertCastAST(param_prototype,&argument_node->expr);
+    void try_implicit_conversion(Location *location,ast::Expression **expr,type::Prototype *target,Context *context){
+        auto prototype = (*expr)->type->getPrototype();
+        if(context->getConversionRules().isImplicitCastRuleExist(prototype,target)){
+            Logger::warning(location,lang->fmtImplicitCvtFromAToB(prototype->getName(),target->getName()));
+            context->getConversionRules().insertCastAST(target,expr);
         }
         else{
-            Logger::error(argument_node->location, lang->fmtArgCannotMatchParam(param_prototype->getName(),arg_prototype->getName()));
+            Logger::error(location, lang->fmtCannotImplicitCvtAToB(prototype->getName(),target->getName()));
         }
     }
 
     void passValToVal(parseTree::Argument *argument_node,ast::Argument *ast_node,Context *context){
         if(!ast_node->parameter->getPrototype()->equal(ast_node->expr->type->getPrototype())){
-            try_implicit_conversion(argument_node,ast_node,context);
+            try_implicit_conversion(argument_node->location,&ast_node->expr,ast_node->parameter->getPrototype(),context);
         }
         ast_node->byval = true;
     }
@@ -61,23 +60,28 @@ namespace evoBasic{
 
 
         if(!ast_node->parameter->getPrototype()->equal(ast_node->expr->type->getPrototype())){
-            try_implicit_conversion(argument_node,ast_node,context);
+            try_implicit_conversion(argument_node->location,&ast_node->expr,ast_node->parameter->getPrototype(),context);
         }
-        argument_node->temp_address = new type::Variable;
-        argument_node->temp_address->setPrototype(ast_node->parameter->getPrototype());
+
+        auto tmp_var = new type::Variable;
+        tmp_var->setPrototype(param_prototype);
+        function->addMemoryLayout(tmp_var);
+
+        auto assign = new ast::Assign(new ast::Local(tmp_var,new ExpressionType(param_prototype,ExpressionType::lvalue)),ast_node->expr);
+        ast_node->expr = assign;
+
         switch (ast_node->parameter->getPrototype()->getKind()) {
             case SymbolKind::Record:
             case SymbolKind::Array:
                 context->byteLengthDependencies.addDependent(function, ast_node->parameter->getPrototype()->as<Domain*>());
                 break;
         }
-        function->addMemoryLayout(argument_node->temp_address);
         ast_node->byval = false;
     }
 
 
-    void parameterPassingResolution(parseTree::Argument *argument_node,ast::Argument *ast_node,
-                                    type::Function *function,Context *context){
+    void parameterPassingResolution(parseTree::Argument *argument_node, ast::Argument *ast_node,
+                                    type::Function *current_function, Context *context){
 
         using passBy = parseTree::expr::Argument;
         if(ast_node->parameter->isByval()){
@@ -94,7 +98,7 @@ namespace evoBasic{
         else{
             switch (argument_node->pass_kind) {
             case passBy::byval:
-                passValToRef(argument_node,ast_node,function,context);
+                passValToRef(argument_node, ast_node, current_function, context);
                 break;
             case passBy::byref:
             case passBy::undefined:
@@ -144,7 +148,7 @@ namespace evoBasic{
         ast_node->parameter = param;
         ast_node->type = ast_arg->type;
 
-        parameterPassingResolution(argument_node,ast_node,function,args.context);
+        parameterPassingResolution(argument_node,ast_node,args.function,args.context);
 
         return (ast::Expression*)ast_node;
     }
@@ -283,7 +287,7 @@ namespace evoBasic{
                             if(args.context->getConversionRules().isImplicitCastRuleExist(ast_initial->type->getPrototype(),anno_prototype)){
                                 Logger::warning(iter->initial->location,
                                                 lang->fmtImplicitCvtFromAToB(ast_initial->type->getPrototype()->getName(),anno_prototype->getName()));
-                                args.context->getConversionRules().insertCastAST(anno_prototype,&(iter->initial));
+                                //args.context->getConversionRules().insertCastAST(anno_prototype,&(iter->initial)); todo
                             }
                             else {
                                 Logger::error(iter->initial->location,
@@ -438,7 +442,7 @@ namespace evoBasic{
         if(!dst_prototype->equal(ast_expr->type->getPrototype())){
             if(args.context->getConversionRules().isImplicitCastRuleExist(ast_expr->type->getPrototype(),dst_prototype)){
                 Logger::warning(ret_node->expr->location, lang->fmtImplicitCvtFromAToB(ast_expr->type->getPrototype()->getName(),dst_prototype->getName()));
-                args.context->getConversionRules().insertCastAST(dst_prototype,&ret_node->expr);
+                args.context->getConversionRules().insertCastAST(dst_prototype,&ast_node->expr);
             }
             else{
                 Logger::error(ret_node->location, lang->fmtCannotImplicitCvtAToB(ast_expr->type->getPrototype()->mangling('.'),"'Integer'"));
@@ -468,6 +472,7 @@ namespace evoBasic{
             case exp::callee_:      return visitCallee((Callee*)expr_node,args);
             case exp::ID_:          return visitID((ID*)expr_node,args);
             case exp::colon_:       return visitColon((Colon*)expr_node,args);
+            case exp::cast_:        return visitCast((Cast*)expr_node,args);
         }
         PANIC;
     }
@@ -564,7 +569,9 @@ namespace evoBasic{
             case Op::GT:
             case Op::LT:{
                 if(!check_binary_op_valid(binary_node->location,args.context->getConversionRules(),
-                                          ast_lhs->type->getPrototype(),ast_rhs->type->getPrototype(),&binary_node->lhs,&binary_node->rhs))
+                                          ast_lhs->type->getPrototype(),ast_rhs->type->getPrototype(),
+                                          binary_node->lhs,binary_node->rhs,
+                                          &ast_node->lhs,&ast_node->rhs))
                     return ast::Expression::error;
                 ast_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue,il::boolean);
                 break;
@@ -575,7 +582,9 @@ namespace evoBasic{
             case Op::DIV:
             case Op::FDIV:{
                 auto result_type = check_binary_op_valid(binary_node->location,args.context->getConversionRules(),
-                                                         ast_lhs->type->getPrototype(),ast_rhs->type->getPrototype(),&binary_node->lhs,&binary_node->rhs);
+                                                         ast_lhs->type->getPrototype(),ast_rhs->type->getPrototype(),
+                                                         binary_node->lhs,binary_node->rhs,
+                                                         &ast_node->lhs,&ast_node->rhs);
                 if(!result_type) return ast::Expression::error;
                 ast_node->type = new ExpressionType(ast_lhs->type->getPrototype(),ExpressionType::rvalue);
                 break;
@@ -717,8 +726,9 @@ namespace evoBasic{
             Logger::error(assign_node->location, lang->msgAssignmentRequireLvalue());
         }
 
-        check_binary_op_valid(assign_node->location,args.context->getConversionRules(),
-                              ast_lhs->type->getPrototype(),ast_rhs->type->getPrototype(),&assign_node->lhs,&assign_node->rhs);
+        if(!ast_lhs->type->getPrototype()->equal(ast_rhs->type->getPrototype())){
+            try_implicit_conversion(assign_node->location,&ast_node->rhs,ast_lhs->type->getPrototype(),args.context);
+        }
 
         ast_node->type = ast_lhs->type;
         return (ast::Expression*)ast_node;
@@ -752,7 +762,7 @@ namespace evoBasic{
         if(!dst_prototype->equal(ast_value->type->getPrototype())){
             if(args.context->getConversionRules().isImplicitCastRuleExist(ast_value->type->getPrototype(),dst_prototype)){
                 Logger::warning(index_node->value->location, lang->fmtImplicitCvtFromAToB(ast_value->type->getPrototype()->getName(),dst_prototype->getName()));
-                args.context->getConversionRules().insertCastAST(dst_prototype,&index_node->value);
+                args.context->getConversionRules().insertCastAST(dst_prototype,&ast_node->offset);
             }
             else{
                 Logger::error(index_node->location, lang->fmtCannotImplicitCvtAToB(ast_value->type->getPrototype()->mangling('.'),"'Integer'"));
@@ -874,19 +884,21 @@ namespace evoBasic{
     }
     
     Prototype *TypeAnalyzer::check_binary_op_valid(Location *code,ConversionRules &rules,
-                                             Prototype *lhs,Prototype *rhs,parseTree::Expression **lhs_node,parseTree::Expression **rhs_node) {
+                                                   Prototype *lhs,Prototype *rhs,
+                                                   parseTree::Expression *lhs_node,parseTree::Expression *rhs_node,
+                                                   ast::Expression **ast_lhs,ast::Expression **ast_rhs) {
         if(!rhs->equal(lhs)){
             auto result = rules.getImplicitPromotionRule(lhs,rhs);
             if(result.has_value()){
                 auto rule = result.value();
                 auto result_type = rule.second;
                 if(!lhs->equal(result_type)) {
-                    Logger::warning((*lhs_node)->location,lang->fmtImplicitCvtFromAToB(lhs->getName(),result_type->getName()));
-                    rules.insertCastAST(result_type, lhs_node);
+                    Logger::warning(lhs_node->location,lang->fmtImplicitCvtFromAToB(lhs->getName(),result_type->getName()));
+                    rules.insertCastAST(result_type, ast_lhs);
                 }
                 if(!rhs->equal(result_type)) {
-                    Logger::warning((*rhs_node)->location,lang->fmtImplicitCvtFromAToB(rhs->getName(),result_type->getName()));
-                    rules.insertCastAST(result_type, rhs_node);
+                    Logger::warning(rhs_node->location,lang->fmtImplicitCvtFromAToB(rhs->getName(),result_type->getName()));
+                    rules.insertCastAST(result_type, ast_rhs);
                 }
                 return result_type;
             }
@@ -1075,7 +1087,10 @@ namespace evoBasic{
         return (ast::Member*)new ast::External(ext_node->function_symbol);
     }
 
-
+    std::any TypeAnalyzer::visitCast(parseTree::expr::Cast *cast_node, TypeAnalyzerArgs args) {
+        //todo
+        PANIC;
+    }
 
 
 }
