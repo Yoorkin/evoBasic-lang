@@ -7,7 +7,6 @@
 #include "parser.h"
 #include "semantic/semantic.h"
 #include "context.h"
-#include "codeGen.h"
 #include "cmd.h"
 namespace fs = std::filesystem;
 using namespace evoBasic;

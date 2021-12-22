@@ -138,10 +138,6 @@ namespace evoBasic{
 
     }
 
-    Visit(void,RecordVector,vector,     il::Block *current){
-
-    }
-
     Visit(void,Delegate,delegate,       il::Block *current){
 
     }
@@ -154,16 +150,137 @@ namespace evoBasic{
 
     }
 
+    void ILGen::visitFtnCall(ast::FtnCall *ftn_node, il::Block *current) {
+
+    }
+
     Visit(void,SFtnCall,sftn,           il::Block *current){
 
     }
 
-    Visit(void,VFtnCall,vftn, il::Block *current){
+
+    void ILGen::loadCalleeArguments(ast::Call *call,il::Block *current){
+        map<string,ast::Argument*> used_options;
+
+//        // load regular argument by declaration order
+//        FOR_EACH(iter,call->argument){
+//            if(iter->is_option)used_options.insert({iter->parameter->getName(),iter});
+//            else{
+//                visitArgument(iter,current);
+//            }
+//        }
+
+        // load optional argument by declaration order
+        for(auto parameter : call->function->getArgsOptions()){
+            auto target = used_options.find(parameter->getName());
+            // load value declared in invoke,otherwise load default value
+            if(target != used_options.end()){
+                visitArgument(target->second,current);
+            }
+            else{
+                auto default_exp = parameter->getInitial();
+                visitExpression(default_exp,current);
+                if(parameter->isByval()){
+                    // pass byval
+                    switch (default_exp->expression_kind) {
+                        case ast::Expression::Assign:{
+                            //todo
+                            break;
+                        }
+                        case ast::Expression::Ftn:
+                            visitFtnCall((ast::FtnCall*)default_exp,current);
+                            break;
+                        case ast::Expression::VFtn:
+                            visitVFtnCall((ast::VFtnCall*)default_exp,current);
+                            break;
+                        case ast::Expression::SFtn:
+                            visitSFtnCall((ast::SFtnCall*)default_exp,current);
+                            break;
+                        case ast::Expression::Fld:{
+                            auto fld = (ast::Fld*)default_exp;
+                            visitFld(fld,current);
+                            current->Ldfld(mapILType(fld->variable->getPrototype()),fld->variable->getToken(factory));
+                            break;
+                        }
+                        case ast::Expression::SFld:{
+                            auto sfld = (ast::SFld*)default_exp;
+                            visitSFld(sfld,current);
+                            current->Ldsfld(mapILType(sfld->variable->getPrototype()),sfld->variable->getToken(factory));
+                            break;
+                        }
+                        case ast::Expression::Element:
+                        case ast::Expression::Unary:
+                        case ast::Expression::Binary:
+                        case ast::Expression::New:
+                        case ast::Expression::Digit:
+                        case ast::Expression::Decimal:
+                        case ast::Expression::String:
+                        case ast::Expression::Boolean:
+                        case ast::Expression::Char:
+                        case ast::Expression::Delegate:
+                        case ast::Expression::Parentheses:
+                        case ast::Expression::Cast:
+                            // do nothing
+                            break;
+                        default: PANIC;
+                    }
+                }
+                else{
+                    // pass byref
+                    switch (default_exp->expression_kind) {
+                        case ast::Expression::Assign:{
+                            //todo
+                            break;
+                        }
+                        case ast::Expression::Ftn:
+                            visitFtnCall((ast::FtnCall*)default_exp,current);
+
+                            break;
+                        case ast::Expression::VFtn:
+                            visitVFtnCall((ast::VFtnCall*)default_exp,current);
+                            break;
+                        case ast::Expression::SFtn:
+                            visitSFtnCall((ast::SFtnCall*)default_exp,current);
+                            break;
+                        case ast::Expression::Fld:{
+                            auto fld = (ast::Fld*)default_exp;
+                            visitFld(fld,current);
+                            current->Ldfld(mapILType(fld->variable->getPrototype()),fld->variable->getToken(factory));
+                            break;
+                        }
+                        case ast::Expression::SFld:{
+                            auto sfld = (ast::SFld*)default_exp;
+                            visitSFld(sfld,current);
+                            current->Ldsfld(mapILType(sfld->variable->getPrototype()),sfld->variable->getToken(factory));
+                            break;
+                        }
+                        case ast::Expression::Element:
+                        case ast::Expression::Unary:
+                        case ast::Expression::Binary:
+                        case ast::Expression::New:
+                        case ast::Expression::Digit:
+                        case ast::Expression::Decimal:
+                        case ast::Expression::String:
+                        case ast::Expression::Boolean:
+                        case ast::Expression::Char:
+                        case ast::Expression::Delegate:
+                        case ast::Expression::Parentheses:
+                        case ast::Expression::Cast:
+                            // do nothing
+                            break;
+                        default: PANIC;
+                    }
+                }
+            }
+            auto target_exp = (target != used_options.end() ? target->second->expr : parameter->getInitial());
+            visitExpression(target_exp,current);
+        }
+    }
+
+    void ILGen::visitVFtnCall(ast::VFtnCall *vftn_node, il::Block *current) {
         visitExpression(vftn_node->ref,current);
         auto token = vftn_node->function->getToken(factory);
-        FOR_EACH(iter,vftn_node->argument){
-
-        }
+        loadCalleeArguments(vftn_node,current);
     }
 
     Visit(void,ExtCall,ext, il::Block *current){

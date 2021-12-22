@@ -232,7 +232,7 @@ namespace evoBasic::ast{
 
     struct Expression : Node{
         enum ExpressionKind{
-            Element,Vector,Ftn,VFtn,SFtn,Local,Arg,Fld,Assign,
+            Element,Ftn,VFtn,SFtn,Local,ArgUse,Fld,Assign,
             SFld,Digit,Decimal,String,Boolean,Char,Unary,Binary,
             Cast,New,Parentheses,Empty,Argument,TmpPath,Ext,Delegate
         }expression_kind = Empty;
@@ -301,9 +301,7 @@ namespace evoBasic::ast{
         Argument(){
             expression_kind = Expression::Argument;
         }
-        enum PassKind{byref,byval,tmp_store}pass_kind;
-        bool is_option = false;
-        type::Variable *temp_address = nullptr;
+        bool byval = false;
         type::Parameter *parameter = nullptr;
         Expression *expr = nullptr;
         Argument *next_sibling = nullptr,*prv_sibling = nullptr;
@@ -326,15 +324,6 @@ namespace evoBasic::ast{
         }
         Expression *array = nullptr;
         Expression *offset = nullptr;
-        DebugInfo *debug()override;
-    };
-
-    struct RecordVector : Expression{
-        RecordVector(){
-            expression_kind = Expression::Vector;
-        }
-        Expression *record = nullptr;
-        type::Variable *vector = nullptr;
         DebugInfo *debug()override;
     };
 
@@ -409,7 +398,7 @@ namespace evoBasic::ast{
 
     struct Arg : Expression{
         Arg(type::Variable *variable,ExpressionType *type){
-            expression_kind = Expression::Arg;
+            expression_kind = Expression::ArgUse;
             this->variable = variable;
             this->type = type;
         }

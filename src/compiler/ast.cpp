@@ -198,8 +198,7 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Argument::debug() {
-        vector<string> PassKindStr{"Undefined","ByRef","ByVal"};
-        return new DebugInfo{Format() << "<Parameter> " << PassKindStr[pass_kind], {expr->debug()}};
+        return new DebugInfo{Format() << "<Argument>", {expr->debug()}};
     }
 
     DebugInfo *New::debug() {
@@ -223,11 +222,6 @@ namespace evoBasic::ast{
         }};
     }
 
-    DebugInfo *RecordVector::debug() {
-        return new DebugInfo{Format() << "<Record-Vector> " << vector->mangling('.'), {
-           record->debug()
-        }};
-    }
 
     DebugInfo *FtnCall::debug() {
         auto ret = new DebugInfo{Format() << "<FtnCall> " << function->mangling('.'), {ref->debug()}};
@@ -266,7 +260,7 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Arg::debug() {
-        return new DebugInfo{Format() << "<Arg> " << variable->mangling('.') << '@' << variable->getLayoutIndex()};
+        return new DebugInfo{Format() << "<ArgUse> " << variable->mangling('.') << '@' << variable->getLayoutIndex()};
     }
 
     DebugInfo *Fld::debug() {

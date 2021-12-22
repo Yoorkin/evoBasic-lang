@@ -13,6 +13,98 @@ namespace evoBasic{
     using namespace type;
     using namespace i18n;
 
+
+
+    /*   ==============================Parameter passing strategy====================================
+     *   Param\Arg            ByVal                  ByRef                Undefined
+     *   ByVal      Yes,allow implicit conversion.    Error         Yes,allow implicit conversion.
+     *   ByRef      store value to tmp address,    Error when arg        Error when arg
+     *              allow implicit conversion.      is not lvalue.        is not lvalue.
+     *   ============================================================================================
+     */
+
+    bool try_implicit_conversion(parseTree::Argument *argument_node,ast::Argument *ast_node,Context *context){
+        auto arg_prototype = ast_node->expr->type->getPrototype();
+        auto param_prototype = ast_node->parameter->getPrototype();
+        if(context->getConversionRules().isImplicitCastRuleExist(arg_prototype,param_prototype)){
+            Logger::warning(argument_node->location,lang->fmtImplicitCvtFromAToB(arg_prototype->getName(),param_prototype->getName()));
+            context->getConversionRules().insertCastAST(param_prototype,&argument_node->expr);
+        }
+        else{
+            Logger::error(argument_node->location, lang->fmtArgCannotMatchParam(param_prototype->getName(),arg_prototype->getName()));
+        }
+    }
+
+    void passValToVal(parseTree::Argument *argument_node,ast::Argument *ast_node,Context *context){
+        if(!ast_node->parameter->getPrototype()->equal(ast_node->expr->type->getPrototype())){
+            try_implicit_conversion(argument_node,ast_node,context);
+        }
+        ast_node->byval = true;
+    }
+
+    void passRefToRef(parseTree::Argument *argument_node,ast::Argument *ast_node){
+        if(ast_node->expr->type->value_kind != ExpressionType::lvalue){
+            Logger::error(argument_node->location, lang->msgCannotPassTmpValByRefImplicit());
+        }
+        else if(!ast_node->parameter->getPrototype()->equal(ast_node->expr->type->getPrototype())){
+            auto arg_prototype = ast_node->expr->type->getPrototype();
+            auto param_prototype = ast_node->parameter->getPrototype();
+            Logger::error(argument_node->location, lang->fmtArgCannotMatchParam(param_prototype->getName(),arg_prototype->getName()));
+        }
+        ast_node->byval = false;
+    }
+
+    void passValToRef(parseTree::Argument *argument_node,ast::Argument *ast_node,
+                      type::Function *function,Context *context){
+        auto arg_prototype = ast_node->expr->type->getPrototype();
+        auto param_prototype = ast_node->parameter->getPrototype();
+
+
+        if(!ast_node->parameter->getPrototype()->equal(ast_node->expr->type->getPrototype())){
+            try_implicit_conversion(argument_node,ast_node,context);
+        }
+        argument_node->temp_address = new type::Variable;
+        argument_node->temp_address->setPrototype(ast_node->parameter->getPrototype());
+        switch (ast_node->parameter->getPrototype()->getKind()) {
+            case SymbolKind::Record:
+            case SymbolKind::Array:
+                context->byteLengthDependencies.addDependent(function, ast_node->parameter->getPrototype()->as<Domain*>());
+                break;
+        }
+        function->addMemoryLayout(argument_node->temp_address);
+        ast_node->byval = false;
+    }
+
+
+    void parameterPassingResolution(parseTree::Argument *argument_node,ast::Argument *ast_node,
+                                    type::Function *function,Context *context){
+
+        using passBy = parseTree::expr::Argument;
+        if(ast_node->parameter->isByval()){
+            switch(argument_node->pass_kind) {
+            case passBy::undefined:
+            case passBy::byval:
+                passValToVal(argument_node,ast_node,context);
+                break;
+            case passBy::byref:
+                Logger::error(argument_node->location, lang->msgExpectedByValButByRef());
+                break;
+            }
+        }
+        else{
+            switch (argument_node->pass_kind) {
+            case passBy::byval:
+                passValToRef(argument_node,ast_node,function,context);
+                break;
+            case passBy::byref:
+            case passBy::undefined:
+                passRefToRef(argument_node,ast_node);
+                break;
+            }
+        }
+    }
+
+
     std::any TypeAnalyzer::visitArg(parseTree::expr::Argument *argument_node, TypeAnalyzerArgs args) {
         NotNull(args.checking_function);
         auto function = args.checking_function;
@@ -20,7 +112,6 @@ namespace evoBasic{
         auto *ast_node = new ast::Argument;
         if(argument_node->expr->expression_kind == parseTree::expr::Expression::colon_){
             // parameter initialization
-            ast_node->is_option = true;
             auto colon_node = (parseTree::Colon*)(argument_node->expr);
             if(colon_node->lhs->expression_kind != parseTree::expr::Expression::ID_){
                 Logger::error(colon_node->lhs->location,lang->msgExpectedParamNameInOptInitialization());
@@ -33,95 +124,28 @@ namespace evoBasic{
                 return ast::Expression::error;
             }
             param = args.checking_function->getArgsOptions()[opt_index.value()];
-            ast_node->parameter = param;
         }
         else{
             // regular parameter
             if(args.checking_arg_index >= function->getArgsSignature().size()){
-                if(function->getParamArray())param = function->getParamArray(); // paramArray
-                else return ast::Expression::error;
+                if(!function->getParamArray())return ast::Expression::error;
+                param = function->getParamArray(); // paramArray
             }
             else {
                 param = function->getArgsSignature()[args.checking_arg_index];
-                ast_node->parameter = param;
             }
         }
-
-
 
         args.dot_prefix = nullptr;
         auto ast_arg = any_cast<ast::Expression*>(visitExpression(argument_node->expr, args));
-        ast_node->expr = ast_arg;
-
         if(ast_arg->type->value_kind == ExpressionType::error)return ast::Expression::error;
 
-        auto arg_prototype = ast_arg->type->getPrototype();
-        auto param_prototype = param->getPrototype();
-
-        auto report_type_error = [&](){
-            Logger::error(argument_node->location, lang->fmtArgCannotMatchParam(param_prototype->getName(),arg_prototype->getName()));
-        };
-
-        auto try_implicit_conversion = [&]()->bool{
-            if(args.context->getConversionRules().isImplicitCastRuleExist(arg_prototype,param_prototype)){
-                Logger::warning(argument_node->location,lang->fmtImplicitCvtFromAToB(arg_prototype->getName(),param_prototype->getName()));
-                args.context->getConversionRules().insertCastAST(param_prototype,&argument_node->expr);
-                return true;
-            }
-            return false;
-        };
-
-        /*
-         *   Param\Arg          ByVal                     ByRef                Undefined
-         *   ByVal      Yes,allow implicit conversion.    Error         Yes,allow implicit conversion.
-         *   ByRef      store value to tmp address,    Error when arg        Error when arg
-         *              allow implicit conversion.      is not lvalue.        is not lvalue.
-         */
-
-        if(param->isByval()){
-            switch (argument_node->pass_kind) {
-                case parseTree::expr::Argument::undefined:
-                case parseTree::expr::Argument::byval:
-                    if(!param->getPrototype()->equal(ast_arg->type->getPrototype())){
-                        if(!try_implicit_conversion())report_type_error();
-                    }
-                    ast_node->pass_kind = ast::Argument::byval;
-                    break;
-                case parseTree::expr::Argument::byref:
-                    Logger::error(argument_node->location, lang->msgExpectedByValButByRef());
-                    break;
-            }
-        }
-        else{
-            switch (argument_node->pass_kind) {
-                case parseTree::expr::Argument::byval:
-                    if(!param->getPrototype()->equal(ast_arg->type->getPrototype())){
-                        if(!try_implicit_conversion())report_type_error();
-                    }
-                    argument_node->temp_address = new type::Variable;
-                    argument_node->temp_address->setPrototype(param->getPrototype());
-                    switch (param->getPrototype()->getKind()) {
-                        case SymbolKind::Record:
-                        case SymbolKind::Array:
-                            args.context->byteLengthDependencies.addDependent(args.function, param->getPrototype()->as<Domain*>());
-                            break;
-                    }
-                    args.function->addMemoryLayout(argument_node->temp_address);
-                    ast_node->pass_kind = ast::Argument::tmp_store;
-                    break;
-                case parseTree::expr::Argument::byref:
-                case parseTree::expr::Argument::undefined:
-                    if(ast_arg->type->value_kind != ExpressionType::lvalue){
-                        Logger::error(argument_node->location, lang->msgCannotPassTmpValByRefImplicit());
-                    }
-                    else if(!param->getPrototype()->equal(ast_arg->type->getPrototype())){
-                        report_type_error();
-                    }
-                    ast_node->pass_kind = ast::Argument::byref;
-                    break;
-            }
-        }
+        ast_node->expr = ast_arg;
+        ast_node->parameter = param;
         ast_node->type = ast_arg->type;
+
+        parameterPassingResolution(argument_node,ast_node,function,args.context);
+
         return (ast::Expression*)ast_node;
     }
 
@@ -604,9 +628,8 @@ namespace evoBasic{
             }
             case ast::Expression::SFtn:
             case ast::Expression::Element:
-            case ast::Expression::Vector:
             case ast::Expression::Local:
-            case ast::Expression::Arg:
+            case ast::Expression::ArgUse:
             case ast::Expression::SFld:
             case ast::Expression::Assign:
                 ret = ast_rhs;
@@ -978,16 +1001,24 @@ namespace evoBasic{
             args.checking_function = target;
             args.checking_arg_index = 0;
             ast::Argument *tail = nullptr;
+            std::list<parseTree::Argument*> optional_arguments;
             FOR_EACH(iter,argument){
-                auto ast_argument = (ast::Argument*)any_cast<ast::Expression*>(visitArg(iter,args));
-                if(tail == nullptr) tail = ast_node->argument = ast_argument;
-                else{
-                    tail->next_sibling = ast_argument;
-                    ast_argument->prv_sibling = tail;
-                    tail = ast_argument;
+                if(iter->expr->expression_kind == parseTree::Expression::colon_){
+                    // optional parameter initialization
+                    optional_arguments.push_back(iter);
                 }
-                args.checking_arg_index++;
+                else{
+                    auto ast_argument = (ast::Argument*)any_cast<ast::Expression*>(visitArg(iter,args));
+                    if(tail == nullptr) tail = ast_node->argument = ast_argument;
+                    else{
+                        tail->next_sibling = ast_argument;
+                        ast_argument->prv_sibling = tail;
+                        tail = ast_argument;
+                    }
+                    args.checking_arg_index++;
+                }
             }
+            //todo optional_arguments
         }
 
     }

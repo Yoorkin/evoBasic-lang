@@ -56,10 +56,10 @@ namespace evoBasic{
         Visit(void,Cast,cast,               il::Block *current)
         Visit(void,Parentheses,parentheses, il::Block *current)
         Visit(void,ArrayElement,element,    il::Block *current)
-        Visit(void,RecordVector,vector,     il::Block *current)
         Visit(void,Delegate,delegate,       il::Block *current)
         Visit(void,Argument,argument,       il::Block *current)
         Visit(void,New,new,                 il::Block *current)
+        Visit(void,FtnCall,ftn,             il::Block *current)
         Visit(void,SFtnCall,sftn,           il::Block *current)
         Visit(void,VFtnCall,vftn,           il::Block *current)
         Visit(void,ExtCall,ext,             il::Block *current)
@@ -73,6 +73,7 @@ namespace evoBasic{
         Visit(void,Char,char,               il::Block *current)
         Visit(void,Boolean,boolean,         il::Block *current)
 
+        void loadCalleeArguments(ast::Call *call, il::Block *current);
     };
 #undef Visit
 }
