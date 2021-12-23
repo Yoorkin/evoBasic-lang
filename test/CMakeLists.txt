@@ -21,7 +21,6 @@ add_executable(
     codegen.cc
     ${UTILS_SOURCE}
     ${CMAKE_SOURCE_DIR}/src/compiler/ast.cpp
-    ${CMAKE_SOURCE_DIR}/src/compiler/codeGen.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/context.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/ir.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/lexer.cpp
@@ -35,8 +34,7 @@ add_executable(
     ${CMAKE_SOURCE_DIR}/src/compiler/type.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/visitor.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/parseTree.cpp
-    compileHelper.h
-        ../src/compiler/ast.cpp ../src/compiler/ast.h)
+    )
 
 target_include_directories(
     cbTest PRIVATE

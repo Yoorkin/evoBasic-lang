@@ -72,7 +72,7 @@ namespace evoBasic::ast{
         auto ret = new DebugInfo{Format() << "<Function> " << function_symbol->getName()};
         for(auto &option : function_symbol->getArgsOptions()){
             ret->childs.push_back(
-                    new DebugInfo{Format() << "<Optional> " << option->getName(),{option->getInitial()->debug()}}
+                    new DebugInfo{Format() << "<Optional> " << option->getName(),{option->getDefaultArgument()->debug()}}
             );
         }
         FOR_EACH(iter,statement){

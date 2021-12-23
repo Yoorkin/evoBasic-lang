@@ -96,6 +96,7 @@ namespace evoBasic::i18n{
         Msg(ParamInitialExpectedIDInLhs,"lhs of parameter initialization must be an id")
         Msg(ParamInitialNotAllowed,"a parameter initialization is allowed only in function or sub")
         Msg(NameConflicit,"Naming conflict in current scope")
+        Msg(OptionalNeedDefaultValue,"optional parameter must have a default value")
     };
 
 

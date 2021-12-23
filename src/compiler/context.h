@@ -14,6 +14,10 @@
 
 namespace evoBasic{
 
+    namespace ast{
+        struct Expression;
+    }
+
     using SymbolPtr = type::Symbol*;
     using PromotionRuleFunction = std::function<std::shared_ptr<type::Prototype>(parseTree::Node *node)>;
     using BinaryOpSignature = std::pair<SymbolPtr,SymbolPtr>;

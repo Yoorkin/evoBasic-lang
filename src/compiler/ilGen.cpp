@@ -178,7 +178,7 @@ namespace evoBasic{
                 visitArgument(target->second,current);
             }
             else{
-                auto default_exp = parameter->getInitial();
+                auto default_exp = parameter->getDefaultArgument();
                 visitExpression(default_exp,current);
                 if(parameter->isByval()){
                     // pass byval
@@ -272,7 +272,7 @@ namespace evoBasic{
                     }
                 }
             }
-            auto target_exp = (target != used_options.end() ? target->second->expr : parameter->getInitial());
+            auto target_exp = (target != used_options.end() ? target->second->expr : parameter->getDefaultArgument());
             visitExpression(target_exp,current);
         }
     }

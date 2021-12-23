@@ -115,14 +115,14 @@ namespace evoBasic::type{
         return true;
     }
 
-    ast::Expression *Parameter::getInitial(){
-        NotNull(initial);
-        return initial;
+    ast::Argument *Parameter::getDefaultArgument(){
+        NotNull(default_argument);
+        return default_argument;
     }
 
-    void Parameter::setInitial(ast::Expression *initial) {
+    void Parameter::setDefaultArgument(ast::Argument *argument) {
         ASSERT(!is_optional,"setInitial failed.Parameter should be optional");
-        this->initial = initial;
+        this->default_argument = argument;
     }
 
     Prototype *Function::getRetSignature() {

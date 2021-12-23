@@ -27,7 +27,7 @@ namespace evoBasic::il{
 }
 
 namespace evoBasic::ast{
-    class Expression;
+    class Argument;
 }
 
 namespace evoBasic::type{
@@ -413,7 +413,8 @@ namespace evoBasic::type{
 
     class Parameter : public Variable{
         bool is_byval,is_optional,is_param_array;
-        ast::Expression *initial = nullptr;
+        ast::Argument *default_argument = nullptr;
+        //Location *initial_location = nullptr;
     public:
         Parameter(std::string name, Prototype *prototype, bool isByval, bool isOptional, bool isParamArray = false);
         std::string debug(int indent)override;
@@ -422,8 +423,8 @@ namespace evoBasic::type{
         bool isParamArray();
         data::ptr getRealByteLength()override;
         bool equal(Parameter* ptr);
-        ast::Expression *getInitial();
-        void setInitial(ast::Expression *initial);
+        ast::Argument *getDefaultArgument();
+        void setDefaultArgument(ast::Argument *argument);
     };
 
     class Array : public Class{
