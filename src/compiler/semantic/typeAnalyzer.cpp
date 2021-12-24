@@ -408,7 +408,8 @@ namespace evoBasic{
         else{
             auto ast_begin = any_cast<ast::Expression*>(visitExpression((*forstmt_node).begin,args)),
                     ast_end = any_cast<ast::Expression*>(visitExpression((*forstmt_node).end,args));
-
+            ast_node->begin = ast_begin;
+            ast_node->end = ast_end;
             if(!ast_begin->type->getPrototype()->equal(ast_iterator->type->getPrototype())){
                 Logger::error(forstmt_node->begin->location,
                               lang->fmtForStmtBeginExpNotMatch(ast_begin->type->getPrototype()->getName(),ast_iterator->type->getPrototype()->getName()));
@@ -419,13 +420,14 @@ namespace evoBasic{
             }
             if((*forstmt_node).step){
                 auto ast_step = any_cast<ast::Expression*>(visitExpression(forstmt_node->step,args));
+                ast_node->step = ast_step;
                 if(!ast_step->type->getPrototype()->equal(ast_iterator->type->getPrototype())){
                     Logger::error(forstmt_node->begin->location,
                                   lang->fmtForStmtStepExpNotMatch(ast_step->type->getPrototype()->getName(),ast_iterator->type->getPrototype()->getName()));
                 }
             }
         }
-
+        ast_node->iterator = ast_iterator;
         ast_node->statement = visitStatementList(forstmt_node->statement,args);
         return (ast::Statement*)ast_node;
     }

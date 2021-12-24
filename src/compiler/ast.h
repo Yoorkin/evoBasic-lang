@@ -250,7 +250,8 @@ namespace evoBasic::ast{
 
     struct Unary : Expression{
         Unary(){expression_kind = ExpressionKind::Unary;}
-        parseTree::Unary::Enum op = parseTree::Unary::Enum::Empty;
+        using Op = parseTree::Unary::Enum;
+        Op op = Op::Empty;
         Expression *terminal = nullptr;
         Unary(parseTree::Unary::Enum op,Expression *terminal):Unary(){
             this->op = op;
@@ -269,7 +270,8 @@ namespace evoBasic::ast{
             this->op = op;
         }
         Expression *lhs = nullptr;
-        parseTree::Binary::Enum op = parseTree::Binary::Enum::Empty;
+        using Op = parseTree::Binary::Enum;
+        Op op = Op::Empty;
         Expression *rhs = nullptr;
         type::Variable *temp_address = nullptr;
         DebugInfo *debug()override;

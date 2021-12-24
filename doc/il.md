@@ -34,6 +34,26 @@
 
     memory of whole array
 
+
+# calling convention
+
+## virtual function
+
+..., ref, vftn, `arg1 value`, `arg2 value` -> ..., `result1 value`, `result2 value`
+
+## method 
+
+..., ref, ftn, `arg1 value`, `arg2 value` -> ..., `result1 value`, `result2 value`
+
+## static function
+
+..., sftn, `arg1 value`, `arg2 value` -> ..., `result1 value`, `result2 value`
+
+## delegate
+
+..., delegate, `arg1 value`, `arg2 value` -> ..., `result1 value`, `result2 value`
+
+
 # instructions
 
 - nop
@@ -42,29 +62,41 @@
 
     transform: ... -> ...
 
+- call
+
+    format: `call`
+
+    transform: ..., ftn, ref, ... -> ...
+
 - callvirt
 
     format: `callvirt`
 
-    transform: ..., vftn,ref -> ...
+    transform: ..., vftn, ref, ... -> ...
 
 - callstatic
 
     format: `callstatic`
 
-    transform: ..., sftn -> ... 
+    transform: ..., sftn, ... -> ... 
 
 - calldlg
 
     format: `calldlg`
 
-    transform: ..., delegate -> ...
+    transform: ..., delegate, ... -> ...
 
 - invoke
 
     format: `invoke <ExtFtnDecl>`
 
     transform: ... -> ..., `function return`
+
+- ldftn
+
+    format: `ldftn <MethodDecl>`
+
+    transform: ... -> ..., ftn
 
 - ldsftn
 
@@ -133,12 +165,6 @@
 
     transform: ..., u16 -> ..., `data type`
 
-- starg
-
-    format: `starg.<DataType>`
-
-    transform: ..., u16, `data type` -> ...
-
 - ldarga
 
     format: `ldarga`
@@ -155,7 +181,13 @@
 
     format: `ldloca`
 
-    transform: ..., u16 -> ..., ptr
+    transform: ..., u16 -> ..., ref
+
+- starg
+
+    format: `starg.<DataType>`
+
+    transform: ..., u16, `data type` -> ...
 
 - stloc
 
@@ -163,35 +195,17 @@
 
     transform: .., u16, `data type` -> ...
 
-- ldfld
+- stelem
 
-    format: `ldfld.<DataType> <FieldDecl>`
+    format: `stelem.<DataType>`
 
-    transform: ..., ref -> `data type` 
-
-- ldsfld
-
-    format: `ldsfld.<DataType> <staticFieldDecl>`
-
-    transform: ... -> `data type`
-
-- ldflda
-
-    format: `ldflda.<DataType> <FieldDecl>`
-
-    transform: ..., ref -> `data type`
-
-- ldsflda
-
-    format: `ldsflda.<DataType> <StaticFieldDecl>`
-
-    transform: ... -> `data type`
+    transform: ..., ref, u16, `data type value` -> ...
 
 - stfld
 
     format: `stfld.<DataType> <FieldDecl>`
 
-    transform: ..., `data type`,ref -> ...
+    transform: ..., ref, `data type` -> ...
 
 - stsfld
 
@@ -199,23 +213,41 @@
 
     transform: ..., `data type` -> ...
 
+- ldfld
+
+    format: `ldfld.<DataType> <FieldDecl>`
+
+    transform: ..., ref -> ..., `data type` 
+
+- ldsfld
+
+    format: `ldsfld.<DataType> <staticFieldDecl>`
+
+    transform: ... -> ..., `data type`
+
+- ldflda
+
+    format: `ldflda <FieldDecl>`
+
+    transform: ..., ref -> ..., ref
+
+- ldsflda
+
+    format: `ldsflda <StaticFieldDecl>`
+
+    transform: ... -> ..., ref
+
 - ldelem
 
     format: `ldelem.<DataType>`
 
-    transform: ..., u16,ref -> `data type` 
+    transform: ..., ref, u16 -> ..., `data type` 
 
 - ldelema
 
     format: `ldelema`
 
-    transform: ..., u16,ref -> ref
-
-- stelem
-
-    format: `stelem.<DataType>`
-
-    transform: ..., `data type value`, u16, ref -> 
+    transform: ..., ref, u16 -> ..., ref
 
 - ldnull
 
@@ -242,6 +274,10 @@
 
     transform: ..., `src data type` -> ..., `dst data type`
 
+## Binary operation
+
+transform: ..., `lhs`, `rhs` -> ..., `result`
+
 - Add
 - Sub
 - Mul
@@ -249,14 +285,19 @@
 - And
 - Or
 - Xor
-- Not
 - EQ
 - NE
 - LT
 - GT
 - LE
 - GE
+
+## Unary operation
+
+transform: ..., `value` -> ..., `value`
+
 - Neg
+- Not
 
 # example
 

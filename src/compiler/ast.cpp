@@ -142,8 +142,8 @@ namespace evoBasic::ast{
             iterator->debug(),
             begin->debug(),
             end->debug(),
-            step->debug()
         }};
+        if(step)ret->childs.push_back(step->debug());
         FOR_EACH(iter,statement){
             ret->childs.push_back(iter->debug());
         }

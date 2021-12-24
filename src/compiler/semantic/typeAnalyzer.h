@@ -105,7 +105,6 @@ namespace evoBasic{
 
         ast::Member *visitAllMember(type::Domain *domain, parseTree::Member *member, TypeAnalyzerArgs args);
 
-        evoBasic::il::DataType mapPrototypeToIL(type::Prototype *variable_prototype);
     };
 }
 

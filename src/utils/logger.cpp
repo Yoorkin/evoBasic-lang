@@ -43,7 +43,7 @@ namespace evoBasic{
             for(int i=0;i<8;i++)*out<<' ';
             *out<<" │ ";
             for(int i=0;i<pos->getBeginX()-1;i++)*out<<' ';
-            *out<< ( is_error ? RED : PURPLE) <<'^';
+            *out<< ( is_error ? RED : YELLOW) <<'^';
             for(int i=1;i<pos->getEndX()-pos->getBeginX();i++)*out<<'~';
             *out<<NC<<endl;
         }
@@ -86,7 +86,7 @@ namespace evoBasic{
 
     void Logger::warning(const Location *pos, const string &message) {
         Logger::warningCount++;
-        *out << PURPLE << "warning: " << message << NC << endl;
+        *out << YELLOW << "warning: " << message << NC << endl;
         code(pos);
     }
 

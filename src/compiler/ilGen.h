@@ -26,6 +26,7 @@ namespace evoBasic{
 #define Visit(RETURN,AST,VAR,...) RETURN visit##AST(ast::AST *VAR##_node,##__VA_ARGS__);
     class ILGen{
         il::ILFactory *factory = nullptr;
+        il::Block *for_next = nullptr,*loop_next = nullptr;
     public:
         Visit(il::IL*,Global,global)
         Visit(il::Class*,Class,class)
@@ -46,8 +47,9 @@ namespace evoBasic{
         Visit(il::Block*,For,for,               il::Block *current,il::Block *next)
         Visit(il::Block*,ExprStmt,expr_stmt,    il::Block *current,il::Block *next)
         Visit(il::Block*,Return,return,         il::Block *current,il::Block *next)
-        Visit(il::Block*,Exit,exit,             il::Block *current,il::Block *next)
+        Visit(il::Block*,Exit,exit,             il::Block *current)
         Visit(il::Block*,Continue,continue,     il::Block *current,il::Block *next)
+        Visit(il::Block*,Statement,statement,   il::Block *current,il::Block *next)
 
         Visit(void,Expression,expression,   il::Block *current)
         Visit(void,Unary,unary,             il::Block *current)

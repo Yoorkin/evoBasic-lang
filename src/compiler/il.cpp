@@ -412,15 +412,15 @@ namespace evoBasic::il{
         return *this;
     }
 
-    Block &Block::Ldftn(Ftn *ftn) {
+    Block &Block::Ldftn(Token *ftn) {
         return *this;
     }
 
-    Block &Block::Ldsftn(SFtn *sftn) {
+    Block &Block::Ldsftn(Token *sftn) {
         return *this;
     }
 
-    Block &Block::Ldvftn(VFtn *vftn) {
+    Block &Block::Ldvftn(Token *vftn) {
         return *this;
     }
 
@@ -452,11 +452,11 @@ namespace evoBasic::il{
         return *this;
     }
 
-    Block &Block::Ldflda(DataType data, Token *fld) {
+    Block &Block::Ldflda(Token *fld) {
         return *this;
     }
 
-    Block &Block::Ldsflda(DataType data, Token *sfld) {
+    Block &Block::Ldsflda(Token *sfld) {
         return *this;
     }
 
@@ -484,11 +484,11 @@ namespace evoBasic::il{
         return *this;
     }
 
-    Block &Block::Newobj(Class *cls) {
+    Block &Block::Newobj(Token *cls) {
         return *this;
     }
 
-    Block &Block::Castcls(Class *src, Class *dst) {
+    Block &Block::Castcls(Token *src, Token *dst) {
         return *this;
     }
 
@@ -500,11 +500,15 @@ namespace evoBasic::il{
         return *this;
     }
 
-    Block &Block::Callext(Ext *external) {
+    Block &Block::Invoke(Token *external) {
         return *this;
     }
 
     Block &Block::Callstatic() {
+        return *this;
+    }
+
+    Block &Block::Call() {
         return *this;
     }
 

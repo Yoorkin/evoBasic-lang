@@ -228,7 +228,9 @@ namespace evoBasic::parseTree{
     }
 
     DebugInfo *stmt::For::debug() {
-        auto ret = new DebugInfo{"For",{begin->debug(),end->debug()}};
+        auto ret = new DebugInfo{Format()<<"For"<<(iterator_has_let ? " let":""),{
+            iterator->debug(),begin->debug(),end->debug()
+        }};
         if(step)ret->childs.push_back(step->debug());
         auto iter = statement;
         while(iter){
