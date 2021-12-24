@@ -120,6 +120,7 @@ namespace evoBasic{
                 params.push_back(factory->createParam(iter->getName(),iter->getPrototype(),!iter->isByval()));
             }
         }
+        return params;
     }
 
     il::Module *ILGen::visitModule(ast::Module *module_node) {
@@ -618,7 +619,14 @@ namespace evoBasic{
                 auto arg = (ast::Arg*)expr;
                 current->Push(il::u16,(data::u16)arg->variable->getLayoutIndex());
                 visitExpression(assign_node->rhs,current);
-                current->Stloc(mapILType(arg->variable->getPrototype()));
+                current->Starg(mapILType(arg->variable->getPrototype()));
+                break;
+            }
+            case ast::Expression::Local:{
+                auto local = (ast::Local*)expr;
+                current->Push(il::u16,(data::u16)local->variable->getLayoutIndex());
+                visitExpression(assign_node->rhs,current);
+                current->Stloc(mapILType(local->variable->getPrototype()));
                 break;
             }
             default: PANIC;

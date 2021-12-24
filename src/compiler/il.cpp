@@ -297,9 +297,10 @@ namespace evoBasic::il{
         return nullptr;
     }
 
-    Document *ILFactory::createDocument() {
+    Document *ILFactory::createDocument(std::vector<Member *> members) {
         return nullptr;
     }
+
 
     std::string Local::toString() {
         return std::string();
@@ -326,11 +327,11 @@ namespace evoBasic::il{
     }
 
     Block &Block::Br(Block *block) {
-
+        return *this;
     }
 
     Block &Block::Jif(Block *block) {
-
+        return *this;
     }
 
     Block &Block::EQ(DataType data) {
@@ -519,6 +520,10 @@ namespace evoBasic::il{
 
     Block &Block::Call() {
         return *this;
+    }
+
+    data::u32 Block::getAddress() {
+        return 0;
     }
 
     std::string Token::toString() {
