@@ -314,6 +314,10 @@ namespace evoBasic::type{
         return FunctionKind::External;
     }
 
+    std::string ExternalFunction::getLibName() {
+        return library;
+    }
+
 
     TemporaryDomain::TemporaryDomain(type::Domain *parent,Function *function)
             : Domain(SymbolKind::TmpDomain),parent_function(function){

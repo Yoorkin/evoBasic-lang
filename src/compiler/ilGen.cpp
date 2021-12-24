@@ -37,66 +37,249 @@ namespace evoBasic{
         }
     }
 
-#define Visit(RETURN,AST,VAR,...) RETURN ILGen::visit##AST(ast::AST *VAR##_node,##__VA_ARGS__)
-    Visit(il::IL*,Global,global){
-
+    il::IL *ILGen::visitGlobal(ast::Global *global_node) {
+        auto members = visitMember(global_node->member);
+        //return factory->createModule(global_node->global_symbol->getName(),global_node->global_symbol->getAccessFlag(),members);
     }
 
-    Visit(il::Class*,Class,class){
-
+    il::Class *ILGen::visitClass(ast::Class *class_node) {
+        auto members = visitMember(class_node->member);
+        auto cls = class_node->class_symbol;
+        auto extend = factory->createExtend(cls->getExtend());
+        vector<Impl*> impls;
+        for(auto [_,interface] : cls->getImplMap()){
+            impls.push_back(factory->createImplements(interface));
+        }
+        return factory->createClass(cls->getName(),cls->getAccessFlag(),extend,impls,members);
     }
 
-    Visit(il::Module*,Module,module){
-
+    il::SFld *ILGen::visitStaticField(ast::Variable *variable_node){
+        auto variable = variable_node->variable_symbol;
+        return factory->createStaticField(variable->getName(),variable->getAccessFlag(),variable->getPrototype());
     }
 
-    Visit(il::Interface*,Interface,interface){
-
+    il::Fld *ILGen::visitField(ast::Variable *variable_node){
+        auto variable = variable_node->variable_symbol;
+        return factory->createField(variable->getName(),variable->getAccessFlag(),variable->getPrototype());
     }
 
-    Visit(il::Record*,Type,type){
-
+    vector<Member*> ILGen::visitMember(ast::Member *member){
+        vector<Member*> members;
+        FOR_EACH(iter,member){
+            switch(iter->member_kind){
+                case ast::Member::function_:
+                    members.push_back(visitFunction((ast::Function*)iter));
+                    break;
+                case ast::Member::class_:
+                    members.push_back(visitClass((ast::Class*)iter));
+                    break;
+                case ast::Member::module_:
+                    members.push_back(visitModule((ast::Module*)iter));
+                    break;
+                case ast::Member::type_:
+                    members.push_back(visitType((ast::Type*)iter));
+                    break;
+                case ast::Member::enum_:
+                    members.push_back(visitEnum((ast::Enum*)iter));
+                    break;
+                case ast::Member::dim_:{
+                    auto dim = (ast::Dim*)iter;
+                    FOR_EACH(variable,dim->variable){
+                        if(variable->variable_symbol->isStatic()){
+                            members.push_back(visitStaticField(variable));
+                        }
+                        else{
+                            members.push_back(visitField(variable));
+                        }
+                    }
+                    break;
+                }
+                case ast::Member::external_:
+                    members.push_back(visitExternal((ast::External*)iter));
+                    break;
+                case ast::Member::interface_:
+                    members.push_back(visitInterface((ast::Interface*)iter));
+                    break;
+            }
+        }
+        return members;
     }
 
-    Visit(il::Enum*,Enum,enum){
-
+    vector<il::Param*> ILGen::visitParameter(vector<type::Parameter*> parameters){
+        vector<Param*> params;
+        for(auto iter : parameters){
+            if(iter->isOptional()){
+                auto block = new il::Block;
+                visitExpression(iter->getDefaultArgument()->expr,block);
+                params.push_back(factory->createOption(iter->getName(),iter->getPrototype(),!iter->isByval(),block));
+            }
+            else if(iter->isParamArray()){
+                params.push_back(factory->createParamArray(iter->getName(),iter->getPrototype(),!iter->isByval()));
+            }
+            else{
+                params.push_back(factory->createParam(iter->getName(),iter->getPrototype(),!iter->isByval()));
+            }
+        }
     }
 
-    Visit(il::Ftn*,Function,function){
-
+    il::Module *ILGen::visitModule(ast::Module *module_node) {
+        auto members = visitMember(module_node->member);
+        auto mod = module_node->module_symbol;
+        return factory->createModule(mod->getName(),mod->getAccessFlag(),members);
     }
 
-    Visit(il::Ext*,External,external){
-
+    il::Interface *ILGen::visitInterface(ast::Interface *interface_node) {
+        vector<FtnBase*> ftns;
+        for(auto symbol : *(interface_node->interface_symbol)){
+            auto member = symbol->as<type::Function*>();
+            auto parameter = visitParameter(member->getArgsSignature());
+            auto result = factory->createResult(member->getRetSignature());
+            auto ftn = factory->createInterfaceFunction(member->getName(),member->getAccessFlag(),parameter,result);
+            ftns.push_back(ftn);
+        }
+        auto itf = interface_node->interface_symbol;
+        return factory->createInterface(itf->getName(),itf->getAccessFlag(),ftns);
     }
 
-    Visit(il::Ctor*,Constructor,ctor){
+    il::Record *ILGen::visitType(ast::Type *type_node) {
+        vector<Fld*> fields;
+        for(auto symbol : *(type_node->type_symbol)){
+            auto variable = symbol->as<type::Variable*>();
+            fields.push_back(factory->createField(variable->getName(),variable->getAccessFlag(),variable->getPrototype()));
+        }
+        auto ty = type_node->type_symbol;
+        return factory->createRecord(ty->getName(),ty->getAccessFlag(),fields);
+    }
 
+    il::Enum *ILGen::visitEnum(ast::Enum *enum_node) {
+        vector<il::Pair*> pairs;
+        for(auto symbol : *(enum_node->enum_symbol)){
+            auto member = symbol->as<type::EnumMember*>();
+            pairs.push_back(factory->createPair(member->getName(),member->getIndex()));
+        }
+        auto em = enum_node->enum_symbol;
+        return factory->createEnum(em->getName(),em->getAccessFlag(),pairs);
+    }
+
+    il::Ftn *ILGen::visitFunction(ast::Function *function_node) {
+        auto entry = new il::Block;
+        visitStatement(function_node->statement, entry, nullptr);
+        auto parameter = visitParameter(function_node->function_symbol->getArgsSignature());
+        auto symbol = function_node->function_symbol;
+        auto result = factory->createResult(symbol->getRetSignature());
+        auto ftn = factory->createFunction(symbol->getName(), function_node->access, parameter,result,entry);
+        return ftn;
+    }
+
+    il::Ext *ILGen::visitExternal(ast::External *external_node) {
+        auto parameter = visitParameter(external_node->function_symbol->getArgsSignature());
+        auto symbol = external_node->function_symbol;
+        auto result = factory->createResult(symbol->getRetSignature());
+        auto ext = factory->createExternalFunction(symbol->getName(),symbol->getLibName(),external_node->access,parameter,result);
+        return ext;
+    }
+
+    il::Ctor *ILGen::visitConstructor(ast::Constructor *ctor_node) {
+        auto entry = new il::Block;
+        auto parameter = visitParameter(ctor_node->constructor_symbol->getArgsSignature());
+        visitStatement(ctor_node->statement,entry,nullptr);
+        auto ctor = factory->createConstructor(ctor_node->access,parameter,entry);
+        return ctor;
     }
 
 
     il::Block *ILGen::visitStatement(ast::Statement *statement_node, il::Block *current, il::Block *next) {
-
+        FOR_EACH(iter,statement_node){
+            switch(iter->stmt_flag){
+                case ast::Statement::error:
+                    PANIC;
+                    break;
+                case ast::Statement::let_:
+                    visitLet((ast::Let*)iter,current,next);
+                    break;
+                case ast::Statement::loop_:
+                    visitLoop((ast::Loop*)iter,current,next);
+                    break;
+                case ast::Statement::if_:
+                    current = visitIf((ast::If*)iter,current,next);
+                    break;
+                case ast::Statement::for_:
+                    current = visitFor((ast::For*)iter,current,next);
+                    break;
+                case ast::Statement::select_:
+                    current = visitSelect((ast::Select*)iter,current,next);
+                    break;
+                case ast::Statement::return_:
+                    visitReturn((ast::Return*)iter,current,next);
+                    break;
+                case ast::Statement::continue_:
+                    visitContinue((ast::Continue*)iter,current,next);
+                    break;
+                case ast::Statement::exit_:
+                    visitExit((ast::Exit*)iter,current);
+                    break;
+                case ast::Statement::expr_:
+                    visitExprStmt((ast::ExprStmt*)iter,current,next);
+                    break;
+            }
+        }
+        return current;
     }
 
-    il::Block *ILGen::visitLet(ast::Let *let_node, il::Block *current, il::Block *next) {
-
+    void ILGen::visitLet(ast::Let *let_node, il::Block *current, il::Block *next) {
+        FOR_EACH(iter,let_node->variable){
+            current->Push(il::u16,(data::u16)iter->variable_symbol->getLayoutIndex());
+            visitExpression(iter->initial,current);
+            current->Stloc(mapILType(iter->initial->type->getPrototype()));
+        }
     }
 
     il::Block *ILGen::visitSelect(ast::Select *select_node, il::Block *current, il::Block *next) {
-
+        //todo
     }
 
     il::Block *ILGen::visitLoop(ast::Loop *loop_node, il::Block *current, il::Block *next) {
+        auto cond_block = new il::Block,
+             loop_block = new il::Block,
+             after_block = new il::Block;
 
+        current->Br(cond_block);
+
+        visitExpression(loop_node->condition,cond_block);
+        cond_block->Jif(loop_block);
+        cond_block->Br(after_block);
+
+        loop_block = visitStatement(loop_node->statement,loop_block,after_block);
+        loop_block->Br(cond_block);
+
+        return after_block;
     }
 
     il::Block *ILGen::visitIf(ast::If *if_node, il::Block *current, il::Block *next) {
-
+        auto after_block = new il::Block;
+        visitCase(if_node->case_,current,after_block);
+        return after_block;
     }
 
-    il::Block *ILGen::visitCase(ast::Case *case_node, il::Block *current, il::Block *next) {
+    void ILGen::visitCase(ast::Case *case_node, il::Block *current, il::Block *next) {
+        map<ast::Case*,il::Block*> case_blocks;
+        FOR_EACH(iter,case_node){
+            case_blocks.insert({iter,new il::Block});
+        }
 
+        FOR_EACH(iter,case_node){
+            auto case_block = case_blocks.find(iter);
+            if(case_block != case_blocks.end()){
+                visitExpression(iter->condition,current);
+                current->Jif(case_block->second);
+                auto after_case_block = visitStatement(iter->statement,case_block->second,next);
+                after_case_block->Br(next);
+            }
+            else{
+                auto after_case_block = visitStatement(iter->statement,current,next);
+                after_case_block->Br(next);
+            }
+        }
     }
 
     il::Block *ILGen::visitFor(ast::For *for_node, il::Block *current, il::Block *next) {
@@ -167,9 +350,9 @@ namespace evoBasic{
 
         current->Br(stmt_block);
 
-        visitStatement(for_node->statement,current,cond_block);
+        stmt_block = visitStatement(for_node->statement,current,cond_block);
 
-        current->Br(cond_block);
+        stmt_block->Br(cond_block);
 
         /*
          * iter = iter + step
@@ -228,7 +411,6 @@ namespace evoBasic{
             default: PANIC;
         }
 
-
         /*
          *  beg < end && iter > end ||
          *  beg > end && iter < beg ||
@@ -257,7 +439,6 @@ namespace evoBasic{
                 .Ldloc(iter_il_type)
                 .EQ(iter_il_type)
                 .Or();
-
 
         cond_block->Jif(after_block);
         cond_block->Br(stmt_block);
@@ -290,6 +471,11 @@ namespace evoBasic{
 
     il::Block *ILGen::visitContinue(ast::Continue *continue_node, il::Block *current, il::Block *next) {
         current->Br(next);
+    }
+
+    void ILGen::visitReturn(ast::Return *return_node, il::Block *current, il::Block *next) {
+        visitExpression(return_node->expr,current);
+        current->Ret();
     }
 
 

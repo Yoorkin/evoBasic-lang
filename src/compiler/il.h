@@ -140,6 +140,7 @@ namespace evoBasic::il{
 
     class Param : public Node{
     public:
+        bool is_ref = false;
         Token *name = nullptr,*type = nullptr;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
@@ -302,20 +303,21 @@ namespace evoBasic::il{
 
         Module *createModule(std::string name,AccessFlag access,std::vector<Member*> members);
         Class *createClass(std::string name,AccessFlag access,Extend *extend,std::vector<Impl*> impls,std::vector<Member*> members);
-        Interface *createInterface(std::string name,AccessFlag access,std::vector<VFtn*> ftns);
+        Interface *createInterface(std::string name,AccessFlag access,std::vector<FtnBase*> ftns);
         Enum *createEnum(std::string name,AccessFlag access,std::vector<Pair*> pairs);
         Record *createRecord(std::string name,AccessFlag access,std::vector<Fld*> fields);
         Fld *createField(std::string name,AccessFlag access,type::Prototype *prototype);
         SFld *createStaticField(std::string name,AccessFlag access,type::Prototype *prototype);
         Ftn *createFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,Block *entry);
         Ctor *createConstructor(AccessFlag access,std::vector<Param*> params,Block *entry);
-        Ftn *createVirtualFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,Block *entry);
-        Ftn *createStaticFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,Block *entry);
+        FtnBase *createInterfaceFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result);
+        VFtn *createVirtualFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,Block *entry);
+        SFtn *createStaticFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,Block *entry);
         Ext *createExternalFunction(std::string name,std::string lib,AccessFlag access,std::vector<Param*> params,Result *result);
 
-        Param *createParam(std::string name,type::Prototype *prototype);
-        Opt *createOption(std::string name,type::Prototype *prototype,SFtn *initial);
-        Inf *createParamArray(std::string name,type::Prototype *prototype);
+        Param *createParam(std::string name,type::Prototype *prototype,bool byref);
+        Opt *createOption(std::string name,type::Prototype *prototype,bool byref,Block *initial);
+        Inf *createParamArray(std::string name,type::Prototype *prototype,bool byref);
         Pair *createPair(std::string name,data::u32 value);
         Extend *createExtend(type::Class *cls);
         Impl *createImplements(type::Interface *interface);

@@ -39,14 +39,14 @@ namespace evoBasic{
         Visit(il::Ext*,External,external)
         Visit(il::Ctor*,Constructor,ctor)
 
-        Visit(il::Block*,Let,let,               il::Block *current,il::Block *next)
+        Visit(void,Let,let,               il::Block *current,il::Block *next)
         Visit(il::Block*,Select,select,         il::Block *current,il::Block *next)
         Visit(il::Block*,Loop,loop,             il::Block *current,il::Block *next)
         Visit(il::Block*,If,if,                 il::Block *current,il::Block *next)
-        Visit(il::Block*,Case,case,             il::Block *current,il::Block *next)
+        Visit(void,Case,case,             il::Block *current,il::Block *next)
         Visit(il::Block*,For,for,               il::Block *current,il::Block *next)
         Visit(il::Block*,ExprStmt,expr_stmt,    il::Block *current,il::Block *next)
-        Visit(il::Block*,Return,return,         il::Block *current,il::Block *next)
+        Visit(void,Return,return,         il::Block *current,il::Block *next)
         Visit(il::Block*,Exit,exit,             il::Block *current)
         Visit(il::Block*,Continue,continue,     il::Block *current,il::Block *next)
         Visit(il::Block*,Statement,statement,   il::Block *current,il::Block *next)
@@ -76,6 +76,16 @@ namespace evoBasic{
         Visit(void,Boolean,boolean,         il::Block *current)
 
         void loadCalleeArguments(ast::Call *call, il::Block *current);
+
+        std::vector<il::Member*> visitMember(ast::Member *member);
+
+        il::SFld *visitStaticField(ast::Variable *variable_node);
+
+        il::Fld *visitField(ast::Variable *variable_node);
+
+        std::vector<il::Param *> visitParameter(std::vector<type::Parameter *> parameters);
+
+
     };
 #undef Visit
 }

@@ -217,7 +217,7 @@ namespace evoBasic::il{
         return nullptr;
     }
 
-    Interface *ILFactory::createInterface(std::string name, AccessFlag access, std::vector<VFtn *> ftns) {
+    Interface *ILFactory::createInterface(std::string name, AccessFlag access, std::vector<FtnBase*> ftns) {
         return nullptr;
     }
 
@@ -246,13 +246,13 @@ namespace evoBasic::il{
         return nullptr;
     }
 
-    Ftn *
-    ILFactory::createVirtualFunction(std::string name, AccessFlag access, std::vector<Param *> params, Result *result,
+    VFtn *
+    ILFactory::createVirtualFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result,
                                      Block *entry) {
         return nullptr;
     }
 
-    Ftn *
+    SFtn *
     ILFactory::createStaticFunction(std::string name, AccessFlag access, std::vector<Param *> params, Result *result,
                                     Block *entry) {
         return nullptr;
@@ -264,15 +264,15 @@ namespace evoBasic::il{
         return nullptr;
     }
 
-    Param *ILFactory::createParam(std::string name, type::Prototype *prototype) {
+    Param *ILFactory::createParam(std::string name, type::Prototype *prototype,bool byref) {
         return nullptr;
     }
 
-    Opt *ILFactory::createOption(std::string name, type::Prototype *prototype, SFtn *initial) {
+    Opt *ILFactory::createOption(std::string name, type::Prototype *prototype, bool byref, Block *initial) {
         return nullptr;
     }
 
-    Inf *ILFactory::createParamArray(std::string name, type::Prototype *prototype) {
+    Inf *ILFactory::createParamArray(std::string name, type::Prototype *prototype, bool byref) {
         return nullptr;
     }
 
@@ -289,6 +289,11 @@ namespace evoBasic::il{
     }
 
     Local *ILFactory::createLocal(std::string name, type::Prototype *prototype) {
+        return nullptr;
+    }
+
+    FtnBase *ILFactory::createInterfaceFunction(std::string name, AccessFlag access, std::vector<Param *> params,
+                                                Result *result) {
         return nullptr;
     }
 
