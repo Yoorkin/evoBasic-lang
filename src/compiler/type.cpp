@@ -267,8 +267,11 @@ namespace evoBasic::type{
         if(getRetSignature())
             str<<" As "<<getRetSignature()->getName();
         str<<"{\n";
+        for(auto m : this->memory_layout){
+            str << m->debug(indent+1);
+        }
         for(auto p : *this){
-            p->debug(indent+1);
+            str << p->debug(indent+1);
         }
         for(int i=0;i<indent;i++)str<<indent_unit;
         str<<"}\n";
@@ -720,7 +723,7 @@ namespace evoBasic::type{
     std::string Variable::debug(int indent) {
         stringstream str;
         for(int i=0;i<indent;i++)str << indent_unit;
-        str << this->getName() << " : "<<AccessFlagString[(int)getAccessFlag()]
+        str << this->getName() <<"@"<< getLayoutIndex() << " : "<<AccessFlagString[(int)getAccessFlag()]
             <<(isStatic()?" Static":"")
             <<" Variable(";
         if(getPrototype()) str << getPrototype()->getName();

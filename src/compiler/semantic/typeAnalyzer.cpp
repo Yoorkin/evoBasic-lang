@@ -398,7 +398,7 @@ namespace evoBasic{
 
     std::any TypeAnalyzer::visitFor(parseTree::stmt::For *forstmt_node, TypeAnalyzerArgs args) {
         auto ast_node = new ast::For;
-        auto ast_iterator = any_cast<ast::Expression*>(visitExpression((*forstmt_node).iterator,args));
+        auto ast_iterator = any_cast<ast::Expression*>(visitExpression(forstmt_node->iterator,args));
         if(ast_iterator->type->value_kind == ExpressionType::error){
             Logger::error(forstmt_node->iterator->location, lang->msgForStmtIteratorNotFound());
         }
@@ -406,10 +406,11 @@ namespace evoBasic{
             Logger::error(forstmt_node->iterator->location, lang->msgForStmtIteratorMustBeLValue());
         }
         else{
-            auto ast_begin = any_cast<ast::Expression*>(visitExpression((*forstmt_node).begin,args)),
-                    ast_end = any_cast<ast::Expression*>(visitExpression((*forstmt_node).end,args));
+            auto ast_begin = any_cast<ast::Expression*>(visitExpression(forstmt_node->begin,args)),
+                    ast_end = any_cast<ast::Expression*>(visitExpression(forstmt_node->end,args));
             ast_node->begin = ast_begin;
             ast_node->end = ast_end;
+
             if(!ast_begin->type->getPrototype()->equal(ast_iterator->type->getPrototype())){
                 Logger::error(forstmt_node->begin->location,
                               lang->fmtForStmtBeginExpNotMatch(ast_begin->type->getPrototype()->getName(),ast_iterator->type->getPrototype()->getName()));
@@ -418,9 +419,27 @@ namespace evoBasic{
                 Logger::error(forstmt_node->begin->location,
                               lang->fmtForStmtEndExpNotMatch(ast_end->type->getPrototype()->getName(),ast_iterator->type->getPrototype()->getName()));
             }
+
+
+
+            auto beg_var = new type::Variable,
+                 end_var = new type::Variable;
+            beg_var->setPrototype(ast_begin->type->getPrototype());
+            args.function->addMemoryLayout(beg_var);
+            ast_node->begin_variable = beg_var;
+            end_var->setPrototype(ast_end->type->getPrototype());
+            args.function->addMemoryLayout(end_var);
+            ast_node->end_variable = end_var;
+
             if((*forstmt_node).step){
                 auto ast_step = any_cast<ast::Expression*>(visitExpression(forstmt_node->step,args));
                 ast_node->step = ast_step;
+
+                auto step_var = new type::Variable;
+                step_var->setPrototype(ast_step->type->getPrototype());
+                args.function->addMemoryLayout(step_var);
+                ast_node->step_variable = step_var;
+
                 if(!ast_step->type->getPrototype()->equal(ast_iterator->type->getPrototype())){
                     Logger::error(forstmt_node->begin->location,
                                   lang->fmtForStmtStepExpNotMatch(ast_step->type->getPrototype()->getName(),ast_iterator->type->getPrototype()->getName()));

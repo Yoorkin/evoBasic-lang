@@ -193,6 +193,10 @@ namespace evoBasic::ast{
         Expression *iterator = nullptr;
         bool iterator_has_let = false;
         Expression *begin = nullptr,*end = nullptr,*step = nullptr;
+        type::Variable *iterator_variable = nullptr,
+                       *begin_variable = nullptr,
+                       *end_variable = nullptr,
+                       *step_variable = nullptr;
         Statement* statement = nullptr;
         DebugInfo *debug()override;
     };

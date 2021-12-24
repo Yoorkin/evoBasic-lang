@@ -79,30 +79,188 @@ namespace evoBasic{
 
     }
 
-    Visit(il::Block*,Let,let,               il::Block *current,il::Block *next){
+    il::Block *ILGen::visitLet(ast::Let *let_node, il::Block *current, il::Block *next) {
 
     }
-    Visit(il::Block*,Select,select,         il::Block *current,il::Block *next){
+
+    il::Block *ILGen::visitSelect(ast::Select *select_node, il::Block *current, il::Block *next) {
 
     }
-    Visit(il::Block*,Loop,loop,             il::Block *current,il::Block *next){
+
+    il::Block *ILGen::visitLoop(ast::Loop *loop_node, il::Block *current, il::Block *next) {
 
     }
-    Visit(il::Block*,If,if,                 il::Block *current,il::Block *next){
+
+    il::Block *ILGen::visitIf(ast::If *if_node, il::Block *current, il::Block *next) {
 
     }
-    Visit(il::Block*,Case,case,             il::Block *current,il::Block *next){
+
+    il::Block *ILGen::visitCase(ast::Case *case_node, il::Block *current, il::Block *next) {
 
     }
 
     il::Block *ILGen::visitFor(ast::For *for_node, il::Block *current, il::Block *next) {
-        visitExpression(for_node->begin,current);
 
-        auto cond_block = new il::Block;
+        switch(for_node->iterator->expression_kind){
+            case ast::Expression::SFld:{
+                auto sfld = (ast::SFld*)for_node->iterator;
+                auto il_type = mapILType(sfld->type->getPrototype());
+                visitExpression(for_node->begin,current);
+                current->Stsfld(il_type,sfld->variable->getToken(factory));
+                break;
+            }
+            case ast::Expression::Fld:{
+                auto fld = (ast::Fld*)for_node->iterator;
+                auto il_type = mapILType(fld->type->getPrototype());
+                visitExpression(fld->ref,current);
+                visitExpression(for_node->begin,current);
+                current->Stfld(il_type,fld->variable->getToken(factory));
+                break;
+            }
+            case ast::Expression::ArgUse:{
+                auto arg = (ast::Arg*)for_node->iterator;
+                auto il_type = mapILType(arg->type->getPrototype());
+                current->Push(il::u16,(data::u16)arg->variable->getLayoutIndex());
+                visitExpression(for_node->begin,current);
+                current->Starg(il_type);
+                break;
+            }
+            case ast::Expression::Local:{
+                auto local = (ast::Local*)for_node->iterator;
+                auto il_type = mapILType(local->type->getPrototype());
+                current->Push(il::u16,(data::u16)local->variable->getLayoutIndex());
+                visitExpression(for_node->begin,current);
+                current->Stloc(il_type);
+                break;
+            }
+            case ast::Expression::Element:{
+                auto element = (ast::ArrayElement*)for_node->iterator;
+                auto il_type = mapILType(element->type->getPrototype());
+                visitExpression(element->array,current);
+                visitExpression(element->offset,current);
+                visitExpression(for_node->begin,current);
+                current->Stelem(il_type);
+                break;
+            }
+            default: PANIC;
+        }
+
+        auto iter_il_type = mapILType(for_node->begin->type->getPrototype());
+
+        current->Push(il::u16,(data::u16)for_node->begin_variable->getLayoutIndex());
+        visitExpression(for_node->begin,current);
+        current->Stloc(iter_il_type);
+
+        current->Push(il::u16,(data::u16)for_node->end_variable->getLayoutIndex());
+        visitExpression(for_node->end,current);
+        current->Stloc(iter_il_type);
+
+        if(for_node->step){
+            current->Push(il::u16,(data::u16)for_node->step_variable->getLayoutIndex());
+            visitExpression(for_node->step,current);
+            current->Stloc(iter_il_type);
+        }
+
         auto stmt_block = new il::Block;
+        auto cond_block = new il::Block;
         auto after_block = new il::Block;
 
-        visitStatement(for_node->statement,current,after_block);
+        current->Br(stmt_block);
+
+        visitStatement(for_node->statement,current,cond_block);
+
+        current->Br(cond_block);
+
+        /*
+         * iter = iter + step
+         */
+        switch(for_node->iterator->expression_kind){
+            case ast::Expression::SFld:{
+                auto sfld = (ast::SFld*)for_node->iterator;
+                auto il_type = mapILType(sfld->type->getPrototype());
+                visitExpression(for_node->iterator,cond_block);
+                visitExpression(for_node->step,cond_block);
+                cond_block->Add(il_type);
+                cond_block->Stsfld(il_type,sfld->variable->getToken(factory));
+                break;
+            }
+            case ast::Expression::Fld:{
+                auto fld = (ast::Fld*)for_node->iterator;
+                auto il_type = mapILType(fld->type->getPrototype());
+                visitExpression(fld->ref,cond_block);
+                visitExpression(for_node->iterator,cond_block);
+                visitExpression(for_node->step,cond_block);
+                cond_block->Add(il_type);
+                cond_block->Stfld(il_type,fld->variable->getToken(factory));
+                break;
+            }
+            case ast::Expression::ArgUse:{
+                auto arg = (ast::Arg*)for_node->iterator;
+                auto il_type = mapILType(arg->type->getPrototype());
+                cond_block->Push(il::u16,(data::u16)arg->variable->getLayoutIndex());
+                visitExpression(for_node->iterator,cond_block);
+                visitExpression(for_node->step,cond_block);
+                cond_block->Add(il_type);
+                cond_block->Starg(il_type);
+                break;
+            }
+            case ast::Expression::Local:{
+                auto local = (ast::Local*)for_node->iterator;
+                auto il_type = mapILType(local->type->getPrototype());
+                cond_block->Push(il::u16,(data::u16)local->variable->getLayoutIndex());
+                visitExpression(for_node->iterator,cond_block);
+                visitExpression(for_node->step,cond_block);
+                cond_block->Add(il_type);
+                cond_block->Stloc(il_type);
+                break;
+            }
+            case ast::Expression::Element:{
+                auto element = (ast::ArrayElement*)for_node->iterator;
+                auto il_type = mapILType(element->type->getPrototype());
+                visitExpression(element->array,cond_block);
+                visitExpression(element->offset,cond_block);
+                visitExpression(for_node->iterator,cond_block);
+                visitExpression(for_node->step,cond_block);
+                cond_block->Add(il_type);
+                cond_block->Stelem(il_type);
+                break;
+            }
+            default: PANIC;
+        }
+
+
+        /*
+         *  beg < end && iter > end ||
+         *  beg > end && iter < beg ||
+         *  beg == end
+         */
+        cond_block->Push(il::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+                   .Ldloc(iter_il_type)
+                   .Push(il::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+                   .Ldloc(iter_il_type)
+                   .LT(iter_il_type);
+        visitExpression(for_node->iterator,cond_block);
+        cond_block->Push(il::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+                   .Ldloc(iter_il_type)
+                   .GT(iter_il_type);
+
+        cond_block->Push(il::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+                    .Ldloc(iter_il_type)
+                    .Push(il::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+                    .Ldloc(iter_il_type)
+                    .GT(iter_il_type);
+        visitExpression(for_node->iterator,cond_block);
+        cond_block->Or();
+        cond_block->Push(il::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+                .Ldloc(iter_il_type)
+                .Push(il::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+                .Ldloc(iter_il_type)
+                .EQ(iter_il_type)
+                .Or();
+
+
+        cond_block->Jif(after_block);
+        cond_block->Br(stmt_block);
 
         return after_block;
     }
