@@ -21,6 +21,7 @@ namespace evoBasic::il{
     class SFtn;
     class VFtn;
     class Block;
+    class FtnBase;
 
     enum DataType{
         empty,i8,i16,i32,i64,u8,u16,u32,u64,f32,f64,
@@ -34,8 +35,9 @@ namespace evoBasic::il{
     };
 
     class Token : public Node{
-        std::string toString()override;
+    public:
         void toHex(std::ostream &stream)override;
+        std::string toString()override;
     };
 
     class ConstructedToken : public Token{
@@ -53,7 +55,7 @@ namespace evoBasic::il{
 
     class Extend : public Node{
     public:
-        Class *target = nullptr;
+        Token *target = nullptr;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
     };
@@ -67,11 +69,12 @@ namespace evoBasic::il{
 
     class Lib : public Node{
     public:
+        Token *target = nullptr;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
     };
 
-    class Member : Node{
+    class Member : public Node{
         ConstructedToken *path_token = nullptr;
     public:
         Token *name = nullptr;
@@ -98,7 +101,7 @@ namespace evoBasic::il{
 
     class Interface : public Member{
     public:
-        std::vector<VFtn*> ftns;
+        std::vector<FtnBase*> ftns;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
     };
@@ -169,7 +172,7 @@ namespace evoBasic::il{
 
     class Result : public Node{
     public:
-        ConstructedToken *token = nullptr;
+        Token *type = nullptr;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
     };
@@ -178,9 +181,11 @@ namespace evoBasic::il{
     public:
         std::vector<Param*> params;
         Result *result = nullptr;
+        std::string toString()override;
     };
 
     class FtnWithDefinition : public FtnBase{
+    protected:
         std::vector<Local*> locals;
     public:
         void addLocal(Local *local){
@@ -188,6 +193,7 @@ namespace evoBasic::il{
             locals.push_back(local);
         }
         Block *entry = nullptr;
+        std::string toString()override;
     };
 
     class Ctor : public FtnWithDefinition{
@@ -286,6 +292,14 @@ namespace evoBasic::il{
         void toHex(std::ostream &stream)override;
     };
 
+
+    class Document : public Node{
+    public:
+        std::vector<Member*> members;
+        std::string toString()override;
+        void toHex(std::ostream &stream)override;
+    };
+
     class InstConv : public Inst{
     public:
         DataType src,dst;
@@ -323,14 +337,14 @@ namespace evoBasic::il{
         Impl *createImplements(type::Interface *interface);
         Local *createLocal(std::string name,type::Prototype *prototype);
         Result *createResult(type::Prototype *prototype);
+
+        Document *createDocument(std::vector<Member*> members);
     };
 
-    class IL : public Node{
-
-    };
 
     class Block : public Node{
     public:
+        data::u32 getAddress();
         std::string toString()override;
         void toHex(std::ostream &stream)override;
         std::vector<Inst*> insts;

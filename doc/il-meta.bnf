@@ -25,13 +25,13 @@ interface ::= '(' 'interface' [access-flag] name {virtual-function} ')'
 
 static-field ::= '(' 'sfld' [access-flag] name type ')';
 
-external-function ::= '(' 'ext' [access-flag] name [lib] {param} [result] ')';
+external-function ::= '(' 'ext' [lib] [access-flag] name {param} [result] ')';
 
 lib ::= '(' 'lib' name ')';
 
-virtual-function ::= '(' 'vftn' [access-flag] name {param} {local} [result] {inst} ')';
+virtual-function ::= '(' 'vftn' [access-flag] name {param} [result] {local} {inst} ')';
 
-static-function ::= '(' 'sftn' [access-flag] name {param} {local} [result] {inst} ')';
+static-function ::= '(' 'sftn' [access-flag] name {param} [result] {local} {inst} ')';
 
 result ::= '(' 'result' type ')';
 

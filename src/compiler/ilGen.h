@@ -28,7 +28,7 @@ namespace evoBasic{
         il::ILFactory *factory = nullptr;
         il::Block *for_next = nullptr,*loop_next = nullptr;
     public:
-        Visit(il::IL*,Global,global)
+        Visit(il::Document*, Global, global)
         Visit(il::Class*,Class,class)
         Visit(il::Module*,Module,module)
         Visit(il::Interface*,Interface,interface)

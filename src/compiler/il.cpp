@@ -5,7 +5,7 @@
 #include "il.h"
 
 namespace evoBasic::il{
-
+    using namespace std;
 
 
     InstBr *Br(Block *block){
@@ -297,6 +297,10 @@ namespace evoBasic::il{
         return nullptr;
     }
 
+    Document *ILFactory::createDocument() {
+        return nullptr;
+    }
+
     std::string Local::toString() {
         return std::string();
     }
@@ -534,7 +538,8 @@ namespace evoBasic::il{
     }
 
     std::string Access::toString() {
-        return std::string();
+        vector<string> str = {"Public","Private","Friend","Protected"};
+        return Format() << "(Access " << str[(int)flag] << ")";
     }
 
     void Access::toHex(std::ostream &stream) {
@@ -542,7 +547,7 @@ namespace evoBasic::il{
     }
 
     std::string Extend::toString() {
-        return std::string();
+        return Format() << "(extend " << target->toString() << ")";
     }
 
     void Extend::toHex(std::ostream &stream) {
@@ -550,7 +555,7 @@ namespace evoBasic::il{
     }
 
     std::string Impl::toString() {
-        return std::string();
+        return Format() << "(impl " << target->toString() << ")";
     }
 
     void Impl::toHex(std::ostream &stream) {
@@ -558,7 +563,7 @@ namespace evoBasic::il{
     }
 
     std::string Lib::toString() {
-        return std::string();
+        return Format() << "(lib " << target->toString() << ")";
     }
 
     void Lib::toHex(std::ostream &stream) {
@@ -566,11 +571,16 @@ namespace evoBasic::il{
     }
 
     ConstructedToken *Member::getConstructedToken() {
-        return nullptr;
+
     }
 
     std::string Class::toString() {
-        return std::string();
+        Format fmt;
+        fmt << "(cls " << access->toString() << ' ' << name->toString() << ' ' << extend.toString();
+        for(auto impl : impls) fmt << ' ' << impl.toString();
+        for(auto member : members) fmt << '\n' << member->toString();
+        fmt << ")";
+        return fmt;
     }
 
     void Class::toHex(std::ostream &stream) {
@@ -578,7 +588,11 @@ namespace evoBasic::il{
     }
 
     std::string Module::toString() {
-        return std::string();
+        Format fmt;
+        fmt << "(mod " << access->toString() << ' ' << name->toString();
+        for(auto member : members) fmt << '\n' << member->toString();
+        fmt << ")";
+        return fmt;
     }
 
     void Module::toHex(std::ostream &stream) {
@@ -586,7 +600,11 @@ namespace evoBasic::il{
     }
 
     std::string Interface::toString() {
-        return std::string();
+        Format fmt;
+        fmt << "(interface " << access->toString() << ' ' << name->toString();
+        for(auto ftn : ftns) fmt << '\n' << ftn->toString();
+        fmt << ")";
+        return fmt;
     }
 
     void Interface::toHex(std::ostream &stream) {
@@ -594,7 +612,7 @@ namespace evoBasic::il{
     }
 
     std::string Pair::toString() {
-        return std::string();
+        return Format() << "(pair " << name->toString() << ' ' << to_string(value);
     }
 
     void Pair::toHex(std::ostream &stream) {
@@ -602,7 +620,11 @@ namespace evoBasic::il{
     }
 
     std::string Enum::toString() {
-        return std::string();
+        Format fmt;
+        fmt << "(Enum " << access->toString() << ' ' << name->toString();
+        for(auto p : pairs) fmt << '\n' << p->toString();
+        fmt << ")";
+        return fmt;
     }
 
     void Enum::toHex(std::ostream &stream) {
@@ -610,7 +632,7 @@ namespace evoBasic::il{
     }
 
     std::string Fld::toString() {
-        return std::string();
+        return Format() << "(fld " << access->toString() << ' ' << name->toString() << ' ' << type->toString() <<")";
     }
 
     void Fld::toHex(std::ostream &stream) {
@@ -618,7 +640,7 @@ namespace evoBasic::il{
     }
 
     std::string SFld::toString() {
-        return Fld::toString();
+        return Format() << "(sfld " << access->toString() << ' ' << name->toString() << ' ' << type->toString() <<")";
     }
 
     void SFld::toHex(std::ostream &stream) {
@@ -626,7 +648,11 @@ namespace evoBasic::il{
     }
 
     std::string Record::toString() {
-        return std::string();
+        Format fmt;
+        fmt << "(record " << access->toString() << ' ' << name->toString();
+        for(auto fld : fields) fmt << '\n' << fld->toString();
+        fmt << ")";
+        return fmt;
     }
 
     void Record::toHex(std::ostream &stream) {
@@ -634,7 +660,7 @@ namespace evoBasic::il{
     }
 
     std::string Param::toString() {
-        return std::string();
+        return Format() << "(param " << name->toString() << " " << type->toString() << ")";
     }
 
     void Param::toHex(std::ostream &stream) {
@@ -642,7 +668,7 @@ namespace evoBasic::il{
     }
 
     std::string Opt::toString() {
-        return Param::toString();
+        return Format() << "(opt " << name->toString() << " " << type->toString() << ")";
     }
 
     void Opt::toHex(std::ostream &stream) {
@@ -650,7 +676,7 @@ namespace evoBasic::il{
     }
 
     std::string Inf::toString() {
-        return Param::toString();
+        return Format() << "(inf " << name->toString() << " " << type->toString() << ")";
     }
 
     void Inf::toHex(std::ostream &stream) {
@@ -658,7 +684,7 @@ namespace evoBasic::il{
     }
 
     std::string Result::toString() {
-        return std::string();
+        return Format() << "(result " << type->toString() << ")";
     }
 
     void Result::toHex(std::ostream &stream) {
@@ -673,8 +699,25 @@ namespace evoBasic::il{
 
     }
 
+
+    std::string FtnBase::toString() {
+        Format fmt;
+        fmt << access->toString() << ' ' << name->toString();
+        for(auto p : params) fmt << ' ' << p->toString();
+        fmt << result->toString();
+        return fmt;
+    }
+
+    std::string FtnWithDefinition::toString() {
+        Format fmt;
+        fmt << FtnBase::toString();
+        for(auto l : locals) fmt << '\n' << l->toString();
+        fmt << entry->toString();
+        return fmt;
+    }
+
     std::string Ftn::toString() {
-        return std::string();
+        return Format() << "(ftn " << FtnWithDefinition::toString() << ")";
     }
 
     void Ftn::toHex(std::ostream &stream) {
@@ -682,7 +725,7 @@ namespace evoBasic::il{
     }
 
     std::string VFtn::toString() {
-        return std::string();
+        return Format() << "(vftn " << FtnWithDefinition::toString() << ")";
     }
 
     void VFtn::toHex(std::ostream &stream) {
@@ -690,7 +733,7 @@ namespace evoBasic::il{
     }
 
     std::string SFtn::toString() {
-        return std::string();
+        return Format() << "(sftn " << FtnWithDefinition::toString() << ")";
     }
 
     void SFtn::toHex(std::ostream &stream) {
@@ -698,7 +741,7 @@ namespace evoBasic::il{
     }
 
     std::string Ext::toString() {
-        return std::string();
+        return Format() << "(ext " << lib.toString() << ' ' << FtnBase::toString() << ")";
     }
 
     void Ext::toHex(std::ostream &stream) {
@@ -706,7 +749,11 @@ namespace evoBasic::il{
     }
 
     std::string InstWithOp::toString() {
-        return std::string();
+        vector<string> str = {"Nop","Ret","CallVirt","CallExt","Calls","Call",
+                           "Ldnull","And","Or","Xor","Ldloca","Ldarga","Ldelema","Not"};
+        Format fmt;
+        fmt << "\n" << str[(int)op]; 
+        return fmt;
     }
 
     void InstWithOp::toHex(std::ostream &stream) {
@@ -714,7 +761,10 @@ namespace evoBasic::il{
     }
 
     std::string InstWithToken::toString() {
-        return std::string();
+        vector<string> str = {"Ldftn","Ldsftn","Ldvftn","Ldc","Newobj","Callext"};
+        Format fmt;
+        fmt << "\n" << str[(int)op] << ' ' << token->toString();
+        return fmt;
     }
 
     void InstWithToken::toHex(std::ostream &stream) {
@@ -722,7 +772,7 @@ namespace evoBasic::il{
     }
 
     std::string InstJif::toString() {
-        return std::string();
+        return Format() << "Jif " << target->getAddress();
     }
 
     void InstJif::toHex(std::ostream &stream) {
@@ -730,7 +780,7 @@ namespace evoBasic::il{
     }
 
     std::string InstBr::toString() {
-        return std::string();
+        return Format() << "Br " << target->getAddress();
     }
 
     void InstBr::toHex(std::ostream &stream) {
@@ -738,7 +788,45 @@ namespace evoBasic::il{
     }
 
     std::string InstPush::toString() {
-        return std::string();
+        vector<string> str = {
+            "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
+            "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
+        };
+        Format fmt;
+        fmt << "Push." << str[(int)type] << ' ';
+        switch(type){
+            case DataType::i8:
+                fmt << any_cast<data::i8>(value);
+                break;
+            case DataType::i16:
+                fmt << any_cast<data::i16>(value);
+                break;
+            case DataType::i32:
+                fmt << any_cast<data::i32>(value);
+                break;
+            case DataType::i64:
+                fmt << any_cast<data::i64>(value);
+                break;
+            case DataType::u8:
+                fmt << any_cast<data::u8>(value);
+                break;
+            case DataType::u32:
+                fmt << any_cast<data::u32>(value);
+                break;
+            case DataType::u64:
+                fmt << any_cast<data::u64>(value);
+                break;
+            case DataType::f32:
+                fmt << any_cast<data::f32>(value);
+                break;
+            case DataType::f64:
+                fmt << any_cast<data::f64>(value);
+                break;
+            case DataType::boolean:
+                fmt << any_cast<data::boolean>(value);
+                break;
+        }
+        return fmt;
     }
 
     void InstPush::toHex(std::ostream &stream) {
@@ -746,7 +834,13 @@ namespace evoBasic::il{
     }
 
     std::string InstWithData::toString() {
-        return std::string();
+        vector<string> inst = {"Ldelem","Stelem","Stelema","Ldarg","Starg","Ldloc","Stloc",
+                           "Add","Sub","Mul","Div","FDiv","EQ","NE","LT","GT","LE","GE","Neg","Pop","Dup"};
+        vector<string> ty = {
+                "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
+                "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
+        };
+        return Format() << inst[(int)op] << '.' << ty[(int)type];
     }
 
     void InstWithData::toHex(std::ostream &stream) {
@@ -754,7 +848,12 @@ namespace evoBasic::il{
     }
 
     std::string InstWithDataToken::toString() {
-        return std::string();
+        vector<string> inst = {"Ldfld","Ldsfld","Ldflda","Ldsflda","Stfld","Stsfld"};
+        vector<string> ty = {
+                "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
+                "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
+        };
+        return Format() << inst[(int)op] << '.' << ty[(int)type] << token->toString();
     }
 
     void InstWithDataToken::toHex(std::ostream &stream) {
@@ -762,7 +861,7 @@ namespace evoBasic::il{
     }
 
     std::string InstCastcls::toString() {
-        return std::string();
+        return Format() << "cast." << srcClass->toString() << " " << dstClass->toString();
     }
 
     void InstCastcls::toHex(std::ostream &stream) {
@@ -770,10 +869,15 @@ namespace evoBasic::il{
     }
 
     std::string InstConv::toString() {
-        return std::string();
+        vector<string> ty = {
+                "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
+                "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
+        };
+        return Format() << "conv." << ty[(int)src] << " " << ty[(int)dst];
     }
 
     void InstConv::toHex(std::ostream &stream) {
 
     }
+
 }

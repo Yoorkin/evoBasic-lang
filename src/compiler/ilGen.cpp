@@ -37,9 +37,9 @@ namespace evoBasic{
         }
     }
 
-    il::IL *ILGen::visitGlobal(ast::Global *global_node) {
+    il::Document *ILGen::visitGlobal(ast::Global *global_node) {
         auto members = visitMember(global_node->member);
-        //return factory->createModule(global_node->global_symbol->getName(),global_node->global_symbol->getAccessFlag(),members);
+        return factory->createDocument(members);
     }
 
     il::Class *ILGen::visitClass(ast::Class *class_node) {
