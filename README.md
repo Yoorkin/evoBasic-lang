@@ -22,6 +22,9 @@ It is an cross-platforms,object-oriented,strongly typed programming language, co
 - [x] IL generator: translate abstract tree to intermediate language
 - [ ] executable file generator
 - [ ] evoBasic vm
+- [ ] runtime library
+
+EvoBasic cannot generate any executable file yet. But you can use option `--dev-info` to print information ( tokens,parse tree,abstract tree,symbol table and IL ) during compilation to check if the compiler works.
 
 # How to build
 
