@@ -410,10 +410,6 @@ namespace evoBasic::type{
         return ls;
     }
 
-    il::Token *Symbol::getToken(il::ILFactory *factory) {
-        return new il::Token("TOKEN");
-    }
-
 
     Symbol *Domain::lookUp(const string &name) {
         Domain *ptr = static_cast<Domain*>(this);
@@ -779,6 +775,8 @@ namespace evoBasic::type{
             case SymbolKind::Class:
             case SymbolKind::Function:
                 return vm::Data::ptr.getSize();
+            case SymbolKind::Enum:
+                return vm::Data(vm::Data::i32).getSize();
         }
         PANIC;
     }

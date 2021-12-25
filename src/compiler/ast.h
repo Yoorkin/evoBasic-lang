@@ -49,7 +49,7 @@ namespace evoBasic::ast{
     };
 
     struct Member : Node{
-        AccessFlag access;
+        AccessFlag access = AccessFlag::Private;
         bool is_static = false;
         enum MemberKind{
             error,function_,class_,module_,type_,enum_,dim_,
@@ -238,10 +238,20 @@ namespace evoBasic::ast{
         enum ExpressionKind{
             Element,Ftn,VFtn,SFtn,Local,ArgUse,Fld,Assign,
             SFld,Digit,Decimal,String,Boolean,Char,Unary,Binary,
-            Cast,New,Parentheses,Empty,Argument,TmpPath,Ext,Delegate
+            Cast,New,Parentheses,Empty,Argument,TmpPath,Ext,Delegate,EnumMember
         }expression_kind = Empty;
         ExpressionType *type = nullptr;
         static Expression *error;
+        DebugInfo *debug()override;
+    };
+
+    struct EnumMember : Expression{
+        EnumMember(){expression_kind = ExpressionKind::EnumMember;}
+        type::EnumMember *member = nullptr;
+        explicit EnumMember(type::EnumMember *member, ExpressionType *type):EnumMember(){
+            this->member = member;
+            this->type = type;
+        }
         DebugInfo *debug()override;
     };
 

@@ -8,24 +8,45 @@ namespace evoBasic::il{
     using namespace std;
 
 
-    Result *ILFactory::createResult(type::Prototype *prototype) {
+    Result *Document::createResult(type::Prototype *prototype) {
         auto ret = new Result;
-        ret->type = prototype->getToken(this);
+        ret->type = createConstructedToken(prototype->getFullName());
         return ret;
     }
 
-    Token *ILFactory::createToken(std::string text) {
-        auto token = new il::Token(text);
-        token_pool.push_back(token);
-        token_pool_map.insert({text,token_pool.size()});
-        return token;
+    Token *Document::createToken(std::string text) {
+        auto target = token_pool_map.find(text);
+        if(target == token_pool_map.end()){
+            auto token = new il::Token(text);
+            token_pool.push_back(token);
+            token->setID(token_pool.size()-1);
+            token_pool_map.insert({text,token_pool.size()-1});
+            return token;
+        }
+        else return token_pool[target->second];
     }
 
-    ConstructedToken *ILFactory::createConstructedToken(std::vector<Token *> token_list) {
-        return nullptr;
+    Token *Document::createConstructedToken(std::list<string> full_name_list) {
+        Format fullname;
+        for(auto &name : full_name_list){
+            if(&name != &full_name_list.front())fullname<<'.';
+            fullname << name;
+        }
+        auto target = token_pool_map.find(fullname);
+        if(target == token_pool_map.end()){
+            auto ret = new ConstructedToken;
+            for(auto &str : full_name_list){
+                ret->tokens.push_back(createToken(str));
+            }
+            ret->setID(token_pool.size());
+            token_pool_map.insert({fullname,token_pool.size()});
+            token_pool.push_back(ret);
+            return ret;
+        }
+        else return token_pool[target->second];
     }
 
-    Module *ILFactory::createModule(std::string name, AccessFlag access, std::vector<Member*> members) {
+    Module *Document::createModule(std::string name, AccessFlag access, std::vector<Member*> members) {
         auto mod = new il::Module;
         mod->access = new Access(access);
         mod->name = createToken(name);
@@ -33,7 +54,7 @@ namespace evoBasic::il{
         return mod;
     }
 
-    Class *ILFactory::createClass(std::string name, AccessFlag access, Extend *extend, std::vector<Impl*> impls,
+    Class *Document::createClass(std::string name, AccessFlag access, Extend *extend, std::vector<Impl*> impls,
                                   std::vector<Member*> members) {
         auto cls = new il::Class;
         cls->name = createToken(name);
@@ -44,7 +65,7 @@ namespace evoBasic::il{
         return cls;
     }
 
-    Interface *ILFactory::createInterface(std::string name, AccessFlag access, std::vector<FtnBase*> ftns) {
+    Interface *Document::createInterface(std::string name, AccessFlag access, std::vector<FtnBase*> ftns) {
         auto ret = new il::Interface;
         ret->name = createToken(name);
         ret->access = new Access(access);
@@ -52,7 +73,7 @@ namespace evoBasic::il{
         return ret;
     }
 
-    Enum *ILFactory::createEnum(std::string name, AccessFlag access, std::vector<Pair*> pairs) {
+    Enum *Document::createEnum(std::string name, AccessFlag access, std::vector<Pair*> pairs) {
         auto ret = new il::Enum;
         ret->name = createToken(name);
         ret->access = new Access(access);
@@ -60,7 +81,7 @@ namespace evoBasic::il{
         return ret;
     }
 
-    Record *ILFactory::createRecord(std::string name, AccessFlag access, std::vector<Fld*> fields) {
+    Record *Document::createRecord(std::string name, AccessFlag access, std::vector<Fld*> fields) {
         auto ret = new il::Record;
         ret->name = createToken(name);
         ret->access = new Access(access);
@@ -68,23 +89,23 @@ namespace evoBasic::il{
         return ret;
     }
 
-    Fld *ILFactory::createField(std::string name, AccessFlag access, type::Prototype *prototype) {
+    Fld *Document::createField(std::string name, AccessFlag access, type::Prototype *prototype) {
         auto ret = new il::Fld;
         ret->name = createToken(name);
         ret->access = new Access(access);
-        ret->type = prototype->getToken(this);
+        ret->type = createConstructedToken(prototype->getFullName());
         return ret;
     }
 
-    SFld *ILFactory::createStaticField(std::string name, AccessFlag access, type::Prototype *prototype) {
+    SFld *Document::createStaticField(std::string name, AccessFlag access, type::Prototype *prototype) {
         auto ret = new il::SFld;
         ret->name = createToken(name);
         ret->access = new Access(access);
-        ret->type = prototype->getToken(this);
+        ret->type = createConstructedToken(prototype->getFullName());
         return ret;
     }
 
-    Ftn *ILFactory::createFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
+    Ftn *Document::createFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
                                    Block *entry) {
         auto ret = new il::Ftn;
         ret->name = createToken(name);
@@ -96,7 +117,7 @@ namespace evoBasic::il{
         return ret;
     }
 
-    Ctor *ILFactory::createConstructor(AccessFlag access, std::vector<Param*> params, vector<Local*> locals, Block *entry) {
+    Ctor *Document::createConstructor(AccessFlag access, std::vector<Param*> params, vector<Local*> locals, Block *entry) {
         auto ret = new il::Ctor;
         ret->access = new Access(access);
         ret->entry = entry;
@@ -106,7 +127,7 @@ namespace evoBasic::il{
     }
 
     VFtn *
-    ILFactory::createVirtualFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
+    Document::createVirtualFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
                                      Block *entry) {
         auto ret = new il::VFtn;
         ret->name = createToken(name);
@@ -119,7 +140,7 @@ namespace evoBasic::il{
     }
 
     SFtn *
-    ILFactory::createStaticFunction(std::string name, AccessFlag access, std::vector<Param *> params, Result *result, vector<Local*> locals,
+    Document::createStaticFunction(std::string name, AccessFlag access, std::vector<Param *> params, Result *result, vector<Local*> locals,
                                     Block *entry) {
         auto ret = new il::SFtn;
         ret->name = createToken(name);
@@ -132,7 +153,7 @@ namespace evoBasic::il{
     }
 
     Ext *
-    ILFactory::createExternalFunction(std::string name, std::string lib, AccessFlag access, std::vector<Param*> params,
+    Document::createExternalFunction(std::string name, std::string lib, AccessFlag access, std::vector<Param*> params,
                                       Result *result) {
         auto ret = new il::Ext;
         ret->name = createToken(name);
@@ -143,59 +164,59 @@ namespace evoBasic::il{
         return ret;
     }
 
-    Param *ILFactory::createParam(std::string name, type::Prototype *prototype,bool byref) {
+    Param *Document::createParam(std::string name, type::Prototype *prototype,bool byref) {
         auto ret = new Param;
         ret->name = createToken(name);
-        ret->type = prototype->getToken(this);
+        ret->type = createConstructedToken(prototype->getFullName());
         ret->is_ref = byref;
         return ret;
     }
 
-    Opt *ILFactory::createOption(std::string name, type::Prototype *prototype, bool byref, Block *initial) {
+    Opt *Document::createOption(std::string name, type::Prototype *prototype, bool byref, Block *initial) {
         auto ret = new Opt;
         ret->name = createToken(name);
-        ret->type = prototype->getToken(this);
+        ret->type = createConstructedToken(prototype->getFullName());
         ret->is_ref = byref;
         ret->initial = initial;
         return ret;
     }
 
-    Inf *ILFactory::createParamArray(std::string name, type::Prototype *prototype, bool byref) {
+    Inf *Document::createParamArray(std::string name, type::Prototype *prototype, bool byref) {
         auto ret = new Inf;
         ret->name = createToken(name);
-        ret->type = prototype->getToken(this);
+        ret->type = createConstructedToken(prototype->getFullName());
         ret->is_ref = byref;
         return ret;
     }
 
-    Pair *ILFactory::createPair(std::string name, data::u32 value) {
+    Pair *Document::createPair(std::string name, data::u32 value) {
         auto ret = new il::Pair;
         ret->name = createToken(name);
         ret->value = value;
         return ret;
     }
 
-    Extend *ILFactory::createExtend(type::Class *cls) {
+    Extend *Document::createExtend(type::Class *cls) {
         auto ret = new il::Extend;
-        ret->target = cls->getToken(this);
+        ret->target = createConstructedToken(cls->getFullName());
         return ret;
     }
 
-    Impl *ILFactory::createImplements(type::Interface *interface) {
+    Impl *Document::createImplements(type::Interface *interface) {
         auto ret = new il::Impl;
-        ret->target = interface->getToken(this);
+        ret->target = createConstructedToken(interface->getFullName());
         return ret;
     }
 
-    Local *ILFactory::createLocal(std::string name, type::Prototype *prototype, data::u16 address) {
+    Local *Document::createLocal(std::string name, type::Prototype *prototype, data::u16 address) {
         auto ret = new il::Local;
         ret->name = createToken(name);
-        ret->type = prototype->getToken(this);
+        ret->type = createConstructedToken(prototype->getFullName());
         ret->address = address;
         return ret;
     }
 
-    FtnBase *ILFactory::createInterfaceFunction(std::string name, AccessFlag access, std::vector<Param *> params,
+    FtnBase *Document::createInterfaceFunction(std::string name, AccessFlag access, std::vector<Param *> params,
                                                 Result *result) {
         auto ret = new il::FtnBase;
         ret->name = createToken(name);
@@ -204,16 +225,11 @@ namespace evoBasic::il{
         ret->result = result;
         return ret;
     }
-
-    Document *ILFactory::createDocument(std::vector<Member *> members) {
-        auto ret = new il::Document;
-        ret->members = std::move(members);
-        return ret;
-    }
+    
 
 
     std::string Local::toString() {
-        return Format() << "(local " << name->toString() << "@" << to_string(address) << " " << type->toString() << ")";
+        return Format() << "(local " << name->getName() << "@" << to_string(address) << " " << type->getName() << ")";
     }
 
     void Local::toHex(std::ostream &stream) {
@@ -503,19 +519,46 @@ namespace evoBasic::il{
     }
 
     std::string Token::toString() {
-        return text;
+        return Format() << "(token " << to_string(id) << " " << text << ")";
     }
 
     void Token::toHex(std::ostream &stream) {
 
     }
 
-    std::string ConstructedToken::toString() {
+    std::string Token::getName() {
+        return Format() << text;
+    }
 
+    void Token::setID(data::u64 value) {
+        id = value;
+    }
+
+    data::u64 Token::getID() {
+        return id;
+    }
+
+    std::string ConstructedToken::toString() {
+        Format fmt;
+        fmt << "(constructed " << to_string(id);
+        for(auto sub_token : tokens){
+            fmt << ' ' << to_string(sub_token->getID());
+        }
+        fmt << ')';
+        return fmt;
     }
 
     void ConstructedToken::toHex(std::ostream &stream) {
 
+    }
+
+    std::string ConstructedToken::getName(){
+        Format fmt;
+        for(auto token : tokens){
+            if(token != tokens.front()) fmt << '.';
+            fmt << token->getName();
+        }
+        return fmt;
     }
 
     std::string Access::toString() {
@@ -528,7 +571,7 @@ namespace evoBasic::il{
     }
 
     std::string Extend::toString() {
-        return Format() << "(extend " << target->toString() << ")";
+        return Format() << "(extend " << target->getName() << ")";
     }
 
     void Extend::toHex(std::ostream &stream) {
@@ -536,7 +579,7 @@ namespace evoBasic::il{
     }
 
     std::string Impl::toString() {
-        return Format() << "(impl " << target->toString() << ")";
+        return Format() << "(impl " << target->getName() << ")";
     }
 
     void Impl::toHex(std::ostream &stream) {
@@ -544,7 +587,7 @@ namespace evoBasic::il{
     }
 
     std::string Lib::toString() {
-        return Format() << "(lib " << target->toString() << ")";
+        return Format() << "(lib " << target->getName() << ")";
     }
 
     void Lib::toHex(std::ostream &stream) {
@@ -557,7 +600,7 @@ namespace evoBasic::il{
 
     std::string Class::toString() {
         Format fmt;
-        fmt << "(cls " << access->toString() << ' ' << name->toString() << ' ' << extend->toString();
+        fmt << "(cls " << access->toString() << ' ' << name->getName() << ' ' << extend->toString();
         for(auto impl : impls) fmt << ' ' << impl->toString();
         for(auto member : members) fmt << '\n' << member->toString();
         fmt << ")";
@@ -570,7 +613,7 @@ namespace evoBasic::il{
 
     std::string Module::toString() {
         Format fmt;
-        fmt << "(mod " << access->toString() << ' ' << name->toString();
+        fmt << "(mod " << access->toString() << ' ' << name->getName();
         for(auto member : members) fmt << '\n' << member->toString();
         fmt << ")";
         return fmt;
@@ -582,7 +625,7 @@ namespace evoBasic::il{
 
     std::string Interface::toString() {
         Format fmt;
-        fmt << "(interface " << access->toString() << ' ' << name->toString();
+        fmt << "(interface " << access->toString() << ' ' << name->getName();
         for(auto ftn : ftns) fmt << '\n' << ftn->toString();
         fmt << ")";
         return fmt;
@@ -593,7 +636,7 @@ namespace evoBasic::il{
     }
 
     std::string Pair::toString() {
-        return Format() << "(pair " << name->toString() << ' ' << to_string(value);
+        return Format() << "(pair " << name->getName() << ' ' << to_string(value);
     }
 
     void Pair::toHex(std::ostream &stream) {
@@ -602,7 +645,7 @@ namespace evoBasic::il{
 
     std::string Enum::toString() {
         Format fmt;
-        fmt << "(Enum " << access->toString() << ' ' << name->toString();
+        fmt << "(Enum " << access->toString() << ' ' << name->getName();
         for(auto p : pairs) fmt << '\n' << p->toString();
         fmt << ")";
         return fmt;
@@ -613,7 +656,7 @@ namespace evoBasic::il{
     }
 
     std::string Fld::toString() {
-        return Format() << "(fld " << access->toString() << ' ' << name->toString() << ' ' << type->toString() <<")";
+        return Format() << "(fld " << access->toString() << ' ' << name->getName() << ' ' << type->getName() <<")";
     }
 
     void Fld::toHex(std::ostream &stream) {
@@ -621,7 +664,7 @@ namespace evoBasic::il{
     }
 
     std::string SFld::toString() {
-        return Format() << "(sfld " << access->toString() << ' ' << name->toString() << ' ' << type->toString() <<")";
+        return Format() << "(sfld " << access->toString() << ' ' << name->getName() << ' ' << type->getName() <<")";
     }
 
     void SFld::toHex(std::ostream &stream) {
@@ -630,7 +673,7 @@ namespace evoBasic::il{
 
     std::string Record::toString() {
         Format fmt;
-        fmt << "(record " << access->toString() << ' ' << name->toString();
+        fmt << "(record " << access->toString() << ' ' << name->getName();
         for(auto fld : fields) fmt << '\n' << fld->toString();
         fmt << ")";
         return fmt;
@@ -641,7 +684,7 @@ namespace evoBasic::il{
     }
 
     std::string Param::toString() {
-        return Format() << "(param " << name->toString() << " " << type->toString() << ")";
+        return Format() << "(param " << name->getName() << " " << type->getName() << ")";
     }
 
     void Param::toHex(std::ostream &stream) {
@@ -649,7 +692,9 @@ namespace evoBasic::il{
     }
 
     std::string Opt::toString() {
-        return Format() << "(opt " << name->toString() << " " << type->toString() << ")";
+        return Format() << "(opt " << name->getName()
+                        << " " << type->getName()
+                        << initial->toString() << ")";
     }
 
     void Opt::toHex(std::ostream &stream) {
@@ -657,7 +702,7 @@ namespace evoBasic::il{
     }
 
     std::string Inf::toString() {
-        return Format() << "(inf " << name->toString() << " " << type->toString() << ")";
+        return Format() << "(inf " << name->getName() << " " << type->getName() << ")";
     }
 
     void Inf::toHex(std::ostream &stream) {
@@ -665,7 +710,7 @@ namespace evoBasic::il{
     }
 
     std::string Result::toString() {
-        return Format() << "(result " << type->toString() << ")";
+        return Format() << "(result " << type->getName() << ")";
     }
 
     void Result::toHex(std::ostream &stream) {
@@ -673,7 +718,7 @@ namespace evoBasic::il{
     }
 
     std::string Ctor::toString() {
-
+        return Format() << "(ctor " << FtnWithDefinition::toString() << ")";
     }
 
     void Ctor::toHex(std::ostream &stream) {
@@ -683,9 +728,10 @@ namespace evoBasic::il{
 
     std::string FtnBase::toString() {
         Format fmt;
-        fmt << access->toString() << ' ' << name->toString();
+        fmt << access->toString() << ' ';
+        if(name) fmt << name->getName();
         for(auto p : params) fmt << ' ' << p->toString();
-        fmt << ' ' << result->toString();
+        if(result) fmt << ' ' << result->toString();
         return fmt;
     }
 
@@ -748,7 +794,7 @@ namespace evoBasic::il{
     std::string InstWithToken::toString() {
         vector<string> str = {"Ldftn","Ldsftn","Ldvftn","Ldc","Newobj","Callext"};
         Format fmt;
-        fmt << "\n" << str[(int)op] << ' ' << token->toString();
+        fmt << "\n" << str[(int)op] << ' ' << token->getName();
         return fmt;
     }
 
@@ -842,7 +888,7 @@ namespace evoBasic::il{
                 "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
                 "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
         };
-        return Format() << inst[(int)op] << '.' << ty[(int)type] << token->toString();
+        return Format() << inst[(int)op] << '.' << ty[(int)type] << token->getName();
     }
 
     void InstWithDataToken::toHex(std::ostream &stream) {
@@ -851,7 +897,7 @@ namespace evoBasic::il{
 
 
     std::string InstCastcls::toString() {
-        return Format() << "cast." << src_class->toString() << " " << dst_class->toString();
+        return Format() << "cast." << src_class->getName() << " " << dst_class->getName();
     }
 
     void InstCastcls::toHex(std::ostream &stream) {
@@ -873,6 +919,7 @@ namespace evoBasic::il{
     std::string Document::toString() {
         Format fmt;
         fmt << "(Document ";
+        for(auto token : token_pool) fmt << '\n' << token->toString();
         for(auto member : members) fmt << '\n' << member->toString();
         fmt << ")";
         return fmt;
@@ -880,5 +927,9 @@ namespace evoBasic::il{
 
     void Document::toHex(ostream &stream) {
 
+    }
+
+    void Document::add(Member *member) {
+        members.push_back(member);
     }
 }

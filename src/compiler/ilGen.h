@@ -24,7 +24,7 @@ namespace evoBasic{
     };
 
     class ILGen{
-        il::ILFactory *factory = new il::ILFactory;
+        il::Document *document = new il::Document;
         il::Block *for_next = nullptr,*loop_next = nullptr;
     public:
         il::Document *visitGlobal(ast::Global *global_node);
@@ -74,7 +74,9 @@ namespace evoBasic{
         std::vector<il::Member*> visitMember(ast::Member *member);
         il::SFld *visitStaticField(ast::Variable *variable_node);
         il::Fld *visitField(ast::Variable *variable_node);
-        std::vector<il::Param *> visitParameter(std::vector<type::Parameter *> parameters);
+        std::vector<il::Param *> visitParameter(type::Function *function);
+
+        void visitEnumMember(ast::EnumMember *enum_member_node, il::Block *current);
     };
 
 }

@@ -11,25 +11,25 @@ namespace evoBasic{
 
     DataType mapILType(type::Prototype *type){
         switch(type->getKind()){
-            case type::SymbolKind::Class:       return il::ref;
-            case type::SymbolKind::Enum:        return il::u32;
-            case type::SymbolKind::Record:      return il::record;
-            case type::SymbolKind::Function:    return il::delegate;
-            case type::SymbolKind::Array:       return il::array;
+            case type::SymbolKind::Class:       return DataType::ref;
+            case type::SymbolKind::Enum:        return DataType::u32;
+            case type::SymbolKind::Record:      return DataType::record;
+            case type::SymbolKind::Function:    return DataType::delegate;
+            case type::SymbolKind::Array:       return DataType::array;
             case type::SymbolKind::Primitive:{
                 auto primitive = type->as<type::Primitive*>();
                 switch(primitive->getDataKind().getValue()){
-                    case vm::Data::i8:      return il::i8;
-                    case vm::Data::i16:     return il::i16;
-                    case vm::Data::i32:     return il::i32;
-                    case vm::Data::i64:     return il::i64;
-                    case vm::Data::u8:      return il::u8;
-                    case vm::Data::u16:     return il::u16;
-                    case vm::Data::u32:     return il::u32;
-                    case vm::Data::u64:     return il::u64;
-                    case vm::Data::f32:     return il::f32;
-                    case vm::Data::f64:     return il::f64;
-                    case vm::Data::boolean: return il::boolean;
+                    case vm::Data::i8:      return DataType::i8;
+                    case vm::Data::i16:     return DataType::i16;
+                    case vm::Data::i32:     return DataType::i32;
+                    case vm::Data::i64:     return DataType::i64;
+                    case vm::Data::u8:      return DataType::u8;
+                    case vm::Data::u16:     return DataType::u16;
+                    case vm::Data::u32:     return DataType::u32;
+                    case vm::Data::u64:     return DataType::u64;
+                    case vm::Data::f32:     return DataType::f32;
+                    case vm::Data::f64:     return DataType::f64;
+                    case vm::Data::boolean: return DataType::boolean;
                     default: PANIC;
                 }
             }
@@ -39,28 +39,31 @@ namespace evoBasic{
 
     il::Document *ILGen::visitGlobal(ast::Global *global_node) {
         auto members = visitMember(global_node->member);
-        return factory->createDocument(members);
+        for(auto member : members){
+            document->add(member);
+        }
+        return document;
     }
 
     il::Class *ILGen::visitClass(ast::Class *class_node) {
         auto members = visitMember(class_node->member);
         auto cls = class_node->class_symbol;
-        auto extend = factory->createExtend(cls->getExtend());
+        auto extend = document->createExtend(cls->getExtend());
         vector<Impl*> impls;
         for(auto [_,interface] : cls->getImplMap()){
-            impls.push_back(factory->createImplements(interface));
+            impls.push_back(document->createImplements(interface));
         }
-        return factory->createClass(cls->getName(),cls->getAccessFlag(),extend,impls,members);
+        return document->createClass(cls->getName(), cls->getAccessFlag(), extend, impls, members);
     }
 
     il::SFld *ILGen::visitStaticField(ast::Variable *variable_node){
         auto variable = variable_node->variable_symbol;
-        return factory->createStaticField(variable->getName(),variable->getAccessFlag(),variable->getPrototype());
+        return document->createStaticField(variable->getName(), variable->getAccessFlag(), variable->getPrototype());
     }
 
     il::Fld *ILGen::visitField(ast::Variable *variable_node){
         auto variable = variable_node->variable_symbol;
-        return factory->createField(variable->getName(),variable->getAccessFlag(),variable->getPrototype());
+        return document->createField(variable->getName(), variable->getAccessFlag(), variable->getPrototype());
     }
 
     vector<Member*> ILGen::visitMember(ast::Member *member){
@@ -100,113 +103,125 @@ namespace evoBasic{
                 case ast::Member::interface_:
                     members.push_back(visitInterface((ast::Interface*)iter));
                     break;
+                case ast::Member::constructor_:
+                    members.push_back(visitConstructor((ast::Constructor*)iter));
+                    break;
+                default:
+                    PANIC;
             }
         }
         return members;
     }
 
-    vector<il::Param*> ILGen::visitParameter(vector<type::Parameter*> parameters){
+    vector<il::Param*> ILGen::visitParameter(type::Function *function){
         vector<Param*> params;
-        for(auto iter : parameters){
-            if(iter->isOptional()){
-                auto block = new il::Block;
-                visitExpression(iter->getDefaultArgument()->expr,block);
-                params.push_back(factory->createOption(iter->getName(),iter->getPrototype(),!iter->isByval(),block));
-            }
-            else if(iter->isParamArray()){
-                params.push_back(factory->createParamArray(iter->getName(),iter->getPrototype(),!iter->isByval()));
-            }
-            else{
-                params.push_back(factory->createParam(iter->getName(),iter->getPrototype(),!iter->isByval()));
-            }
+
+        for(auto iter : function->getArgsSignature()){
+            params.push_back(document->createParam(iter->getName(), iter->getPrototype(), !iter->isByval()));
         }
+
+        for(auto iter : function->getArgsOptions()){
+            auto block = new il::Block;
+            visitExpression(iter->getDefaultArgument()->expr,block);
+            params.push_back(document->createOption(iter->getName(), iter->getPrototype(), !iter->isByval(), block));
+        }
+
+        if(function->getParamArray())
+            params.push_back(document->createParamArray(function->getParamArray()->getName(),
+                                                        function->getParamArray()->getPrototype(),
+                                                        !function->getParamArray()->isByval()));
+
         return params;
     }
 
     il::Module *ILGen::visitModule(ast::Module *module_node) {
         auto members = visitMember(module_node->member);
         auto mod = module_node->module_symbol;
-        return factory->createModule(mod->getName(),mod->getAccessFlag(),members);
+        return document->createModule(mod->getName(), mod->getAccessFlag(), members);
     }
 
     il::Interface *ILGen::visitInterface(ast::Interface *interface_node) {
         vector<FtnBase*> ftns;
         for(auto symbol : *(interface_node->interface_symbol)){
             auto member = symbol->as<type::Function*>();
-            auto parameter = visitParameter(member->getArgsSignature());
-            auto result = factory->createResult(member->getRetSignature());
-            auto ftn = factory->createInterfaceFunction(member->getName(),member->getAccessFlag(),parameter,result);
+            auto parameter = visitParameter(member);
+            auto result = nullptr;
+            if(member->getRetSignature())document->createResult(member->getRetSignature());
+            auto ftn = document->createInterfaceFunction(member->getName(), member->getAccessFlag(), parameter, result);
             ftns.push_back(ftn);
         }
         auto itf = interface_node->interface_symbol;
-        return factory->createInterface(itf->getName(),itf->getAccessFlag(),ftns);
+        return document->createInterface(itf->getName(), itf->getAccessFlag(), ftns);
     }
 
     il::Record *ILGen::visitType(ast::Type *type_node) {
         vector<Fld*> fields;
         for(auto symbol : *(type_node->type_symbol)){
             auto variable = symbol->as<type::Variable*>();
-            fields.push_back(factory->createField(variable->getName(),variable->getAccessFlag(),variable->getPrototype()));
+            fields.push_back(document->createField(variable->getName(), variable->getAccessFlag(), variable->getPrototype()));
         }
         auto ty = type_node->type_symbol;
-        return factory->createRecord(ty->getName(),ty->getAccessFlag(),fields);
+        return document->createRecord(ty->getName(), ty->getAccessFlag(), fields);
     }
 
     il::Enum *ILGen::visitEnum(ast::Enum *enum_node) {
         vector<il::Pair*> pairs;
         for(auto symbol : *(enum_node->enum_symbol)){
             auto member = symbol->as<type::EnumMember*>();
-            pairs.push_back(factory->createPair(member->getName(),member->getIndex()));
+            pairs.push_back(document->createPair(member->getName(), member->getIndex()));
         }
         auto em = enum_node->enum_symbol;
-        return factory->createEnum(em->getName(),em->getAccessFlag(),pairs);
+        return document->createEnum(em->getName(), em->getAccessFlag(), pairs);
     }
 
     il::FtnWithDefinition *ILGen::visitFunction(ast::Function *function_node) {
         auto entry = new il::Block;
-        visitStatement(function_node->statement, entry, nullptr);
-        auto parameter = visitParameter(function_node->function_symbol->getArgsSignature());
         auto symbol = function_node->function_symbol->as<type::UserFunction*>();
-        auto result = factory->createResult(symbol->getRetSignature());
+        visitStatement(function_node->statement, entry, nullptr);
+
+        auto parameter = visitParameter(symbol);
+        auto result = nullptr;
+        if(symbol->getRetSignature()) document->createResult(symbol->getRetSignature());
 
         vector<il::Local*> locals;
         for(auto variable : symbol->getMemoryLayout()){
-            locals.push_back(factory->createLocal(variable->getName(),variable->getPrototype(),variable->getLayoutIndex()));
+            locals.push_back(document->createLocal(variable->getName(), variable->getPrototype(), variable->getLayoutIndex()));
         }
 
         FtnWithDefinition *ftn = nullptr;
         switch(symbol->getFunctionFlag()){
-            case type::FunctionFlag::Method:
-                ftn = factory->createFunction(symbol->getName(), function_node->access, parameter,result,locals,entry);
+            case FunctionFlag::Method:
+                ftn = document->createFunction(symbol->getName(), function_node->access, parameter, result, locals, entry);
                 break;
-            case type::FunctionFlag::Static:
-                ftn = factory->createStaticFunction(symbol->getName(), function_node->access, parameter,result,locals,entry);
+            case FunctionFlag::Static:
+                ftn = document->createStaticFunction(symbol->getName(), function_node->access, parameter, result, locals, entry);
                 break;
-            case type::FunctionFlag::Virtual:
-            case type::FunctionFlag::Override:
-                ftn = factory->createVirtualFunction(symbol->getName(), function_node->access, parameter,result,locals,entry);
+            case FunctionFlag::Virtual:
+            case FunctionFlag::Override:
+                ftn = document->createVirtualFunction(symbol->getName(), function_node->access, parameter, result, locals, entry);
                 break;
         }
         return ftn;
     }
 
     il::Ext *ILGen::visitExternal(ast::External *external_node) {
-        auto parameter = visitParameter(external_node->function_symbol->getArgsSignature());
+        auto parameter = visitParameter(external_node->function_symbol);
         auto symbol = external_node->function_symbol;
-        auto result = factory->createResult(symbol->getRetSignature());
-        auto ext = factory->createExternalFunction(symbol->getName(),symbol->getLibName(),external_node->access,parameter,result);
+        auto result = nullptr;
+        if(symbol->getRetSignature()) document->createResult(symbol->getRetSignature());
+        auto ext = document->createExternalFunction(symbol->getName(), symbol->getLibName(), external_node->access, parameter, result);
         return ext;
     }
 
     il::Ctor *ILGen::visitConstructor(ast::Constructor *ctor_node) {
         auto entry = new il::Block;
-        auto parameter = visitParameter(ctor_node->constructor_symbol->getArgsSignature());
+        auto parameter = visitParameter(ctor_node->constructor_symbol);
         visitStatement(ctor_node->statement,entry,nullptr);
         vector<il::Local*> locals;
         for(auto variable : ctor_node->constructor_symbol->getMemoryLayout()){
-            locals.push_back(factory->createLocal(variable->getName(),variable->getPrototype(),variable->getLayoutIndex()));
+            locals.push_back(document->createLocal(variable->getName(), variable->getPrototype(), variable->getLayoutIndex()));
         }
-        auto ctor = factory->createConstructor(ctor_node->access,parameter,locals,entry);
+        auto ctor = document->createConstructor(ctor_node->access, parameter, locals, entry);
         return ctor;
     }
 
@@ -214,9 +229,6 @@ namespace evoBasic{
     il::Block *ILGen::visitStatement(ast::Statement *statement_node, il::Block *current, il::Block *next) {
         FOR_EACH(iter,statement_node){
             switch(iter->stmt_flag){
-                case ast::Statement::error:
-                    PANIC;
-                    break;
                 case ast::Statement::let_:
                     visitLet((ast::Let*)iter,current,next);
                     break;
@@ -244,6 +256,9 @@ namespace evoBasic{
                 case ast::Statement::expr_:
                     visitExprStmt((ast::ExprStmt*)iter,current,next);
                     break;
+                default:
+                    PANIC;
+                    break;
             }
         }
         return current;
@@ -251,7 +266,7 @@ namespace evoBasic{
 
     void ILGen::visitLet(ast::Let *let_node, il::Block *current, il::Block *next) {
         FOR_EACH(iter,let_node->variable){
-            current->Push(il::u16,(data::u16)iter->variable_symbol->getLayoutIndex());
+            current->Push(DataType::u16,(data::u16)iter->variable_symbol->getLayoutIndex());
             visitExpression(iter->initial,current);
             current->Stloc(mapILType(iter->initial->type->getPrototype()));
         }
@@ -312,7 +327,7 @@ namespace evoBasic{
                 auto sfld = (ast::SFld*)for_node->iterator;
                 auto il_type = mapILType(sfld->type->getPrototype());
                 visitExpression(for_node->begin,current);
-                current->Stsfld(il_type,sfld->variable->getToken(factory));
+                current->Stsfld(il_type,document->createConstructedToken(sfld->variable->getFullName()));
                 break;
             }
             case ast::Expression::Fld:{
@@ -320,13 +335,13 @@ namespace evoBasic{
                 auto il_type = mapILType(fld->type->getPrototype());
                 visitExpression(fld->ref,current);
                 visitExpression(for_node->begin,current);
-                current->Stfld(il_type,fld->variable->getToken(factory));
+                current->Stfld(il_type,document->createConstructedToken(fld->variable->getFullName()));
                 break;
             }
             case ast::Expression::ArgUse:{
                 auto arg = (ast::Arg*)for_node->iterator;
                 auto il_type = mapILType(arg->type->getPrototype());
-                current->Push(il::u16,(data::u16)arg->variable->getLayoutIndex());
+                current->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex());
                 visitExpression(for_node->begin,current);
                 current->Starg(il_type);
                 break;
@@ -334,7 +349,7 @@ namespace evoBasic{
             case ast::Expression::Local:{
                 auto local = (ast::Local*)for_node->iterator;
                 auto il_type = mapILType(local->type->getPrototype());
-                current->Push(il::u16,(data::u16)local->variable->getLayoutIndex());
+                current->Push(DataType::u16,(data::u16)local->variable->getLayoutIndex());
                 visitExpression(for_node->begin,current);
                 current->Stloc(il_type);
                 break;
@@ -353,16 +368,16 @@ namespace evoBasic{
 
         auto iter_il_type = mapILType(for_node->begin->type->getPrototype());
 
-        current->Push(il::u16,(data::u16)for_node->begin_variable->getLayoutIndex());
+        current->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex());
         visitExpression(for_node->begin,current);
         current->Stloc(iter_il_type);
 
-        current->Push(il::u16,(data::u16)for_node->end_variable->getLayoutIndex());
+        current->Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex());
         visitExpression(for_node->end,current);
         current->Stloc(iter_il_type);
 
         if(for_node->step){
-            current->Push(il::u16,(data::u16)for_node->step_variable->getLayoutIndex());
+            current->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex());
             visitExpression(for_node->step,current);
             current->Stloc(iter_il_type);
         }
@@ -387,7 +402,7 @@ namespace evoBasic{
                 visitExpression(for_node->iterator,cond_block);
                 visitExpression(for_node->step,cond_block);
                 cond_block->Add(il_type);
-                cond_block->Stsfld(il_type,sfld->variable->getToken(factory));
+                cond_block->Stsfld(il_type,document->createConstructedToken(sfld->variable->getFullName()));
                 break;
             }
             case ast::Expression::Fld:{
@@ -397,13 +412,13 @@ namespace evoBasic{
                 visitExpression(for_node->iterator,cond_block);
                 visitExpression(for_node->step,cond_block);
                 cond_block->Add(il_type);
-                cond_block->Stfld(il_type,fld->variable->getToken(factory));
+                cond_block->Stfld(il_type,document->createConstructedToken(fld->variable->getFullName()));
                 break;
             }
             case ast::Expression::ArgUse:{
                 auto arg = (ast::Arg*)for_node->iterator;
                 auto il_type = mapILType(arg->type->getPrototype());
-                cond_block->Push(il::u16,(data::u16)arg->variable->getLayoutIndex());
+                cond_block->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex());
                 visitExpression(for_node->iterator,cond_block);
                 visitExpression(for_node->step,cond_block);
                 cond_block->Add(il_type);
@@ -413,7 +428,7 @@ namespace evoBasic{
             case ast::Expression::Local:{
                 auto local = (ast::Local*)for_node->iterator;
                 auto il_type = mapILType(local->type->getPrototype());
-                cond_block->Push(il::u16,(data::u16)local->variable->getLayoutIndex());
+                cond_block->Push(DataType::u16,(data::u16)local->variable->getLayoutIndex());
                 visitExpression(for_node->iterator,cond_block);
                 visitExpression(for_node->step,cond_block);
                 cond_block->Add(il_type);
@@ -439,26 +454,26 @@ namespace evoBasic{
          *  beg > end && iter < beg ||
          *  beg == end
          */
-        cond_block->Push(il::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+        cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
                    .Ldloc(iter_il_type)
-                   .Push(il::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+                   .Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
                    .Ldloc(iter_il_type)
                    .LT(iter_il_type);
         visitExpression(for_node->iterator,cond_block);
-        cond_block->Push(il::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+        cond_block->Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
                    .Ldloc(iter_il_type)
                    .GT(iter_il_type);
 
-        cond_block->Push(il::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+        cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
                     .Ldloc(iter_il_type)
-                    .Push(il::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+                    .Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
                     .Ldloc(iter_il_type)
                     .GT(iter_il_type);
         visitExpression(for_node->iterator,cond_block);
         cond_block->Or();
-        cond_block->Push(il::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+        cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
                 .Ldloc(iter_il_type)
-                .Push(il::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+                .Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
                 .Ldloc(iter_il_type)
                 .EQ(iter_il_type)
                 .Or();
@@ -573,7 +588,14 @@ namespace evoBasic{
             case ast::Expression::Delegate:
                 visitDelegate((ast::Delegate*)expression_node,current);
                 break;
+            case ast::Expression::EnumMember:
+                visitEnumMember((ast::EnumMember*)expression_node,current);
+                break;
         }
+    }
+
+    void ILGen::visitEnumMember(ast::EnumMember* enum_member_node, il::Block *current){
+        current->Push(DataType::i32,enum_member_node->member->getIndex());
     }
 
     void ILGen::visitUnary(ast::Unary *unary_node, il::Block *current) {
@@ -590,7 +612,7 @@ namespace evoBasic{
     void ILGen::visitBinary(ast::Binary *binary_node, il::Block *current) {
         visitExpression(binary_node->lhs,current);
         visitExpression(binary_node->rhs,current);
-        auto il_type = mapILType(binary_node->type->getPrototype());
+        auto il_type = mapILType(binary_node->lhs->type->getPrototype());
         using Op = ast::Binary::Op;
         switch (binary_node->op) {
             case Op::Empty: PANIC; break;
@@ -619,14 +641,14 @@ namespace evoBasic{
                 auto fld = (ast::Fld*)expr;
                 visitFld(fld,current);
                 visitExpression(assign_node->rhs,current);
-                current->Stfld(mapILType(fld->variable->getPrototype()),fld->variable->getToken(factory));
+                current->Stfld(mapILType(fld->variable->getPrototype()),document->createConstructedToken(fld->variable->getFullName()));
                 break;
             }
             case ast::Expression::SFld:{
                 auto sfld = (ast::SFld*)expr;
                 visitSFld(sfld,current);
                 visitExpression(assign_node->rhs,current);
-                current->Stsfld(mapILType(sfld->variable->getPrototype()),sfld->variable->getToken(factory));
+                current->Stsfld(mapILType(sfld->variable->getPrototype()),document->createConstructedToken(sfld->variable->getFullName()));
                 break;
             }
             case ast::Expression::Element:{
@@ -639,14 +661,14 @@ namespace evoBasic{
             }
             case ast::Expression::ArgUse:{
                 auto arg = (ast::Arg*)expr;
-                current->Push(il::u16,(data::u16)arg->variable->getLayoutIndex());
+                current->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex());
                 visitExpression(assign_node->rhs,current);
                 current->Starg(mapILType(arg->variable->getPrototype()));
                 break;
             }
             case ast::Expression::Local:{
                 auto local = (ast::Local*)expr;
-                current->Push(il::u16,(data::u16)local->variable->getLayoutIndex());
+                current->Push(DataType::u16,(data::u16)local->variable->getLayoutIndex());
                 visitExpression(assign_node->rhs,current);
                 current->Stloc(mapILType(local->variable->getPrototype()));
                 break;
@@ -678,62 +700,63 @@ namespace evoBasic{
         auto expr = argument_node->expr;
         if(argument_node->byval){
             // pass byval
-            if(expr->expression_kind == ast::Expression::Assign){
-                auto assign = (ast::Assign*)expr;
-                visitAssign(assign,current);
-                expr = assign->lhs;
-            }
-
-            switch (expr->expression_kind) {
-                case ast::Expression::Ftn:
-                    visitFtnCall((ast::FtnCall*)expr,current);
-                    break;
-                case ast::Expression::VFtn:
-                    visitVFtnCall((ast::VFtnCall*)expr,current);
-                    break;
-                case ast::Expression::SFtn:
-                    visitSFtnCall((ast::SFtnCall*)expr,current);
-                    break;
-                case ast::Expression::Fld:{
-                    auto fld = (ast::Fld*)expr;
-                    visitFld(fld,current);
-                    current->Ldfld(mapILType(fld->variable->getPrototype()),fld->variable->getToken(factory));
-                    break;
-                }
-                case ast::Expression::SFld:{
-                    auto sfld = (ast::SFld*)expr;
-                    visitSFld(sfld,current);
-                    current->Ldsfld(mapILType(sfld->variable->getPrototype()),sfld->variable->getToken(factory));
-                    break;
-                }
-                case ast::Expression::Element:{
-                    auto element = (ast::ArrayElement*)expr;
-                    visitExpression(element->array,current);
-                    visitExpression(element->offset,current);
-                    current->Ldelem(mapILType(element->type->getPrototype()));
-                    break;
-                }
-                case ast::Expression::ArgUse:{
-                    auto arg = (ast::Arg*)expr;
-                    current->Push(il::u16,arg->variable->getLayoutIndex())
-                            .Ldarg(mapILType(arg->variable->getPrototype()));
-                    break;
-                }
-                case ast::Expression::Unary:
-                case ast::Expression::Binary:
-                case ast::Expression::New:
-                case ast::Expression::Digit:
-                case ast::Expression::Decimal:
-                case ast::Expression::String:
-                case ast::Expression::Boolean:
-                case ast::Expression::Char:
-                case ast::Expression::Delegate:
-                case ast::Expression::Parentheses:
-                case ast::Expression::Cast:
-                    // do nothing
-                    break;
-                default: PANIC;
-            }
+            visitExpression(expr,current);
+//            if(expr->expression_kind == ast::Expression::Assign){
+//                auto assign = (ast::Assign*)expr;
+//                visitAssign(assign,current);
+//                expr = assign->lhs;
+//            }
+//
+//            switch (expr->expression_kind) {
+//                case ast::Expression::Ftn:
+//                    visitFtnCall((ast::FtnCall*)expr,current);
+//                    break;
+//                case ast::Expression::VFtn:
+//                    visitVFtnCall((ast::VFtnCall*)expr,current);
+//                    break;
+//                case ast::Expression::SFtn:
+//                    visitSFtnCall((ast::SFtnCall*)expr,current);
+//                    break;
+//                case ast::Expression::Fld:{
+//                    auto fld = (ast::Fld*)expr;
+//                    visitFld(fld,current);
+//                    current->Ldfld(mapILType(fld->variable->getPrototype()),document->createConstructedToken(fld->variable->getFullName()));
+//                    break;
+//                }
+//                case ast::Expression::SFld:{
+//                    auto sfld = (ast::SFld*)expr;
+//                    visitSFld(sfld,current);
+//                    current->Ldsfld(mapILType(sfld->variable->getPrototype()),document->createConstructedToken(sfld->variable->getFullName()));
+//                    break;
+//                }
+//                case ast::Expression::Element:{
+//                    auto element = (ast::ArrayElement*)expr;
+//                    visitExpression(element->array,current);
+//                    visitExpression(element->offset,current);
+//                    current->Ldelem(mapILType(element->type->getPrototype()));
+//                    break;
+//                }
+//                case ast::Expression::ArgUse:{
+//                    auto arg = (ast::Arg*)expr;
+//                    current->Push(DataType::u16,arg->variable->getLayoutIndex())
+//                            .Ldarg(mapILType(arg->variable->getPrototype()));
+//                    break;
+//                }
+//                case ast::Expression::Unary:
+//                case ast::Expression::Binary:
+//                case ast::Expression::New:
+//                case ast::Expression::Digit:
+//                case ast::Expression::Decimal:
+//                case ast::Expression::String:
+//                case ast::Expression::Boolean:
+//                case ast::Expression::Char:
+//                case ast::Expression::Delegate:
+//                case ast::Expression::Parentheses:
+//                case ast::Expression::Cast:
+//                    // do nothing
+//                    break;
+//                default: PANIC;
+//            }
         }
         else{
             // pass byref
@@ -747,13 +770,13 @@ namespace evoBasic{
                 case ast::Expression::Fld:{
                     auto fld = (ast::Fld*)expr;
                     visitFld(fld,current);
-                    current->Ldflda(fld->variable->getToken(factory));
+                    current->Ldflda(document->createConstructedToken(fld->variable->getFullName()));
                     break;
                 }
                 case ast::Expression::SFld:{
                     auto sfld = (ast::SFld*)expr;
                     visitSFld(sfld,current);
-                    current->Ldsflda(sfld->variable->getToken(factory));
+                    current->Ldsflda(document->createConstructedToken(sfld->variable->getFullName()));
                     break;
                 }
                 case ast::Expression::Element:{
@@ -765,7 +788,7 @@ namespace evoBasic{
                 }
                 case ast::Expression::ArgUse:{
                     auto arg = (ast::Arg*)expr;
-                    current->Push(il::u16,(data::u16)arg->variable->getLayoutIndex())
+                    current->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex())
                             .Ldarga();
                     break;
                 }
@@ -777,19 +800,19 @@ namespace evoBasic{
 
     void ILGen::visitNew(ast::New *new_node, il::Block *current) {
         loadCalleeArguments(new_node,current);
-        current->Newobj(new_node->target->getToken(factory));
+        current->Newobj(document->createConstructedToken(new_node->target->getFullName()));
     }
 
     void ILGen::visitFtnCall(ast::FtnCall *ftn_node, il::Block *current) {
         visitExpression(ftn_node->ref,current);
-        current->Ldftn(ftn_node->function->getToken(factory));
+        current->Ldftn(document->createConstructedToken(ftn_node->function->getFullName()));
         loadCalleeArguments(ftn_node,current);
         current->Call();
     }
 
     void ILGen::visitSFtnCall(ast::SFtnCall *sftn_node, il::Block *current) {
         loadCalleeArguments(sftn_node,current);
-        current->Ldsftn(sftn_node->function->getToken(factory))
+        current->Ldsftn(document->createConstructedToken(sftn_node->function->getFullName()))
                 .Callstatic();
     }
 
@@ -802,22 +825,22 @@ namespace evoBasic{
 
     void ILGen::visitVFtnCall(ast::VFtnCall *vftn_node, il::Block *current) {
         visitExpression(vftn_node->ref,current);
-        current->Ldvftn(vftn_node->function->getToken(factory));
+        current->Ldvftn(document->createConstructedToken(vftn_node->function->getFullName()));
         loadCalleeArguments(vftn_node,current);
         current->Callvirt();
     }
 
     void ILGen::visitExtCall(ast::ExtCall *ext_node, il::Block *current) {
-        current->Invoke(ext_node->function->getToken(factory));
+        current->Invoke(document->createConstructedToken(ext_node->function->getFullName()));
     }
 
     void ILGen::visitSFld(ast::SFld *sfld_node, il::Block *current) {
-        auto token = sfld_node->variable->getToken(factory);
+        auto token = document->createConstructedToken(sfld_node->variable->getFullName());
         current->Ldsfld(mapILType(sfld_node->variable->getPrototype()),token);
     }
 
     void ILGen::visitFld(ast::Fld *fld_node, il::Block *current) {
-        auto token = fld_node->variable->getToken(factory);
+        auto token = document->createConstructedToken(fld_node->variable->getFullName());
         visitExpression(fld_node->ref,current);
         current->Ldfld(mapILType(fld_node->variable->getPrototype()),token);
     }
@@ -843,7 +866,7 @@ namespace evoBasic{
     }
 
     void ILGen::visitString(ast::String *string_node, il::Block *current) {
-        current->Ldc(factory->createToken(string_node->value));
+        current->Ldc(document->createToken(string_node->value));
         //todo: call ctor for String
     }
 

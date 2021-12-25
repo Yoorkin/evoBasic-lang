@@ -23,11 +23,6 @@ namespace evoBasic::il{
     class Block;
     class FtnBase;
 
-    enum DataType{
-        empty,i8,i16,i32,i64,u8,u16,u32,u64,f32,f64,
-        ref,ftn,vftn,sftn,record,array,boolean,character,delegate
-    };
-
     class Node {
     public:
         virtual std::string toString()=0;
@@ -36,20 +31,28 @@ namespace evoBasic::il{
 
     class Token : public Node{
         std::string text;
+    protected:
+        data::u64 id = -1;
     public:
+        Token()=default;
         explicit Token(std::string text) : text(text){}
         void toHex(std::ostream &stream)override;
         std::string toString()override;
+        virtual std::string getName();
+        void setID(data::u64 value);
+        data::u64 getID();
     };
 
     class ConstructedToken : public Token{
+    public:
         std::vector<Token*> tokens;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
+        std::string getName()override;
     };
 
     class Access : public Node{
-        AccessFlag flag;
+        AccessFlag flag = AccessFlag::Private;
     public:
         explicit Access(AccessFlag flag) : flag(flag){}
         std::string toString()override;
@@ -297,13 +300,6 @@ namespace evoBasic::il{
     };
 
 
-    class Document : public Node{
-    public:
-        std::vector<Member*> members;
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-    };
-
     class InstConv : public Inst{
     public:
         DataType src,dst;
@@ -311,13 +307,17 @@ namespace evoBasic::il{
         void toHex(std::ostream &stream)override;
     };
 
-    class ILFactory{
+    class Document : public Node{
         std::map<std::string,int> token_pool_map;
         std::vector<Token*> token_pool;
         std::vector<ConstructedToken*> constructed_token_pool;
+        std::vector<Member*> members;
     public:
+        std::string toString()override;
+        void toHex(std::ostream &stream)override;
+
         Token *createToken(std::string text);
-        ConstructedToken *createConstructedToken(std::vector<Token*> token_list);
+        Token *createConstructedToken(std::list<std::string> full_name_list);
 
         Module *createModule(std::string name,AccessFlag access,std::vector<Member*> members);
         Class *createClass(std::string name,AccessFlag access,Extend *extend,std::vector<Impl*> impls,std::vector<Member*> members);
@@ -344,7 +344,7 @@ namespace evoBasic::il{
         Local *createLocal(std::string name,type::Prototype *prototype, data::u16 address);
         Result *createResult(type::Prototype *prototype);
 
-        Document *createDocument(std::vector<Member*> members);
+        void add(Member* member);
     };
 
 

@@ -535,7 +535,7 @@ namespace evoBasic{
         auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::u16);
         auto ast_node = new ast::Char;
         ast_node->value = ch_node->value;
-        ast_node->type = new ExpressionType(primitive,ExpressionType::rvalue,il::u16);
+        ast_node->type = new ExpressionType(primitive,ExpressionType::rvalue,DataType::u16);
         return (ast::Expression*)ast_node;
     }
 
@@ -554,7 +554,7 @@ namespace evoBasic{
         if(ast_lhs->type->value_kind == ExpressionType::error || ast_rhs->type->value_kind == ExpressionType::error)
             return ast::Expression::error;
 
-        auto boolean_prototype = args.context->getBuiltIn().getPrimitive(vm::Data::i8);
+        auto boolean_prototype = args.context->getBuiltIn().getPrimitive(vm::Data::boolean);
         auto is_boolean = [&](ExpressionType *type,Location *location)->bool{
             if(!type->getPrototype()->equal(boolean_prototype)){
                 Logger::error(location, lang->msgExpExpectedBoolean());
@@ -593,7 +593,7 @@ namespace evoBasic{
                                           binary_node->lhs,binary_node->rhs,
                                           &ast_node->lhs,&ast_node->rhs))
                     return ast::Expression::error;
-                ast_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue,il::boolean);
+                ast_node->type = new ExpressionType(boolean_prototype,ExpressionType::rvalue);
                 break;
             }
             case Op::ADD:
@@ -661,6 +661,7 @@ namespace evoBasic{
             case ast::Expression::ArgUse:
             case ast::Expression::SFld:
             case ast::Expression::Assign:
+            case ast::Expression::EnumMember:
                 ret = ast_rhs;
                 break;
             default:
@@ -715,9 +716,8 @@ namespace evoBasic{
                     return (ast::Expression*)new ast::TmpPath(new ExpressionType(target,ExpressionType::path,true));
                 }
                 case type::SymbolKind::EnumMember:{
-                    PANIC;
-                    //todo
-                    //return new ExpressionType(target->getParent(),ExpressionType::rvalue,true);
+                    return (ast::Expression*)new ast::EnumMember(target->as<type::EnumMember*>(),
+                            new ExpressionType(target->getParent(),ExpressionType::rvalue,true));
                 }
                 default:
                     PANIC;

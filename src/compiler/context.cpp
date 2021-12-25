@@ -21,7 +21,7 @@ namespace evoBasic{
         //void,boolean,i8,i16,i32,i64,f32,f64,u8,u16,u32,u64
         primitive_vector = {
             nullptr,
-            new Primitive("boolean", vm::Data(vm::Data::i8)),
+            new Primitive("boolean", vm::Data(vm::Data::boolean)),
             new Primitive("byte", vm::Data(vm::Data::i8)),
             new Primitive("short", vm::Data(vm::Data::i16)),
             new Primitive("integer", vm::Data(vm::Data::i32)),
@@ -190,7 +190,7 @@ namespace evoBasic{
             case SymbolKind::Array:
                 break;
         }
-        (*expression)->type = new ExpressionType(dst,ExpressionType::rvalue,il::empty);
+        (*expression)->type = new ExpressionType(dst,ExpressionType::rvalue,DataType::empty);
     }
 
 

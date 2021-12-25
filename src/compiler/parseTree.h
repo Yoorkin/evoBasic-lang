@@ -3,14 +3,13 @@
 #include "token.h"
 #include "data.h"
 #include "nullSafe.h"
+#include "enums.h"
 #include <memory>
 #include <list>
 
 #define FOR_EACH(Iterator,Head) for(auto Iterator=Head; Iterator!=nullptr; Iterator=Iterator->next_sibling)
 
 namespace evoBasic{
-    enum class AccessFlag {Public,Private,Friend,Protected};
-    enum class MethodFlag {Virtual,Override,None};
     struct ExpressionType;
     namespace type{
         class Variable;

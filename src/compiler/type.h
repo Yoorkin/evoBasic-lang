@@ -19,10 +19,10 @@
 #include "parseTree.h"
 #include "token.h"
 #include "bytecode.h"
-#include "ir.h"
+#include "enums.h"
 
 namespace evoBasic::il{
-    class ILFactory;
+    class Document;
     class Token;
 }
 
@@ -32,7 +32,6 @@ namespace evoBasic::ast{
 
 namespace evoBasic::type{
 
-    enum class FunctionEnum{User,External,Intrinsic};
 /*
  *  谁用宏在项目中搞花样谁就是没事找抽 8/10/2021
     STRING_ENUM_DECLARE(InstanceEnum,INSTANCE_ENUM_LIST);
@@ -102,7 +101,6 @@ namespace evoBasic::type{
         void setStatic(bool value);
 
         bool isExtern();
-        il::Token *getToken(il::ILFactory *factory);
     };
 
 
@@ -128,7 +126,7 @@ namespace evoBasic::type{
         }
     };
 
-    enum class VariableKind{Undefined,Local,Field,StaticField,Parameter};
+
 
     class Variable : public Symbol{
         friend class Record;
@@ -218,10 +216,6 @@ namespace evoBasic::type{
         
     };
 
-
-    enum class FunctionFlag{Method=0,Static,Virtual,Override};
-
-    enum class FunctionKind{InterfaceFunction,UserFunction,Operator,External,Constructor};
 
     class Function: public Domain{
     protected:

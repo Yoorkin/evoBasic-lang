@@ -164,10 +164,10 @@ namespace evoBasic{
         if(is_name_valid(name,function_node->name->location,args.domain)){
             type::Function *function = nullptr;
 
-            type::FunctionFlag flag = FunctionFlag::Static;
+            FunctionFlag flag = FunctionFlag::Static;
 
             if(function_node->is_static){
-                flag = type::FunctionFlag::Static;
+                flag = FunctionFlag::Static;
                 if(args.domain->getKind() == type::SymbolKind::Module){
                     Logger::error(function_node->location,lang->msgFtnInModuleCannotMarkStatic());
                 }
@@ -180,7 +180,7 @@ namespace evoBasic{
                     }
 
                     if(args.domain->getKind() == SymbolKind::Class){
-                        flag = type::FunctionFlag::Virtual;
+                        flag = FunctionFlag::Virtual;
                     }
                     else if(args.domain->getKind() == SymbolKind::Module){
                         Logger::error(function_node->location,lang->msgSFtnCannotMarkVirtual());
@@ -192,7 +192,7 @@ namespace evoBasic{
                     }
 
                     if(args.domain->getKind() == SymbolKind::Class){
-                        flag = type::FunctionFlag::Override;
+                        flag = FunctionFlag::Override;
                     }
                     else if(args.domain->getKind() == SymbolKind::Module){
                         Logger::error(function_node->location,lang->msgFtnInModuleCannotMarkOverride());
@@ -200,7 +200,7 @@ namespace evoBasic{
                     break;
                 case MethodFlag::None:
                     if(args.domain->getKind() == type::SymbolKind::Class && !function_node->is_static){
-                        flag = type::FunctionFlag::Method;
+                        flag = FunctionFlag::Method;
                     }
                     break;
             }

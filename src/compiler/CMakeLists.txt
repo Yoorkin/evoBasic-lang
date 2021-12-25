@@ -21,6 +21,6 @@ file(GLOB COMPILER_SOURCE
         )
 
 
-add_executable(ecc main.cpp ${COMPILER_SOURCE} ${UTILS_SOURCE})
+add_executable(ecc main.cpp ${COMPILER_SOURCE} ${UTILS_SOURCE} ../utils/enums.h)
 MESSAGE(${COMPILER_SOURCE})
 target_include_directories(ecc PRIVATE ${COMPILER_INCLUDE} ${UTILS_INCLUDE})

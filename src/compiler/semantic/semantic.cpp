@@ -17,8 +17,8 @@ using namespace evoBasic::parseTree::expr;
 namespace evoBasic{
 
 
-    ExpressionType *ExpressionType::Error = new ExpressionType(new type::Error,error,il::empty);
-    ExpressionType *ExpressionType::Void = new ExpressionType(new type::Error,void_,il::empty);
+    ExpressionType *ExpressionType::Error = new ExpressionType(new type::Error,error,DataType::empty);
+    ExpressionType *ExpressionType::Void = new ExpressionType(new type::Error,void_,DataType::empty);
 
     void Semantic::collectSymbol(ParseTree *parse_tree, Context *context) {
         SymbolCollector collector;

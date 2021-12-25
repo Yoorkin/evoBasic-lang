@@ -38,6 +38,10 @@ namespace evoBasic::ast{
         return new DebugInfo{"<Error>"};
     }
 
+    DebugInfo *EnumMember::debug() {
+        return new DebugInfo{Format() << "<EnumMember> " << member->mangling('.')};
+    }
+
     evoBasic::DebugInfo *Global::debug() {
         auto ret = new DebugInfo{"<Global>"};
         FOR_EACH(iter,member){
