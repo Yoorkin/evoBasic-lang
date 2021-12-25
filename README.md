@@ -15,6 +15,14 @@ It is an cross-platforms,object-oriented,strongly typed programming language, co
 
 - First-class functions
 
+# project status
+
+- [x] lexer and parser: generate parse tree
+- [x] semantic check: type check,generate symbol table and translate parse tree to abstract tree
+- [x] IL generator: translate abstract tree to intermediate language
+- [ ] executable file generator
+- [ ] evoBasic vm
+
 # How to build
 
 build requirements:
