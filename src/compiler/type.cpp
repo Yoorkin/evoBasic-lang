@@ -411,7 +411,7 @@ namespace evoBasic::type{
     }
 
     il::Token *Symbol::getToken(il::ILFactory *factory) {
-        return nullptr;
+        return new il::Token("TOKEN");
     }
 
 
@@ -474,6 +474,10 @@ namespace evoBasic::type{
             size += variable->getRealByteLength();
         }
         Prototype::setByteLength(size);
+    }
+
+    const std::vector<Variable *> &Domain::getMemoryLayout() {
+        return memory_layout;
     }
 
 

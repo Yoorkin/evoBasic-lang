@@ -162,13 +162,31 @@ namespace evoBasic{
         return factory->createEnum(em->getName(),em->getAccessFlag(),pairs);
     }
 
-    il::Ftn *ILGen::visitFunction(ast::Function *function_node) {
+    il::FtnWithDefinition *ILGen::visitFunction(ast::Function *function_node) {
         auto entry = new il::Block;
         visitStatement(function_node->statement, entry, nullptr);
         auto parameter = visitParameter(function_node->function_symbol->getArgsSignature());
-        auto symbol = function_node->function_symbol;
+        auto symbol = function_node->function_symbol->as<type::UserFunction*>();
         auto result = factory->createResult(symbol->getRetSignature());
-        auto ftn = factory->createFunction(symbol->getName(), function_node->access, parameter,result,entry);
+
+        vector<il::Local*> locals;
+        for(auto variable : symbol->getMemoryLayout()){
+            locals.push_back(factory->createLocal(variable->getName(),variable->getPrototype(),variable->getLayoutIndex()));
+        }
+
+        FtnWithDefinition *ftn = nullptr;
+        switch(symbol->getFunctionFlag()){
+            case type::FunctionFlag::Method:
+                ftn = factory->createFunction(symbol->getName(), function_node->access, parameter,result,locals,entry);
+                break;
+            case type::FunctionFlag::Static:
+                ftn = factory->createStaticFunction(symbol->getName(), function_node->access, parameter,result,locals,entry);
+                break;
+            case type::FunctionFlag::Virtual:
+            case type::FunctionFlag::Override:
+                ftn = factory->createVirtualFunction(symbol->getName(), function_node->access, parameter,result,locals,entry);
+                break;
+        }
         return ftn;
     }
 
@@ -184,7 +202,11 @@ namespace evoBasic{
         auto entry = new il::Block;
         auto parameter = visitParameter(ctor_node->constructor_symbol->getArgsSignature());
         visitStatement(ctor_node->statement,entry,nullptr);
-        auto ctor = factory->createConstructor(ctor_node->access,parameter,entry);
+        vector<il::Local*> locals;
+        for(auto variable : ctor_node->constructor_symbol->getMemoryLayout()){
+            locals.push_back(factory->createLocal(variable->getName(),variable->getPrototype(),variable->getLayoutIndex()));
+        }
+        auto ctor = factory->createConstructor(ctor_node->access,parameter,locals,entry);
         return ctor;
     }
 

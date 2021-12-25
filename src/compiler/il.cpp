@@ -8,302 +8,212 @@ namespace evoBasic::il{
     using namespace std;
 
 
-    InstBr *Br(Block *block){
-        auto ret = new InstBr;
-        ret->target = block;
-        return ret;
-    }
-    InstJif *Jif(Block *block){
-        auto ret = new InstJif;
-        ret->target = block;
-        return ret;
-    }
-
-#define FillOp(OP) auto ret = new InstWithOp; \
-                    ret->op = InstWithOp::OP;   \
-                    return ret;
-
-#define FillOpData(OP) auto ret = new InstWithData; \
-                        ret->op = InstWithData::OP; \
-                        ret->type = data;           \
-                        return ret;
-
-#define FillOpToken(OP,TOKEN) auto ret = new InstWithToken; \
-                                        ret->op = InstWithToken::OP;  \
-                                        ret->token = TOKEN;              \
-                                        return ret;
-
-#define FillOpDataToken(OP,DATA,TOKEN) auto ret = new InstWithDataToken; \
-                                        ret->op = InstWithDataToken::OP;  \
-                                        ret->type = DATA;                \
-                                        ret->token = TOKEN;              \
-                                        return ret;
-
-
-    InstWithData *EQ(DataType data){
-        FillOpData(EQ)
-    }
-    InstWithData *NE(DataType data){
-        FillOpData(NE);
-    }
-    InstWithData *LT(DataType data){
-        FillOpData(NE);
-    }
-    InstWithData *GT(DataType data){
-        FillOpData(GT);
-    }
-    InstWithData *LE(DataType data){
-        FillOpData(LE);
-    }
-    InstWithData *GE(DataType data){
-        FillOpData(GE);
-    }
-    InstWithData *Add(DataType data){
-        FillOpData(Add);
-    }
-    InstWithData *Sub(DataType data){
-        FillOpData(Sub);
-    }
-    InstWithData *Mul(DataType data){
-        FillOpData(Mul);
-    }
-    InstWithData *Div(DataType data){
-        FillOpData(Div);
-    }
-    InstWithData *FDiv(DataType data){
-        FillOpData(FDiv);
-    }
-    InstWithData *Neg(DataType data){
-        FillOpData(NE);
-    }
-    InstWithOp *And(){
-        FillOp(And);
-    }
-    InstWithOp *Or(){
-        FillOp(Or);
-    }
-    InstWithOp *Xor(){
-        FillOp(Xor);
-    }
-    InstWithOp *Not(){
-        FillOp(Not);
-    }
-    InstWithOp *Nop(){
-        FillOp(Nop);
-    }
-    InstWithData *Pop(DataType data){
-        FillOpData(Pop);
-    }
-    InstWithData *Dup(DataType data){
-        FillOpData(Dup);
-    }
-    InstWithOp *Ret(){
-        FillOp(Ret);
-    }
-    InstPush *Push(DataType data, std::any value){
-        auto ret = new InstPush;
-        ret->type = data;
-        ret->value = value;
-        return ret;
-    }
-    InstWithToken *Ldc(ConstructedToken *token){
-        FillOpToken(Ldc,token);
-    }
-    InstWithToken *Ldftn(Ftn *ftn){
-        FillOpToken(Ldftn,ftn->getConstructedToken());
-    }
-    InstWithToken *Ldsftn(SFtn *sftn){
-        FillOpToken(Ldsftn,sftn->getConstructedToken());
-    }
-    InstWithToken *Ldvftn(VFtn *vftn){
-        FillOpToken(Ldvftn,vftn->getConstructedToken());
-    }
-    InstWithData *Ldarg(DataType data){
-        FillOpData(Ldarg);
-    }
-    InstWithData *Starg(DataType data){
-        FillOpData(Starg);
-    }
-    InstWithOp *Ldarga(){
-        FillOp(Ldarga);
-    }
-    InstWithData *Ldloc(DataType data){
-        FillOpData(Ldloc);
-    }
-    InstWithOp *Ldloca(){
-        FillOp(Ldloca);
-    }
-    InstWithData *Stloc(DataType data){
-        FillOpData(Stloc);
-    }
-    InstWithDataToken *Ldfld(DataType data,Fld *field){
-        FillOpDataToken(Ldfld,data,field->getConstructedToken());
-    }
-    InstWithDataToken *Ldsfld(DataType data,SFld *field){
-        FillOpDataToken(Ldsfld,data,field->getConstructedToken());
-    }
-    InstWithDataToken *Ldflda(DataType data,Fld *field){
-        FillOpDataToken(Ldflda,data,field->getConstructedToken());
-    }
-    InstWithDataToken *Ldsflda(DataType data,SFld *field){
-        FillOpDataToken(Ldsflda,data,field->getConstructedToken());
-    }
-    InstWithDataToken *Stfld(DataType data,Fld *field){
-        FillOpDataToken(Stfld,data,field->getConstructedToken());
-    }
-    InstWithDataToken *Stsfld(DataType data,SFld *field){
-        FillOpDataToken(Stsfld,data,field->getConstructedToken());
-    }
-    InstWithData *Ldelem(DataType data){
-        FillOpData(Ldelem);
-    }
-    InstWithOp *Ldelema(){
-        FillOp(Ldelema);
-    }
-    InstWithData *Stelem(DataType data){
-        FillOpData(Stelem);
-    }
-    InstWithOp *Ldnull(){
-        FillOp(Ldnull);
-    }
-    InstWithToken *Newobj(Class *cls){
-        FillOpToken(Newobj,cls->getConstructedToken());
-    }
-    InstCastcls *Castcls(Class *src, Class *dst){
-        auto ret = new InstCastcls;
-        ret->srcClass = src->getConstructedToken();
-        ret->dstClass = dst->getConstructedToken();
-        return ret;
-    }
-    InstConv *Conv(DataType src, DataType dst){
-        auto ret = new InstConv;
-        ret->src = src;
-        ret->dst = dst;
-        return ret;
-    }
-    InstWithOp *Callvirt(){
-        FillOp(CallVirt);
-    }
-    InstWithToken *Callext(Ext *external){
-        FillOpToken(Callext,external->getConstructedToken());
-    }
-    InstWithOp *Callstatic(){
-        FillOp(Calls);
-    }
-    InstWithOp *Call(){
-        FillOp(Call);
-    }
-
     Result *ILFactory::createResult(type::Prototype *prototype) {
         auto ret = new Result;
-        //todo token query
+        ret->type = prototype->getToken(this);
         return ret;
     }
 
     Token *ILFactory::createToken(std::string text) {
-        return nullptr;
+        auto token = new il::Token(text);
+        token_pool.push_back(token);
+        token_pool_map.insert({text,token_pool.size()});
+        return token;
     }
 
     ConstructedToken *ILFactory::createConstructedToken(std::vector<Token *> token_list) {
         return nullptr;
     }
 
-    Module *ILFactory::createModule(std::string name, AccessFlag access, std::vector<Member *> members) {
-        return nullptr;
+    Module *ILFactory::createModule(std::string name, AccessFlag access, std::vector<Member*> members) {
+        auto mod = new il::Module;
+        mod->access = new Access(access);
+        mod->name = createToken(name);
+        mod->members = std::move(members);
+        return mod;
     }
 
-    Class *ILFactory::createClass(std::string name, AccessFlag access, Extend *extend, std::vector<Impl *> impls,
-                                  std::vector<Member *> members) {
-        return nullptr;
+    Class *ILFactory::createClass(std::string name, AccessFlag access, Extend *extend, std::vector<Impl*> impls,
+                                  std::vector<Member*> members) {
+        auto cls = new il::Class;
+        cls->name = createToken(name);
+        cls->access = new Access(access);
+        cls->extend = extend;
+        cls->impls = std::move(impls);
+        cls->members = std::move(members);
+        return cls;
     }
 
     Interface *ILFactory::createInterface(std::string name, AccessFlag access, std::vector<FtnBase*> ftns) {
-        return nullptr;
+        auto ret = new il::Interface;
+        ret->name = createToken(name);
+        ret->access = new Access(access);
+        ret->ftns = std::move(ftns);
+        return ret;
     }
 
-    Enum *ILFactory::createEnum(std::string name, AccessFlag access, std::vector<Pair *> pairs) {
-        return nullptr;
+    Enum *ILFactory::createEnum(std::string name, AccessFlag access, std::vector<Pair*> pairs) {
+        auto ret = new il::Enum;
+        ret->name = createToken(name);
+        ret->access = new Access(access);
+        ret->pairs = std::move(pairs);
+        return ret;
     }
 
-    Record *ILFactory::createRecord(std::string name, AccessFlag access, std::vector<Fld *> fields) {
-        return nullptr;
+    Record *ILFactory::createRecord(std::string name, AccessFlag access, std::vector<Fld*> fields) {
+        auto ret = new il::Record;
+        ret->name = createToken(name);
+        ret->access = new Access(access);
+        ret->fields = std::move(fields);
+        return ret;
     }
 
     Fld *ILFactory::createField(std::string name, AccessFlag access, type::Prototype *prototype) {
-        return nullptr;
+        auto ret = new il::Fld;
+        ret->name = createToken(name);
+        ret->access = new Access(access);
+        ret->type = prototype->getToken(this);
+        return ret;
     }
 
     SFld *ILFactory::createStaticField(std::string name, AccessFlag access, type::Prototype *prototype) {
-        return nullptr;
+        auto ret = new il::SFld;
+        ret->name = createToken(name);
+        ret->access = new Access(access);
+        ret->type = prototype->getToken(this);
+        return ret;
     }
 
-    Ftn *ILFactory::createFunction(std::string name, AccessFlag access, std::vector<Param *> params, Result *result,
+    Ftn *ILFactory::createFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
                                    Block *entry) {
-        return nullptr;
+        auto ret = new il::Ftn;
+        ret->name = createToken(name);
+        ret->access = new Access(access);
+        ret->entry = entry;
+        ret->params = std::move(params);
+        ret->locals = std::move(locals);
+        ret->result = result;
+        return ret;
     }
 
-    Ctor *ILFactory::createConstructor(AccessFlag access, std::vector<Param *> params, Block *entry) {
-        return nullptr;
+    Ctor *ILFactory::createConstructor(AccessFlag access, std::vector<Param*> params, vector<Local*> locals, Block *entry) {
+        auto ret = new il::Ctor;
+        ret->access = new Access(access);
+        ret->entry = entry;
+        ret->params = std::move(params);
+        ret->locals = std::move(locals);
+        return ret;
     }
 
     VFtn *
-    ILFactory::createVirtualFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result,
+    ILFactory::createVirtualFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
                                      Block *entry) {
-        return nullptr;
+        auto ret = new il::VFtn;
+        ret->name = createToken(name);
+        ret->access = new Access(access);
+        ret->entry = entry;
+        ret->params = std::move(params);
+        ret->locals = std::move(locals);
+        ret->result = result;
+        return ret;
     }
 
     SFtn *
-    ILFactory::createStaticFunction(std::string name, AccessFlag access, std::vector<Param *> params, Result *result,
+    ILFactory::createStaticFunction(std::string name, AccessFlag access, std::vector<Param *> params, Result *result, vector<Local*> locals,
                                     Block *entry) {
-        return nullptr;
+        auto ret = new il::SFtn;
+        ret->name = createToken(name);
+        ret->access = new Access(access);
+        ret->entry = entry;
+        ret->params = std::move(params);
+        ret->locals = std::move(locals);
+        ret->result = result;
+        return ret;
     }
 
     Ext *
-    ILFactory::createExternalFunction(std::string name, std::string lib, AccessFlag access, std::vector<Param *> params,
+    ILFactory::createExternalFunction(std::string name, std::string lib, AccessFlag access, std::vector<Param*> params,
                                       Result *result) {
-        return nullptr;
+        auto ret = new il::Ext;
+        ret->name = createToken(name);
+        ret->lib = new Lib(createToken(lib));
+        ret->access = new Access(access);
+        ret->params = std::move(params);
+        ret->result = result;
+        return ret;
     }
 
     Param *ILFactory::createParam(std::string name, type::Prototype *prototype,bool byref) {
-        return nullptr;
+        auto ret = new Param;
+        ret->name = createToken(name);
+        ret->type = prototype->getToken(this);
+        ret->is_ref = byref;
+        return ret;
     }
 
     Opt *ILFactory::createOption(std::string name, type::Prototype *prototype, bool byref, Block *initial) {
-        return nullptr;
+        auto ret = new Opt;
+        ret->name = createToken(name);
+        ret->type = prototype->getToken(this);
+        ret->is_ref = byref;
+        ret->initial = initial;
+        return ret;
     }
 
     Inf *ILFactory::createParamArray(std::string name, type::Prototype *prototype, bool byref) {
-        return nullptr;
+        auto ret = new Inf;
+        ret->name = createToken(name);
+        ret->type = prototype->getToken(this);
+        ret->is_ref = byref;
+        return ret;
     }
 
     Pair *ILFactory::createPair(std::string name, data::u32 value) {
-        return nullptr;
+        auto ret = new il::Pair;
+        ret->name = createToken(name);
+        ret->value = value;
+        return ret;
     }
 
     Extend *ILFactory::createExtend(type::Class *cls) {
-        return nullptr;
+        auto ret = new il::Extend;
+        ret->target = cls->getToken(this);
+        return ret;
     }
 
     Impl *ILFactory::createImplements(type::Interface *interface) {
-        return nullptr;
+        auto ret = new il::Impl;
+        ret->target = interface->getToken(this);
+        return ret;
     }
 
-    Local *ILFactory::createLocal(std::string name, type::Prototype *prototype) {
-        return nullptr;
+    Local *ILFactory::createLocal(std::string name, type::Prototype *prototype, data::u16 address) {
+        auto ret = new il::Local;
+        ret->name = createToken(name);
+        ret->type = prototype->getToken(this);
+        ret->address = address;
+        return ret;
     }
 
     FtnBase *ILFactory::createInterfaceFunction(std::string name, AccessFlag access, std::vector<Param *> params,
                                                 Result *result) {
-        return nullptr;
+        auto ret = new il::FtnBase;
+        ret->name = createToken(name);
+        ret->access = new Access(access);
+        ret->params = std::move(params);
+        ret->result = result;
+        return ret;
     }
 
     Document *ILFactory::createDocument(std::vector<Member *> members) {
-        return nullptr;
+        auto ret = new il::Document;
+        ret->members = std::move(members);
+        return ret;
     }
 
 
     std::string Local::toString() {
-        return std::string();
+        return Format() << "(local " << name->toString() << "@" << to_string(address) << " " << type->toString() << ")";
     }
 
     void Local::toHex(std::ostream &stream) {
@@ -315,7 +225,11 @@ namespace evoBasic::il{
     }
 
     std::string Block::toString() {
-        return std::string();
+        Format fmt;
+        for(auto i : insts){
+            fmt << '\n' << i->toString();
+        }
+        return fmt;
     }
 
     void Block::toHex(std::ostream &stream) {
@@ -327,198 +241,260 @@ namespace evoBasic::il{
     }
 
     Block &Block::Br(Block *block) {
+        auto br = new InstBr;
+        br->target = block;
+        insts.push_back(br);
         return *this;
     }
 
     Block &Block::Jif(Block *block) {
+        auto jif = new InstJif;
+        jif->target = block;
+        insts.push_back(jif);
         return *this;
     }
 
     Block &Block::EQ(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::EQ,data));
         return *this;
     }
 
     Block &Block::NE(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::NE,data));
         return *this;
     }
 
     Block &Block::LT(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::LT,data));
         return *this;
     }
 
     Block &Block::GT(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::GT,data));
         return *this;
     }
 
     Block &Block::LE(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::LE,data));
         return *this;
     }
 
     Block &Block::GE(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::GE,data));
         return *this;
     }
 
     Block &Block::Add(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::Add,data));
         return *this;
     }
 
     Block &Block::Sub(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::Sub,data));
         return *this;
     }
 
     Block &Block::Mul(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::Mul,data));
         return *this;
     }
 
     Block &Block::Div(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::Div,data));
         return *this;
     }
 
     Block &Block::FDiv(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::FDiv,data));
         return *this;
     }
 
     Block &Block::Neg(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::Neg,data));
         return *this;
     }
 
     Block &Block::And() {
+        insts.push_back(new InstWithOp(InstWithOp::Op::And));
         return *this;
     }
 
     Block &Block::Or() {
+        insts.push_back(new InstWithOp(InstWithOp::Op::Or));
         return *this;
     }
 
     Block &Block::Xor() {
+        insts.push_back(new InstWithOp(InstWithOp::Op::Xor));
         return *this;
     }
 
     Block &Block::Not() {
+        insts.push_back(new InstWithOp(InstWithOp::Op::Not));
         return *this;
     }
 
     Block &Block::Nop() {
+        insts.push_back(new InstWithOp(InstWithOp::Op::Nop));
         return *this;
     }
 
     Block &Block::Pop(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::Pop,data));
         return *this;
     }
 
     Block &Block::Dup(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::Dup,data));
         return *this;
     }
 
     Block &Block::Ret() {
+        insts.push_back(new InstWithOp(InstWithOp::Op::Ret));
         return *this;
     }
 
     Block &Block::Push(DataType data, std::any value) {
+        auto push = new InstPush;
+        push->value = value;
+        push->type = data;
+        insts.push_back(push);
         return *this;
     }
 
     Block &Block::Ldc(Token *token) {
+        insts.push_back(new InstWithToken(InstWithToken::Op::Ldc,token));
         return *this;
     }
 
     Block &Block::Ldftn(Token *ftn) {
+        insts.push_back(new InstWithToken(InstWithToken::Op::Ldftn,ftn));
         return *this;
     }
 
     Block &Block::Ldsftn(Token *sftn) {
+        insts.push_back(new InstWithToken(InstWithToken::Op::Ldsftn,sftn));
         return *this;
     }
 
     Block &Block::Ldvftn(Token *vftn) {
+        insts.push_back(new InstWithToken(InstWithToken::Op::Ldvftn,vftn));
         return *this;
     }
 
     Block &Block::Starg(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::Starg,data));
         return *this;
     }
 
     Block &Block::Ldarga() {
+        insts.push_back(new InstWithOp(InstWithOp::Op::Ldarga));
         return *this;
     }
 
     Block &Block::Ldloc(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::Ldloc,data));
         return *this;
     }
 
     Block &Block::Ldloca() {
+        insts.push_back(new InstWithOp(InstWithOp::Op::Ldloca));
         return *this;
     }
 
     Block &Block::Stloc(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::Stloc,data));
         return *this;
     }
 
     Block &Block::Ldfld(DataType data, Token *fld) {
+        insts.push_back(new InstWithDataToken(InstWithDataToken::Op::Ldfld,data,fld));
         return *this;
     }
 
     Block &Block::Ldsfld(DataType data, Token *sfld) {
+        insts.push_back(new InstWithDataToken(InstWithDataToken::Op::Ldsfld,data,sfld));
         return *this;
     }
 
     Block &Block::Ldflda(Token *fld) {
+        insts.push_back(new InstWithToken(InstWithToken::Op::Ldflda,fld));
         return *this;
     }
 
     Block &Block::Ldsflda(Token *sfld) {
+        insts.push_back(new InstWithToken(InstWithToken::Op::Ldflda,sfld));
         return *this;
     }
 
     Block &Block::Stfld(DataType data, Token *fld) {
+        insts.push_back(new InstWithDataToken(InstWithDataToken::Op::Stfld,data,fld));
         return *this;
     }
 
     Block &Block::Stsfld(DataType data, Token *sfld) {
+        insts.push_back(new InstWithDataToken(InstWithDataToken::Op::Stsfld,data,sfld));
         return *this;
     }
 
     Block &Block::Ldelem(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::Stloc,data));
         return *this;
     }
 
     Block &Block::Ldelema() {
+        insts.push_back(new InstWithOp(InstWithOp::Op::Ldelema));
         return *this;
     }
 
     Block &Block::Stelem(DataType data) {
+        insts.push_back(new InstWithData(InstWithData::Op::Stelem,data));
         return *this;
     }
 
     Block &Block::Ldnull() {
+        insts.push_back(new InstWithOp(InstWithOp::Op::Ldnull));
         return *this;
     }
 
     Block &Block::Newobj(Token *cls) {
+        insts.push_back(new InstWithToken(InstWithToken::Op::Newobj,cls));
         return *this;
     }
 
     Block &Block::Castcls(Token *src, Token *dst) {
+        auto cast = new InstCastcls;
+        cast->src_class = src;
+        cast->dst_class = dst;
+        insts.push_back(cast);
         return *this;
     }
 
     Block &Block::Conv(DataType src, DataType dst) {
+        auto conv = new InstConv;
+        conv->src = src;
+        conv->dst = dst;
+        insts.push_back(conv);
         return *this;
     }
 
     Block &Block::Callvirt() {
+        insts.push_back(new InstWithOp(InstWithOp::CallVirt));
         return *this;
     }
 
     Block &Block::Invoke(Token *external) {
+        insts.push_back(new InstWithToken(InstWithToken::Invoke,external));
         return *this;
     }
 
     Block &Block::Callstatic() {
+        insts.push_back(new InstWithOp(InstWithOp::Callstatic));
         return *this;
     }
 
     Block &Block::Call() {
+        insts.push_back(new InstWithOp(InstWithOp::Call));
         return *this;
     }
 
@@ -527,7 +503,7 @@ namespace evoBasic::il{
     }
 
     std::string Token::toString() {
-        return std::string();
+        return text;
     }
 
     void Token::toHex(std::ostream &stream) {
@@ -581,8 +557,8 @@ namespace evoBasic::il{
 
     std::string Class::toString() {
         Format fmt;
-        fmt << "(cls " << access->toString() << ' ' << name->toString() << ' ' << extend.toString();
-        for(auto impl : impls) fmt << ' ' << impl.toString();
+        fmt << "(cls " << access->toString() << ' ' << name->toString() << ' ' << extend->toString();
+        for(auto impl : impls) fmt << ' ' << impl->toString();
         for(auto member : members) fmt << '\n' << member->toString();
         fmt << ")";
         return fmt;
@@ -697,7 +673,7 @@ namespace evoBasic::il{
     }
 
     std::string Ctor::toString() {
-        return std::string();
+
     }
 
     void Ctor::toHex(std::ostream &stream) {
@@ -709,8 +685,12 @@ namespace evoBasic::il{
         Format fmt;
         fmt << access->toString() << ' ' << name->toString();
         for(auto p : params) fmt << ' ' << p->toString();
-        fmt << result->toString();
+        fmt << ' ' << result->toString();
         return fmt;
+    }
+
+    void FtnBase::toHex(ostream &stream) {
+
     }
 
     std::string FtnWithDefinition::toString() {
@@ -746,7 +726,7 @@ namespace evoBasic::il{
     }
 
     std::string Ext::toString() {
-        return Format() << "(ext " << lib.toString() << ' ' << FtnBase::toString() << ")";
+        return Format() << "(ext " << lib->toString() << ' ' << FtnBase::toString() << ")";
     }
 
     void Ext::toHex(std::ostream &stream) {
@@ -754,7 +734,7 @@ namespace evoBasic::il{
     }
 
     std::string InstWithOp::toString() {
-        vector<string> str = {"Nop","Ret","CallVirt","CallExt","Calls","Call",
+        vector<string> str = {"Nop","Ret","CallVirt","CallExt","Callstatic","Call",
                            "Ldnull","And","Or","Xor","Ldloca","Ldarga","Ldelema","Not"};
         Format fmt;
         fmt << "\n" << str[(int)op]; 
@@ -801,35 +781,39 @@ namespace evoBasic::il{
         fmt << "Push." << str[(int)type] << ' ';
         switch(type){
             case DataType::i8:
-                fmt << any_cast<data::i8>(value);
+                fmt << to_string(any_cast<data::i8>(value));
                 break;
             case DataType::i16:
-                fmt << any_cast<data::i16>(value);
+                fmt << to_string(any_cast<data::i16>(value));
                 break;
             case DataType::i32:
-                fmt << any_cast<data::i32>(value);
+                fmt << to_string(any_cast<data::i32>(value));
                 break;
             case DataType::i64:
-                fmt << any_cast<data::i64>(value);
+                fmt << to_string(any_cast<data::i64>(value));
                 break;
             case DataType::u8:
-                fmt << any_cast<data::u8>(value);
+                fmt << to_string(any_cast<data::u8>(value));
+                break;
+            case DataType::u16:
+                fmt << to_string(any_cast<data::u16>(value));
                 break;
             case DataType::u32:
-                fmt << any_cast<data::u32>(value);
+                fmt << to_string(any_cast<data::u32>(value));
                 break;
             case DataType::u64:
-                fmt << any_cast<data::u64>(value);
+                fmt << to_string(any_cast<data::u64>(value));
                 break;
             case DataType::f32:
-                fmt << any_cast<data::f32>(value);
+                fmt << to_string(any_cast<data::f32>(value));
                 break;
             case DataType::f64:
-                fmt << any_cast<data::f64>(value);
+                fmt << to_string(any_cast<data::f64>(value));
                 break;
             case DataType::boolean:
-                fmt << any_cast<data::boolean>(value);
+                fmt << to_string(any_cast<data::boolean>(value));
                 break;
+            default: PANIC;
         }
         return fmt;
     }
@@ -865,8 +849,9 @@ namespace evoBasic::il{
 
     }
 
+
     std::string InstCastcls::toString() {
-        return Format() << "cast." << srcClass->toString() << " " << dstClass->toString();
+        return Format() << "cast." << src_class->toString() << " " << dst_class->toString();
     }
 
     void InstCastcls::toHex(std::ostream &stream) {
@@ -885,4 +870,15 @@ namespace evoBasic::il{
 
     }
 
+    std::string Document::toString() {
+        Format fmt;
+        fmt << "(Document ";
+        for(auto member : members) fmt << '\n' << member->toString();
+        fmt << ")";
+        return fmt;
+    }
+
+    void Document::toHex(ostream &stream) {
+
+    }
 }

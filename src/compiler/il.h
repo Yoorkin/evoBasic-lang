@@ -35,7 +35,9 @@ namespace evoBasic::il{
     };
 
     class Token : public Node{
+        std::string text;
     public:
+        explicit Token(std::string text) : text(text){}
         void toHex(std::ostream &stream)override;
         std::string toString()override;
     };
@@ -47,8 +49,9 @@ namespace evoBasic::il{
     };
 
     class Access : public Node{
-    public:
         AccessFlag flag;
+    public:
+        explicit Access(AccessFlag flag) : flag(flag){}
         std::string toString()override;
         void toHex(std::ostream &stream)override;
     };
@@ -62,13 +65,14 @@ namespace evoBasic::il{
 
     class Impl : public Node{
     public:
-        Interface *target = nullptr;
+        Token *target = nullptr;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
     };
 
     class Lib : public Node{
     public:
+        explicit Lib(Token *target) : target(target){}
         Token *target = nullptr;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
@@ -85,8 +89,8 @@ namespace evoBasic::il{
 
     class Class : public Member{
     public:
-        Extend extend;
-        std::vector<Impl> impls;
+        Extend *extend = nullptr;
+        std::vector<Impl*> impls;
         std::vector<Member*> members;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
@@ -151,7 +155,7 @@ namespace evoBasic::il{
 
     class Opt : public Param{
     public:
-        SFtn *initial = nullptr;
+        Block *initial = nullptr;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
     };
@@ -182,16 +186,12 @@ namespace evoBasic::il{
         std::vector<Param*> params;
         Result *result = nullptr;
         std::string toString()override;
+        void toHex(std::ostream &stream)override;
     };
 
     class FtnWithDefinition : public FtnBase{
-    protected:
-        std::vector<Local*> locals;
     public:
-        void addLocal(Local *local){
-            local->address = locals.size();
-            locals.push_back(local);
-        }
+        std::vector<Local*> locals;
         Block *entry = nullptr;
         std::string toString()override;
     };
@@ -222,23 +222,25 @@ namespace evoBasic::il{
 
     class Ext : public FtnBase{
     public:
-        Lib lib;
+        Lib *lib = nullptr;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
     };
 
     class Inst : public Node{};
 
-    class InstWithOp : public Node{
+    class InstWithOp : public Inst{
     public:
-        enum Op{Nop,Ret,CallVirt,CallExt,Calls,Call,Ldnull,And,Or,Xor,Ldloca,Ldarga,Ldelema,Not}op;
+        enum Op{Nop,Ret,CallVirt,CallExt,Callstatic,Call,Ldnull,And,Or,Xor,Ldloca,Ldarga,Ldelema,Not}op;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
+        InstWithOp(Op op):op(op){}
     };
 
-    class InstWithToken : public Node{
+    class InstWithToken : public Inst{
     public:
-        enum Op{Ldftn,Ldsftn,Ldvftn,Ldc,Newobj,Callext}op;
+        enum Op{Ldftn,Ldsftn,Ldvftn,Ldc,Newobj,Invoke,Ldflda,Ldsflda}op;
+        InstWithToken(Op op,Token *token):op(op),token(token){}
         Token *token = nullptr;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
@@ -273,11 +275,13 @@ namespace evoBasic::il{
         DataType type;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
+        InstWithData(Op op,DataType type):op(op),type(type){}
     };
 
-    class InstWithDataToken : Inst{
+    class InstWithDataToken : public Inst{
     public:
-        enum Op{Ldfld,Ldsfld,Ldflda,Ldsflda,Stfld,Stsfld}op;
+        enum Op{Ldfld,Ldsfld,Stfld,Stsfld}op;
+        InstWithDataToken(Op op,DataType type,Token *token) : op(op),type(type),token(token){}
         DataType type;
         Token *token = nullptr;
         std::string toString()override;
@@ -286,8 +290,8 @@ namespace evoBasic::il{
 
     class InstCastcls : public Inst{
     public:
-        Token *srcClass = nullptr,
-              *dstClass = nullptr;
+        Token *src_class = nullptr,
+              *dst_class = nullptr;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
     };
@@ -322,11 +326,13 @@ namespace evoBasic::il{
         Record *createRecord(std::string name,AccessFlag access,std::vector<Fld*> fields);
         Fld *createField(std::string name,AccessFlag access,type::Prototype *prototype);
         SFld *createStaticField(std::string name,AccessFlag access,type::Prototype *prototype);
-        Ftn *createFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,Block *entry);
-        Ctor *createConstructor(AccessFlag access,std::vector<Param*> params,Block *entry);
+
+        Ftn *createFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,std::vector<Local*> locals,Block *entry);
+        Ctor *createConstructor(AccessFlag access,std::vector<Param*> params,std::vector<Local*> locals,Block *entry);
+        VFtn *createVirtualFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,std::vector<Local*> locals,Block *entry);
+        SFtn *createStaticFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,std::vector<Local*> locals,Block *entry);
+
         FtnBase *createInterfaceFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result);
-        VFtn *createVirtualFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,Block *entry);
-        SFtn *createStaticFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,Block *entry);
         Ext *createExternalFunction(std::string name,std::string lib,AccessFlag access,std::vector<Param*> params,Result *result);
 
         Param *createParam(std::string name,type::Prototype *prototype,bool byref);
@@ -335,7 +341,7 @@ namespace evoBasic::il{
         Pair *createPair(std::string name,data::u32 value);
         Extend *createExtend(type::Class *cls);
         Impl *createImplements(type::Interface *interface);
-        Local *createLocal(std::string name,type::Prototype *prototype);
+        Local *createLocal(std::string name,type::Prototype *prototype, data::u16 address);
         Result *createResult(type::Prototype *prototype);
 
         Document *createDocument(std::vector<Member*> members);

@@ -189,6 +189,7 @@ namespace evoBasic::type{
         iterator end();
         virtual void updateMemoryLayout();
         void addMemoryLayout(Variable *variable);
+        const std::vector<Variable*>& getMemoryLayout();
     };
 
     class Module : public Domain{
