@@ -22,7 +22,6 @@ add_executable(
     ${UTILS_SOURCE}
     ${CMAKE_SOURCE_DIR}/src/compiler/ast.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/context.cpp
-    ${CMAKE_SOURCE_DIR}/src/compiler/ir.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/lexer.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/parser.cpp
     ${CMAKE_SOURCE_DIR}/src/compiler/semantic/semantic.cpp

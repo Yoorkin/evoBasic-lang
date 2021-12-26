@@ -209,7 +209,10 @@ namespace evoBasic{
         auto symbol = external_node->function_symbol;
         auto result = nullptr;
         if(symbol->getRetSignature()) document->createResult(symbol->getRetSignature());
-        auto ext = document->createExternalFunction(symbol->getName(), symbol->getLibName(), external_node->access, parameter, result);
+
+        ExtAlias *alias = nullptr;
+        if(!symbol->getAlias().empty())alias = document->createExtAlias(symbol->getAlias());
+        auto ext = document->createExternalFunction(symbol->getName(), symbol->getLibName(), alias, external_node->access, parameter, result);
         return ext;
     }
 

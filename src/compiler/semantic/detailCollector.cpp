@@ -239,8 +239,10 @@ namespace evoBasic{
 
         if(is_name_valid(name,external_node->name->location,args.domain)){
             auto lib = getString(external_node->lib);
-            //auto alias = getString(ext_node->alias); TODO alias
-            auto function = new type::ExternalFunction(lib, name);
+            auto name = getID(external_node->name);
+            auto alias = name;
+            if(external_node->alias)alias = getString(external_node->alias);
+            auto function = new type::ExternalFunction(lib,alias);
             function->setLocation(external_node->name->location);
             function->setName(name);
             args.domain->add(function);

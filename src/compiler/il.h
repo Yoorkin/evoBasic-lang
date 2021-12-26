@@ -223,12 +223,22 @@ namespace evoBasic::il{
         void toHex(std::ostream &stream)override;
     };
 
-    class Ext : public FtnBase{
+    class ExtAlias : public Node{
+        Token *token = nullptr;
     public:
-        Lib *lib = nullptr;
+        explicit ExtAlias(Token *token) : token(token){}
         std::string toString()override;
         void toHex(std::ostream &stream)override;
     };
+
+    class Ext : public FtnBase{
+    public:
+        Lib *lib = nullptr;
+        ExtAlias *alias = nullptr;
+        std::string toString()override;
+        void toHex(std::ostream &stream)override;
+    };
+
 
     class Inst : public Node{};
 
@@ -333,7 +343,7 @@ namespace evoBasic::il{
         SFtn *createStaticFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,std::vector<Local*> locals,Block *entry);
 
         FtnBase *createInterfaceFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result);
-        Ext *createExternalFunction(std::string name,std::string lib,AccessFlag access,std::vector<Param*> params,Result *result);
+        Ext *createExternalFunction(std::string name,std::string lib,ExtAlias *alias,AccessFlag access,std::vector<Param*> params,Result *result);
 
         Param *createParam(std::string name,type::Prototype *prototype,bool byref);
         Opt *createOption(std::string name,type::Prototype *prototype,bool byref,Block *initial);
@@ -345,6 +355,8 @@ namespace evoBasic::il{
         Result *createResult(type::Prototype *prototype);
 
         void add(Member* member);
+
+        ExtAlias *createExtAlias(std::string text);
     };
 
 

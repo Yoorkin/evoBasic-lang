@@ -30,6 +30,10 @@ namespace evoBasic::ast{
     class Argument;
 }
 
+namespace evoBasic{
+    struct DebugInfo;
+}
+
 namespace evoBasic::type{
 
 /*
@@ -48,6 +52,7 @@ namespace evoBasic::type{
     class Interface;
     class Variable;
     class Operator;
+    class Parameter;
 
     void strToLowerByRef(std::string& str);
 
@@ -95,7 +100,7 @@ namespace evoBasic::type{
         std::string mangling(char separator = '$');
         std::list<std::string> getFullName();
 
-        virtual std::string debug(int indent)=0;
+        virtual DebugInfo *debug()=0;
 
         virtual bool isStatic();
         void setStatic(bool value);
@@ -120,7 +125,7 @@ namespace evoBasic::type{
     public:
         Error(const Error&)=delete;
         explicit Error();
-        std::string debug(int indent)override;
+        DebugInfo *debug()override;
         bool equal(Prototype *ptr)override{
             return this == ptr;
         }
@@ -143,7 +148,7 @@ namespace evoBasic::type{
         void setConstant(bool value);
         Prototype *getPrototype();
         void setPrototype(Prototype *ptr);
-        std::string debug(int indent)override;
+        DebugInfo *debug()override;
         std::size_t getOffset();
         void setLayoutIndex(std::size_t index);
         std::size_t getLayoutIndex();
@@ -199,7 +204,7 @@ namespace evoBasic::type{
         void addImport(Symbol *child);
 
         bool equal(Prototype *ptr)override {return false;}
-        std::string debug(int indent)override;
+        DebugInfo *debug()override;
         
     };
 
@@ -212,7 +217,7 @@ namespace evoBasic::type{
 
         const std::vector<Variable*>& getFields();
         void add(Symbol *symbol)override;
-        std::string debug(int indent)override;
+        DebugInfo *debug()override;
         
     };
 
@@ -238,7 +243,7 @@ namespace evoBasic::type{
         Prototype *getRetSignature();
         void setRetSignature(Prototype *ptr);
 
-        std::string debug(int indent)override;
+        DebugInfo *debug()override;
         bool equal(Prototype *ptr)override;
 
         virtual FunctionKind getFunctionKind();
@@ -276,19 +281,20 @@ namespace evoBasic::type{
         void setFunctionFlag(FunctionFlag flag);
         bool isStatic()override;
         void setParent(Domain *parent)override;
-        std::string debug(int indent)override;
+        DebugInfo *debug()override;
         FunctionKind getFunctionKind()override;
     };
 
 
     class ExternalFunction: public Function{
-        std::string library,name;
+        std::string library,alias;
     public:
         ExternalFunction(const ExternalFunction&)=delete;
-        explicit ExternalFunction(std::string library,std::string name);
+        explicit ExternalFunction(std::string library,std::string alias);
         FunctionKind getFunctionKind()override;
         std::string getLibName();
-        
+        std::string getAlias();
+        DebugInfo *debug()override;
     };
 
     class VirtualTable{
@@ -340,7 +346,7 @@ namespace evoBasic::type{
         void generateClassInfo();
         void updateMemoryLayout()override;
 
-        std::string debug(int indent)override;
+        DebugInfo *debug()override;
         Symbol *find(const std::string& name)override;
 
         bool isAbstract();
@@ -354,7 +360,7 @@ namespace evoBasic::type{
         void add(Symbol *symbol)final;
 
         bool equal(Prototype *ptr)final{PANIC;}
-        std::string debug(int indent)final;
+        DebugInfo *debug()override;
         VirtualTable *getVTable();
         
     };
@@ -372,7 +378,7 @@ namespace evoBasic::type{
         public:
             explicit Primitive(std::string name,vm::Data data_kind);
             bool equal(Prototype *ptr)override;
-            std::string debug(int indent)override;
+            DebugInfo *debug()override;
             vm::Data getDataKind();
         };
 
@@ -389,7 +395,7 @@ namespace evoBasic::type{
         void add(Symbol *symbol) override;
 
         bool equal(Prototype *ptr)override;
-        std::string debug(int indent)override;
+        DebugInfo *debug()override;
         
     };
 
@@ -401,7 +407,7 @@ namespace evoBasic::type{
             setByteLength(vm::Data::ptr.getSize());
         }
         int getIndex()const{return index;}
-        std::string debug(int indent)override;
+        DebugInfo *debug()override;
         virtual bool equal(Prototype *ptr){PANIC;}
         
     };
@@ -412,7 +418,7 @@ namespace evoBasic::type{
         //Location *initial_location = nullptr;
     public:
         Parameter(std::string name, Prototype *prototype, bool isByval, bool isOptional, bool isParamArray = false);
-        std::string debug(int indent)override;
+        DebugInfo *debug()override;
         bool isByval();
         bool isOptional();
         bool isParamArray();
@@ -429,7 +435,7 @@ namespace evoBasic::type{
         explicit Array(Prototype *element,data::u32 size);
         Prototype *getElementPrototype();
         bool equal(Prototype *ptr)override;
-        std::string debug(int indent)override;
+        DebugInfo *debug()override;
         data::ptr getByteLength()override;
         data::ptr getSize(){return size_;}
         
@@ -442,8 +448,10 @@ namespace evoBasic::type{
         explicit TemporaryDomain(type::Domain *parent,Function *function);
         void add(type::Symbol *symbol)override;
         bool equal(Prototype *ptr)override{PANIC;};
-        std::string debug(int indent)override;
+        DebugInfo *debug()override;
     };
+
+    std::string debugSymbolTable(DebugInfo *info);
 
 }
 

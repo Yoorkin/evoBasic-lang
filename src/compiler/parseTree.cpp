@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include "ast.h"
+#include "utils.h"
 
 using namespace std;
 namespace evoBasic::parseTree{
@@ -146,7 +147,7 @@ namespace evoBasic::parseTree{
             ret->childs.push_back(iter->debug());
             iter = iter->next_sibling;
         }
-        ret->childs.push_back(return_annotation->debug());
+        if(return_annotation)ret->childs.push_back(return_annotation->debug());
         return ret;
     }
 

@@ -16,6 +16,16 @@ namespace evoBasic{
     std::string getString(parseTree::expr::String *str);
 
     bool is_name_valid(const std::string& name, Location *location, type::Domain *domain);
+
+
+    struct DebugInfo{
+        std::string text;
+        std::list<DebugInfo*> childs;
+
+        ~DebugInfo(){
+            for(auto child:childs)delete child;
+        }
+    };
 }
 
 

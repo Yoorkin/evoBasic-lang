@@ -5,6 +5,7 @@
 #include "ast.h"
 #include <string>
 #include <vector>
+#include "utils.h"
 namespace evoBasic::ast{
     using namespace std;
 

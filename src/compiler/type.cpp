@@ -11,6 +11,7 @@
 #include <string>
 #include <algorithm>
 #include "logger.h"
+#include "utils.h"
 
 using namespace std;
 namespace evoBasic::type{
@@ -53,22 +54,12 @@ namespace evoBasic::type{
         setByteLength(vm::Data::ptr.getSize());
     }
 
-    std::string Enumeration::debug(int indent) {
-        stringstream str;
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Enum{\n";
-        for(auto p = begin();p!=end();p++){
-            str<<p->debug(indent+1);
-        }
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<"}\n";
-        return str.str();
-    }
 
     void Enumeration::add(Symbol *symbol) {
         ASSERT(symbol->getKind() != SymbolKind::EnumMember,"symbol is not a EnumMember");
         Domain::add(symbol);
     }
+
 
     Parameter::Parameter(std::string name,Prototype *prototype, bool isByval, bool isOptional ,bool isParamArray)
             : Variable(SymbolKind::Parameter), is_byval(isByval), is_optional(isOptional), is_param_array(isParamArray){
@@ -88,14 +79,6 @@ namespace evoBasic::type{
 
     bool Parameter::isParamArray() {
         return is_param_array;
-    }
-
-    std::string Parameter::debug(int indent) {
-        stringstream str;
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str << (isByval() ? "ByVal":"ByRef") << ' ';
-        str << getName() << " As " << getPrototype()->getName();
-        return str.str();
     }
 
     data::ptr Parameter::getRealByteLength() {
@@ -125,6 +108,7 @@ namespace evoBasic::type{
         this->default_argument = argument;
     }
 
+
     Prototype *Function::getRetSignature() {
         return this->ret_signature;
     }
@@ -132,27 +116,6 @@ namespace evoBasic::type{
     void Function::setRetSignature(Prototype *ptr){
         NotNull(ptr);
         ret_signature = ptr;
-    }
-
-
-    std::string Function::debug(int indent) {
-        stringstream str;
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<this->getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Function(";
-        for(const auto& arg:this->args_signature){
-            str<<arg->debug(0);
-            if(&arg!=&args_signature.back())str << ',';
-        }
-        str<<')';
-        if(ret_signature)
-            str << " As " << ret_signature->getName();
-        str<<"{\n";
-        for(auto p : *this){
-            p->debug(indent+1);
-        }
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<"}\n";
-        return str.str();
     }
 
     bool Function::equal(Prototype *ptr) {
@@ -252,32 +215,6 @@ namespace evoBasic::type{
         }
     }
 
-
-    std::string UserFunction::debug(int indent) {
-        stringstream str;
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<this->getName()<<" : "<<AccessFlagString[(int)getAccessFlag()];
-        str<<" "<<FunctionFlagString[(int)getFunctionFlag()];
-        str<<" Function(";
-        for(const auto& arg:this->getArgsSignature()){
-            str<<arg->debug(0);
-            if(&arg!=&getArgsSignature().back())str<<',';
-        }
-        str<<')';
-        if(getRetSignature())
-            str<<" As "<<getRetSignature()->getName();
-        str<<"{\n";
-        for(auto m : this->memory_layout){
-            str << m->debug(indent+1);
-        }
-        for(auto p : *this){
-            str << p->debug(indent+1);
-        }
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<"}\n";
-        return str.str();
-    }
-
     FunctionFlag UserFunction::getFunctionFlag() {
         return flag;
     }
@@ -307,8 +244,9 @@ namespace evoBasic::type{
         return FunctionKind::UserFunction;
     }
 
-    ExternalFunction::ExternalFunction(std::string library, std::string name)
-        : library(std::move(library)),name(std::move(name)){}
+
+    ExternalFunction::ExternalFunction(std::string library, std::string alias)
+        : library(std::move(library)),alias(std::move(alias)){}
 
     FunctionKind ExternalFunction::getFunctionKind() {
         return FunctionKind::External;
@@ -318,6 +256,9 @@ namespace evoBasic::type{
         return library;
     }
 
+    std::string ExternalFunction::getAlias() {
+        return alias;
+    }
 
     TemporaryDomain::TemporaryDomain(type::Domain *parent,Function *function)
             : Domain(SymbolKind::TmpDomain),parent_function(function){
@@ -329,18 +270,6 @@ namespace evoBasic::type{
         NotNull(variable);
         parent_function->addMemoryLayout(variable);
         Domain::add(variable);
-    }
-
-    std::string TemporaryDomain::debug(int indent) {
-        stringstream str;
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<< getName() <<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Domain{\n";
-        for(auto p = begin();p!=end();p++){
-            str<<p->debug(indent+1);
-        }
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<"}\n";
-        return str.str();
     }
 
     std::string Symbol::getName() {
@@ -474,32 +403,6 @@ namespace evoBasic::type{
 
     const std::vector<Variable *> &Domain::getMemoryLayout() {
         return memory_layout;
-    }
-
-
-    std::string Module::debug(int indent) {
-        stringstream str;
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<this->getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Module{\n";
-        for(auto p = begin();p!=end();p++){
-            str<<p->debug(indent+1);
-        }
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<"}\n";
-        return str.str();
-    }
-
-
-    std::string Class::debug(int indent) {
-        stringstream str;
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Class{\n";
-        for(auto p = begin();p!=end();p++){
-            str<<p->debug(indent+1);
-        }
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<"}\n";
-        return str.str();
     }
 
     void Class::setExtend(Class *base) {
@@ -650,6 +553,7 @@ namespace evoBasic::type{
     }
 
 
+
     void Record::add(Symbol *symbol) {
         auto field = symbol->as<Variable*>();
         NotNull(field);
@@ -679,16 +583,10 @@ namespace evoBasic::type{
             return p && p->kind_.operator==(kind_);
         }
 
-        std::string Primitive::debug(int indent) {
-            std::stringstream str;
-            for(int i=0;i<indent;i++)str<<indent_unit;
-            str<<getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Primitive("<<kind_.toString()<<")\n";
-            return str.str();
-        }
-
         vm::Data Primitive::getDataKind() {
             return this->kind_;
         }
+
     }
 
 
@@ -707,33 +605,8 @@ namespace evoBasic::type{
         return true;
     }
 
-    std::string Record::debug(int indent) {
-        stringstream str;
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<this->getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Record{\n";
-        for(auto p = begin();p!=end();p++){
-            str<<p->debug(indent+1);
-        }
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<"}\n";
-        return str.str();
-    }
-
     const std::vector<Variable*> &Record::getFields() {
         return fields;
-    }
-
-
-    std::string Variable::debug(int indent) {
-        stringstream str;
-        for(int i=0;i<indent;i++)str << indent_unit;
-        str << this->getName() <<"@"<< getLayoutIndex() << " : "<<AccessFlagString[(int)getAccessFlag()]
-            <<(isStatic()?" Static":"")
-            <<" Variable(";
-        if(getPrototype()) str << getPrototype()->getName();
-        else str << " ? ";
-        str << ")\n";
-        return str.str();
     }
 
     std::size_t Variable::getOffset() {
@@ -814,16 +687,6 @@ namespace evoBasic::type{
         is_parameter = !is_parameter;
     }
 
-    std::string EnumMember::debug(int indent) {
-        stringstream str;
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<this->getName()<<" : "<<this->index<<'\n';
-        return str.str();
-    }
-
-    std::string Error::debug(int indent) {
-        return getName();
-    }
 
     Error::Error(): Prototype(SymbolKind::Error){}
 
@@ -833,18 +696,6 @@ namespace evoBasic::type{
         Domain::add(symbol);
     }
 
-    std::string Interface::debug(int indent) {
-        stringstream str;
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<getName()<<" : "<<AccessFlagString[(int)getAccessFlag()]<<" Interface{\n";
-        for(auto p = begin();p!=end();p++){
-            str<<p->debug(indent+1);
-        }
-        for(int i=0;i<indent;i++)str<<indent_unit;
-        str<<"}\n";
-        return str.str();
-    }
-
     Interface::Interface() : Domain(SymbolKind::Interface){
         vtable = new VirtualTable();
     }
@@ -852,6 +703,7 @@ namespace evoBasic::type{
     VirtualTable *Interface::getVTable() {
         return vtable;
     }
+
 
     Array::Array(Prototype *element,data::u32 size)
         : Class(SymbolKind::Array),element_type(element),size_(size){
@@ -869,13 +721,10 @@ namespace evoBasic::type{
         return array->getElementPrototype()->equal(element_type) && array->size_ == size_;
     }
 
-    std::string Array::debug(int indent) {
-        return Format() << "Ptr<" << element_type->getName() << ">";
-    }
-
     data::ptr Array::getByteLength() {
         return size_ * getElementPrototype()->getByteLength();
     }
+
 
     data::ptr Prototype::getByteLength() {
         return byte_length;
@@ -958,4 +807,115 @@ namespace evoBasic::type{
         }
         return true;
     }
+
+
+
+    DebugInfo * makeDebugInfo(std::string name,std::string type,
+                              list<string> property = {},list<DebugInfo*> childs = {}){
+        auto ret = new DebugInfo;
+        Format fmt;
+        fmt << name << " : " << type;
+        for(auto p:property)fmt << " " << p;
+        ret->text = fmt;
+        ret->childs = std::move(childs);
+        return ret;
+    }
+
+    DebugInfo * makeDebugInfo(std::string type,Domain *domain){
+        list<string> p;
+        list<DebugInfo*> info;
+        if(domain->isStatic())p.emplace_back("Static");
+        p.emplace_back(AccessFlagString[(int)domain->getAccessFlag()]);
+        for(auto child : *domain){
+            info.push_back(child->debug());
+        }
+        return makeDebugInfo(domain->getName(),std::move(type),p,info);
+    }
+
+    DebugInfo *Error::debug() {
+        return makeDebugInfo("Error","");
+    }
+
+    DebugInfo *Variable::debug() {
+        list<string> p;
+        if(isStatic())p.emplace_back("Static");
+        p.emplace_back(AccessFlagString[(int)getAccessFlag()]);
+        return makeDebugInfo(getName(),getPrototype()->mangling('.'),p);
+    }
+
+    DebugInfo *Module::debug() {
+        return makeDebugInfo("Module",this);
+    }
+
+    DebugInfo *Record::debug() {
+        return makeDebugInfo("Record",this);
+    }
+
+    DebugInfo *Function::debug() {
+        return makeDebugInfo("Function",this);
+    }
+
+    DebugInfo *UserFunction::debug() {
+        return makeDebugInfo("UserFunction",this);
+    }
+
+    DebugInfo *ExternalFunction::debug() {
+        return makeDebugInfo("External",this);
+    }
+
+    DebugInfo *Class::debug() {
+        return makeDebugInfo("Class",this);
+    }
+
+    DebugInfo *Interface::debug() {
+        return makeDebugInfo("Interface",this);
+    }
+
+    DebugInfo *primitive::Primitive::debug() {
+        return makeDebugInfo("Primitive",this);
+    }
+
+    DebugInfo *Enumeration::debug() {
+        return makeDebugInfo("Enum",this);
+    }
+
+    DebugInfo *EnumMember::debug() {
+        return new DebugInfo{getName() + " = " + to_string(index)};
+    }
+
+    DebugInfo *Parameter::debug() {
+        list<string> p;
+        if(isStatic())p.emplace_back("Static");
+        p.emplace_back(isByval() ? "Byval" : "Byref");
+        p.emplace_back(AccessFlagString[(int)getAccessFlag()]);
+        return makeDebugInfo(getName(),getPrototype()->mangling('.'),p);
+    }
+
+    DebugInfo *Array::debug() {
+        return new DebugInfo{getName()};
+    }
+
+    DebugInfo *TemporaryDomain::debug() {
+        return makeDebugInfo("",this);
+    }
+
+    void debugSymbolTable(DebugInfo *info,std::ostream &stream,string indent){
+        stream << indent << info->text;
+        if(!info->childs.empty()){
+            stream << "{\n";
+            for(auto i : info->childs){
+                debugSymbolTable(i,stream,indent + "    ");
+            }
+            stream << indent << "}";
+        }
+        stream << '\n';
+    }
+
+    std::string debugSymbolTable(DebugInfo *info){
+        std::stringstream stream;
+        stream << "# SymbolTable \n";
+        debugSymbolTable(info,stream,"");
+        return stream.str();
+    }
+
 }

@@ -10,6 +10,7 @@
 #define FOR_EACH(Iterator,Head) for(auto Iterator=Head; Iterator!=nullptr; Iterator=Iterator->next_sibling)
 
 namespace evoBasic{
+    struct DebugInfo;
     struct ExpressionType;
     namespace type{
         class Variable;
@@ -25,16 +26,6 @@ namespace evoBasic{
         class Record;
         class Parameter;
     }
-
-    struct DebugInfo{
-    public:
-        std::string text;
-        std::list<DebugInfo*> childs;
-
-        ~DebugInfo(){
-            for(auto child:childs)delete child;
-        }
-    };
 }
 
 namespace evoBasic::parseTree{

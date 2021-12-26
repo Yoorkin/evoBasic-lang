@@ -152,16 +152,23 @@ namespace evoBasic::il{
         return ret;
     }
 
+
     Ext *
-    Document::createExternalFunction(std::string name, std::string lib, AccessFlag access, std::vector<Param*> params,
-                                      Result *result) {
+    Document::createExternalFunction(std::string name, std::string lib, ExtAlias *alias, AccessFlag access,
+                                          std::vector<Param *> params, Result *result) {
         auto ret = new il::Ext;
         ret->name = createToken(name);
         ret->lib = new Lib(createToken(lib));
         ret->access = new Access(access);
         ret->params = std::move(params);
         ret->result = result;
+        ret->alias = alias;
         return ret;
+    }
+
+    ExtAlias *
+    Document::createExtAlias(std::string text){
+        return new ExtAlias(createToken(text));
     }
 
     Param *Document::createParam(std::string name, type::Prototype *prototype,bool byref) {
@@ -772,7 +779,11 @@ namespace evoBasic::il{
     }
 
     std::string Ext::toString() {
-        return Format() << "(ext " << lib->toString() << ' ' << FtnBase::toString() << ")";
+        Format fmt;
+        fmt << "(ext " << lib->toString();
+        if(alias)fmt << ' ' << alias->toString();
+        fmt << ' ' << FtnBase::toString() << ")";
+        return fmt;
     }
 
     void Ext::toHex(std::ostream &stream) {
@@ -931,5 +942,13 @@ namespace evoBasic::il{
 
     void Document::add(Member *member) {
         members.push_back(member);
+    }
+
+    std::string ExtAlias::toString() {
+        return Format() << "(alias " << token->getName() <<")";
+    }
+
+    void ExtAlias::toHex(ostream &stream) {
+
     }
 }

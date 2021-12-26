@@ -113,7 +113,7 @@ int main(int argc,char *argv[]) {
         Logger::dev(debugAST(ast));
     }
 
-    Logger::dev(context->getGlobal()->debug(0));
+    Logger::dev(type::debugSymbolTable(context->getGlobal()->debug()));
 
     if(Logger::errorCount == 0){
         for(auto ast : asts){

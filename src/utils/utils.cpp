@@ -36,6 +36,4 @@ namespace evoBasic{
         }
         return true;
     }
-
-
 }
