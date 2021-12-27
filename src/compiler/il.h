@@ -31,16 +31,18 @@ namespace evoBasic::il{
 
     class Token : public Node{
         std::string text;
+    public:
+        using ID = data::u64;
     protected:
-        data::u64 id = -1;
+        ID id = -1;
     public:
         Token()=default;
         explicit Token(std::string text) : text(text){}
         void toHex(std::ostream &stream)override;
         std::string toString()override;
         virtual std::string getName();
-        void setID(data::u64 value);
-        data::u64 getID();
+        void setID(ID value);
+        ID getID();
     };
 
     class ConstructedToken : public Token{
@@ -241,13 +243,18 @@ namespace evoBasic::il{
     };
 
 
-    class Inst : public Node{};
+    class Inst : public Node{
+    public:
+        using ByteSize = data::u32;
+        virtual ByteSize getByteSize() = 0;
+    };
 
     class InstWithOp : public Inst{
     public:
         enum Op{Nop,Ret,CallVirt,CallExt,Callstatic,Call,Ldnull,And,Or,Xor,Ldloca,Ldarga,Ldelema,Not}op;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
+        data::u32 getByteSize()override;
         InstWithOp(Op op):op(op){}
     };
 
@@ -257,6 +264,7 @@ namespace evoBasic::il{
         InstWithToken(Op op,Token *token):op(op),token(token){}
         Token *token = nullptr;
         std::string toString()override;
+        data::u32 getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
@@ -264,6 +272,7 @@ namespace evoBasic::il{
     public:
         Block *target = nullptr;
         std::string toString()override;
+        data::u32 getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
@@ -271,6 +280,7 @@ namespace evoBasic::il{
     public:
         Block *target = nullptr;
         std::string toString()override;
+        data::u32 getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
@@ -279,6 +289,7 @@ namespace evoBasic::il{
         DataType type;
         std::any value;
         std::string toString()override;
+        data::u32 getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
@@ -289,6 +300,7 @@ namespace evoBasic::il{
         DataType type;
         std::string toString()override;
         void toHex(std::ostream &stream)override;
+        data::u32 getByteSize()override;
         InstWithData(Op op,DataType type):op(op),type(type){}
     };
 
@@ -299,6 +311,7 @@ namespace evoBasic::il{
         DataType type;
         Token *token = nullptr;
         std::string toString()override;
+        data::u32 getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
@@ -307,6 +320,7 @@ namespace evoBasic::il{
         Token *src_class = nullptr,
               *dst_class = nullptr;
         std::string toString()override;
+        data::u32 getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
@@ -315,13 +329,13 @@ namespace evoBasic::il{
     public:
         DataType src,dst;
         std::string toString()override;
+        data::u32 getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
     class Document : public Node{
         std::map<std::string,int> token_pool_map;
         std::vector<Token*> token_pool;
-        std::vector<ConstructedToken*> constructed_token_pool;
         std::vector<Member*> members;
     public:
         std::string toString()override;
@@ -362,8 +376,13 @@ namespace evoBasic::il{
 
 
     class Block : public Node{
+        Inst::ByteSize address = -1;
+        Inst::ByteSize size = -1;
     public:
-        data::u32 getAddress();
+        Inst::ByteSize getAddress();
+        Inst::ByteSize getByteSize();
+        void setAddress(Inst::ByteSize value);
+
         std::string toString()override;
         void toHex(std::ostream &stream)override;
         std::vector<Inst*> insts;

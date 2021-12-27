@@ -119,11 +119,10 @@ int main(int argc,char *argv[]) {
         for(auto ast : asts){
             Semantic::solveByteLengthDependencies(context);
             ILGen gen;
-
             auto ir = gen.visitGlobal(ast);
             Logger::dev(ir->toString());
-            //fstream file("out.evo",ios::binary | ios::out);
-            //ir->toHex(file);
+            fstream file("out.evo",ios::binary | ios::out);
+            ir->toHex(file);
         }
     }
 

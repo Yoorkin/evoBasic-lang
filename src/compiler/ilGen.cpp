@@ -179,7 +179,8 @@ namespace evoBasic{
         blocks.clear();
         blocks.push_back(entry);
         auto symbol = function_node->function_symbol->as<type::UserFunction*>();
-        visitStatement(function_node->statement, entry, nullptr);
+        auto tail_block = visitStatement(function_node->statement, entry, nullptr);
+        tail_block->Ret();
 
         auto parameter = visitParameter(symbol);
         auto result = nullptr;
@@ -223,7 +224,9 @@ namespace evoBasic{
         blocks.clear();
         blocks.push_back(entry);
         auto parameter = visitParameter(ctor_node->constructor_symbol);
-        visitStatement(ctor_node->statement,entry,nullptr);
+        auto tail_block = visitStatement(ctor_node->statement,entry,nullptr);
+        tail_block->Ret();
+
         vector<il::Local*> locals;
         for(auto variable : ctor_node->constructor_symbol->getMemoryLayout()){
             locals.push_back(document->createLocal(variable->getName(), variable->getPrototype(), variable->getLayoutIndex()));
@@ -851,6 +854,7 @@ namespace evoBasic{
     }
 
     void ILGen::visitExtCall(ast::ExtCall *ext_node, il::Block *current) {
+        loadCalleeArguments(ext_node,current);
         current->Invoke(document->createConstructedToken(ext_node->function->getFullName()));
     }
 

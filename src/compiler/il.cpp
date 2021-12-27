@@ -247,8 +247,9 @@ namespace evoBasic::il{
 
     std::string Block::toString() {
         Format fmt;
+        fmt << '\n' << to_string(getAddress()) << ":";
         for(auto i : insts){
-            fmt << '\n' << i->toString();
+            fmt << "\n    " << i->toString();
         }
         return fmt;
     }
@@ -516,7 +517,21 @@ namespace evoBasic::il{
     }
 
     data::u32 Block::getAddress() {
-        return 0;
+        return address;
+    }
+
+    void Block::setAddress(data::u32 value) {
+        address = value;
+    }
+
+    data::u32 Block::getByteSize(){
+        if(size == -1){
+            size = 0;
+            for(auto inst : insts){
+                size += inst->getByteSize();
+            }
+        }
+        return size;
     }
 
     std::string Token::toString() {
@@ -671,7 +686,16 @@ namespace evoBasic::il{
         return fmt;
     }
 
+    void generateAddressInfo(list<Block*> blocks){
+        Inst::ByteSize address = 0;
+        for(auto block : blocks){
+            block->setAddress(address);
+            address += block->getByteSize();
+        }
+    }
+
     std::string FtnWithDefinition::toString() {
+        generateAddressInfo(blocks);
         Format fmt;
         fmt << FtnBase::toString();
         for(auto l : locals) fmt << '\n' << l->toString();
@@ -821,6 +845,60 @@ namespace evoBasic::il{
 
 
 
+    
+    
+    Inst::ByteSize InstWithOp::getByteSize() {
+        return 2;
+    }
+
+    Inst::ByteSize InstWithToken::getByteSize() {
+        return 1 + sizeof(Token::ID);
+    }
+
+    Inst::ByteSize InstJif::getByteSize() {
+        return 1 + sizeof(ByteSize);
+    }
+
+    Inst::ByteSize InstBr::getByteSize() {
+        return 1 + sizeof(ByteSize);
+    }
+    
+    Inst::ByteSize InstPush::getByteSize() {
+        switch(type){
+            case i8:  return 2 + sizeof(data::i8);
+            case i16: return 2 + sizeof(data::i16);
+            case i32: return 2 + sizeof(data::i32);
+            case i64: return 2 + sizeof(data::i64);
+            case u8:  return 2 + sizeof(data::u8);
+            case u16: return 2 + sizeof(data::u16);
+            case u32: return 2 + sizeof(data::u32);
+            case u64: return 2 + sizeof(data::u64);
+            case f32: return 2 + sizeof(data::f32);
+            case f64: return 2 + sizeof(data::f64);
+            case boolean: return 2 + sizeof(data::boolean);
+            default: PANIC;
+        }
+    }
+    
+    Inst::ByteSize InstWithData::getByteSize() {
+        return 2;
+    }
+
+    Inst::ByteSize InstWithDataToken::getByteSize() {
+        return 2 + sizeof(ByteSize);
+    }
+    
+    Inst::ByteSize InstCastcls::getByteSize() {
+        return 1 + 2 * sizeof(ByteSize);
+    }
+
+    Inst::ByteSize InstConv::getByteSize() {
+        return 3;
+    }
+
+
+
+
 
 
     void Local::toHex(std::ostream &stream) {
@@ -876,6 +954,7 @@ namespace evoBasic::il{
 
     void Document::toHex(ostream &stream) {
         write(stream,(data::u8)Bytecode::DocumentDef);
+        for(auto token : token_pool)token->toHex(stream);
         for(auto member : members)member->toHex(stream);
         write(stream,(data::u8)Bytecode::EndMark);
     }
@@ -978,10 +1057,13 @@ namespace evoBasic::il{
 
     void FtnBase::toHex(ostream &stream) {
         for(auto p : params) p->toHex(stream);
-        result->toHex(stream);
+        if(result)result->toHex(stream);
     }
 
+
     void FtnWithDefinition::toHex(ostream &stream) {
+        generateAddressInfo(blocks);
+
         FtnBase::toHex(stream);
         for(auto local : locals) local->toHex(stream);
         write(stream,(data::u8)Bytecode::InstBeg);
@@ -1044,6 +1126,7 @@ namespace evoBasic::il{
         write(stream,(data::u8)code);
     }
 
+
     void InstWithToken::toHex(std::ostream &stream) {
         Bytecode code;
         switch(op){
@@ -1065,10 +1148,12 @@ namespace evoBasic::il{
         write(stream,target->getAddress());
     }
 
+
     void InstBr::toHex(std::ostream &stream) {
         write(stream,(data::u8)Bytecode::Br);
         write(stream,target->getAddress());
     }
+
 
     Bytecode ILDataTypeToByteCode(DataType type){
         switch(type){
@@ -1135,6 +1220,7 @@ namespace evoBasic::il{
         }
     }
 
+
     void InstWithData::toHex(std::ostream &stream) {
         Bytecode code;
         switch(op){
@@ -1176,7 +1262,7 @@ namespace evoBasic::il{
         write(stream,(data::u8)ILDataTypeToByteCode(type));
         write(stream,token->getID());
     }
-
+    
     void InstCastcls::toHex(std::ostream &stream) {
         write(stream,(data::u8)Bytecode::CastCls);
         write(stream,src_class->getID());
