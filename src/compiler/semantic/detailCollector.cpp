@@ -275,6 +275,12 @@ namespace evoBasic{
                     constructor->setLocation(ctor_node->location);
                     cls->setConstructor(constructor);
                     ctor_node->constructor_symbol = constructor;
+
+                    args.function = constructor;
+                    args.domain = constructor;
+                    FOR_EACH(parameter,ctor_node->parameter){
+                        visitParameter(parameter,args);
+                    }
                 }
             }
         }

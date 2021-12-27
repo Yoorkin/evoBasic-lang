@@ -268,7 +268,7 @@ namespace evoBasic::type{
     public:
         explicit Constructor(parseTree::Constructor *node);
         FunctionKind getFunctionKind()override;
-        
+        DebugInfo *debug()override;
     };
 
     class UserFunction : public Function{

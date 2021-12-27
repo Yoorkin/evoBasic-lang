@@ -176,6 +176,8 @@ namespace evoBasic{
 
     il::FtnWithDefinition *ILGen::visitFunction(ast::Function *function_node) {
         auto entry = new il::Block;
+        blocks.clear();
+        blocks.push_back(entry);
         auto symbol = function_node->function_symbol->as<type::UserFunction*>();
         visitStatement(function_node->statement, entry, nullptr);
 
@@ -191,14 +193,14 @@ namespace evoBasic{
         FtnWithDefinition *ftn = nullptr;
         switch(symbol->getFunctionFlag()){
             case FunctionFlag::Method:
-                ftn = document->createFunction(symbol->getName(), function_node->access, parameter, result, locals, entry);
+                ftn = document->createFunction(symbol->getName(), function_node->access, parameter, result, locals, blocks);
                 break;
             case FunctionFlag::Static:
-                ftn = document->createStaticFunction(symbol->getName(), function_node->access, parameter, result, locals, entry);
+                ftn = document->createStaticFunction(symbol->getName(), function_node->access, parameter, result, locals, blocks);
                 break;
             case FunctionFlag::Virtual:
             case FunctionFlag::Override:
-                ftn = document->createVirtualFunction(symbol->getName(), function_node->access, parameter, result, locals, entry);
+                ftn = document->createVirtualFunction(symbol->getName(), function_node->access, parameter, result, locals, blocks);
                 break;
         }
         return ftn;
@@ -218,13 +220,15 @@ namespace evoBasic{
 
     il::Ctor *ILGen::visitConstructor(ast::Constructor *ctor_node) {
         auto entry = new il::Block;
+        blocks.clear();
+        blocks.push_back(entry);
         auto parameter = visitParameter(ctor_node->constructor_symbol);
         visitStatement(ctor_node->statement,entry,nullptr);
         vector<il::Local*> locals;
         for(auto variable : ctor_node->constructor_symbol->getMemoryLayout()){
             locals.push_back(document->createLocal(variable->getName(), variable->getPrototype(), variable->getLayoutIndex()));
         }
-        auto ctor = document->createConstructor(ctor_node->access, parameter, locals, entry);
+        auto ctor = document->createConstructor(ctor_node->access, parameter, locals, blocks);
         return ctor;
     }
 
@@ -284,6 +288,10 @@ namespace evoBasic{
              loop_block = new il::Block,
              after_block = new il::Block;
 
+        blocks.push_back(cond_block);
+        blocks.push_back(loop_block);
+        blocks.push_back(after_block);
+
         current->Br(cond_block);
 
         visitExpression(loop_node->condition,cond_block);
@@ -298,6 +306,7 @@ namespace evoBasic{
 
     il::Block *ILGen::visitIf(ast::If *if_node, il::Block *current, il::Block *next) {
         auto after_block = new il::Block;
+        blocks.push_back(after_block);
         visitCase(if_node->case_,current,after_block);
         return after_block;
     }
@@ -305,7 +314,11 @@ namespace evoBasic{
     void ILGen::visitCase(ast::Case *case_node, il::Block *current, il::Block *next) {
         map<ast::Case*,il::Block*> case_blocks;
         FOR_EACH(iter,case_node){
-            case_blocks.insert({iter,new il::Block});
+            if(iter->condition){
+                auto bl = new il::Block;
+                blocks.push_back(bl);
+                case_blocks.insert({iter,bl});
+            }
         }
 
         FOR_EACH(iter,case_node){
@@ -388,6 +401,10 @@ namespace evoBasic{
         auto stmt_block = new il::Block;
         auto cond_block = new il::Block;
         auto after_block = new il::Block;
+
+        blocks.push_back(stmt_block);
+        blocks.push_back(cond_block);
+        blocks.push_back(after_block);
 
         current->Br(stmt_block);
 

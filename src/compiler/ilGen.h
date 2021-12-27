@@ -26,6 +26,7 @@ namespace evoBasic{
     class ILGen{
         il::Document *document = new il::Document;
         il::Block *for_next = nullptr,*loop_next = nullptr;
+        std::list<il::Block*> blocks;
     public:
         il::Document *visitGlobal(ast::Global *global_node);
         il::Class *visitClass(ast::Class *class_node);

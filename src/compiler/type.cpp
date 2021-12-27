@@ -413,6 +413,7 @@ namespace evoBasic::type{
     void Class::setConstructor(Constructor *constructor) {
         NotNull(constructor);
         this->constructor = constructor;
+        constructor->setParent(this);
     }
 
     void Class::addImpl(Interface *interface) {
@@ -767,6 +768,7 @@ namespace evoBasic::type{
 
     Constructor::Constructor(parseTree::Constructor *node) : constructor_node(node) {}
 
+
     VirtualTable::VirtualTable(VirtualTable *base)
         : slot(base->slot),slot_map(base->slot_map),base(base) {}
 
@@ -829,7 +831,9 @@ namespace evoBasic::type{
         for(auto child : *domain){
             info.push_back(child->debug());
         }
-        return makeDebugInfo(domain->getName(),std::move(type),p,info);
+        auto name = domain->getName();
+        if(name.empty())name = "<Unnamed>";
+        return makeDebugInfo(name,std::move(type),p,info);
     }
 
     DebugInfo *Error::debug() {
@@ -855,6 +859,10 @@ namespace evoBasic::type{
         return makeDebugInfo("Function",this);
     }
 
+    DebugInfo *Constructor::debug() {
+        return makeDebugInfo("Ctor",this);
+    }
+
     DebugInfo *UserFunction::debug() {
         return makeDebugInfo("UserFunction",this);
     }
@@ -864,7 +872,9 @@ namespace evoBasic::type{
     }
 
     DebugInfo *Class::debug() {
-        return makeDebugInfo("Class",this);
+        auto ret = makeDebugInfo("Class",this);
+        if(constructor) ret->childs.push_back(constructor->debug());
+        return ret;
     }
 
     DebugInfo *Interface::debug() {
@@ -902,7 +912,7 @@ namespace evoBasic::type{
     void debugSymbolTable(DebugInfo *info,std::ostream &stream,string indent){
         stream << indent << info->text;
         if(!info->childs.empty()){
-            stream << "{\n";
+            stream << " {\n";
             for(auto i : info->childs){
                 debugSymbolTable(i,stream,indent + "    ");
             }

@@ -195,8 +195,9 @@ namespace evoBasic::il{
     class FtnWithDefinition : public FtnBase{
     public:
         std::vector<Local*> locals;
-        Block *entry = nullptr;
         std::string toString()override;
+        std::list<Block*> blocks;
+        void toHex(std::ostream &stream)override;
     };
 
     class Ctor : public FtnWithDefinition{
@@ -337,10 +338,10 @@ namespace evoBasic::il{
         Fld *createField(std::string name,AccessFlag access,type::Prototype *prototype);
         SFld *createStaticField(std::string name,AccessFlag access,type::Prototype *prototype);
 
-        Ftn *createFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,std::vector<Local*> locals,Block *entry);
-        Ctor *createConstructor(AccessFlag access,std::vector<Param*> params,std::vector<Local*> locals,Block *entry);
-        VFtn *createVirtualFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,std::vector<Local*> locals,Block *entry);
-        SFtn *createStaticFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,std::vector<Local*> locals,Block *entry);
+        Ftn *createFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,std::vector<Local*> locals,std::list<Block*> blocks);
+        Ctor *createConstructor(AccessFlag access,std::vector<Param*> params,std::vector<Local*> locals,std::list<Block*> blocks);
+        VFtn *createVirtualFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,std::vector<Local*> locals,std::list<Block*> blocks);
+        SFtn *createStaticFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result,std::vector<Local*> locals,std::list<Block*> blocks);
 
         FtnBase *createInterfaceFunction(std::string name,AccessFlag access,std::vector<Param*> params,Result *result);
         Ext *createExternalFunction(std::string name,std::string lib,ExtAlias *alias,AccessFlag access,std::vector<Param*> params,Result *result);
@@ -421,6 +422,10 @@ namespace evoBasic::il{
     };
 
 
+    template<typename T>
+    void write(std::ostream &stream,const T t){
+        stream.write((const char*)(&t),sizeof(t));
+    }
 
 }
 
