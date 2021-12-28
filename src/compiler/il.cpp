@@ -56,6 +56,7 @@ namespace evoBasic::il{
 
     Module *Document::createModule(std::string name, AccessFlag access, std::vector<Member*> members) {
         auto mod = new il::Module;
+        mod->setDocument(this);
         mod->access = Access(access);
         mod->name = getTokenRef(name);
         mod->members = std::move(members);
@@ -65,6 +66,7 @@ namespace evoBasic::il{
     Class *Document::createClass(std::string name, AccessFlag access, Extend extend, std::vector<Impl> impls,
                                   std::vector<Member*> members) {
         auto cls = new il::Class;
+        cls->setDocument(this);
         cls->name = getTokenRef(name);
         cls->access = Access(access);
         cls->extend = extend;
@@ -75,6 +77,7 @@ namespace evoBasic::il{
 
     Interface *Document::createInterface(std::string name, AccessFlag access, std::vector<FtnBase*> ftns) {
         auto ret = new il::Interface;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->access = Access(access);
         ret->ftns = std::move(ftns);
@@ -83,6 +86,7 @@ namespace evoBasic::il{
 
     Enum *Document::createEnum(std::string name, AccessFlag access, std::vector<Pair> pairs) {
         auto ret = new il::Enum;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->access = Access(access);
         ret->pairs = std::move(pairs);
@@ -91,6 +95,7 @@ namespace evoBasic::il{
 
     Record *Document::createRecord(std::string name, AccessFlag access, std::vector<Fld*> fields) {
         auto ret = new il::Record;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->access = Access(access);
         ret->fields = std::move(fields);
@@ -99,6 +104,7 @@ namespace evoBasic::il{
 
     Fld *Document::createField(std::string name, AccessFlag access, type::Prototype *prototype) {
         auto ret = new il::Fld;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->access = Access(access);
         ret->type = getTokenRef(prototype->getFullName());
@@ -107,6 +113,7 @@ namespace evoBasic::il{
 
     SFld *Document::createStaticField(std::string name, AccessFlag access, type::Prototype *prototype) {
         auto ret = new il::SFld;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->access = Access(access);
         ret->type = getTokenRef(prototype->getFullName());
@@ -116,6 +123,7 @@ namespace evoBasic::il{
     Ftn *Document::createFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
                                   std::list<Block*> blocks) {
         auto ret = new il::Ftn;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->access = Access(access);
         ret->blocks = blocks;
@@ -127,6 +135,7 @@ namespace evoBasic::il{
 
     Ctor *Document::createConstructor(AccessFlag access, std::vector<Param*> params, std::vector<Local*> locals, std::list<Block*> blocks) {
         auto ret = new il::Ctor;
+        ret->setDocument(this);
         ret->access = Access(access);
         ret->blocks = blocks;
         ret->params = std::move(params);
@@ -138,6 +147,7 @@ namespace evoBasic::il{
     Document::createVirtualFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
                                     std::list<Block*> blocks) {
         auto ret = new il::VFtn;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->access = Access(access);
         ret->blocks = blocks;
@@ -151,6 +161,7 @@ namespace evoBasic::il{
     Document::createStaticFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
                                    std::list<Block*> blocks) {
         auto ret = new il::SFtn;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->access = Access(access);
         ret->blocks = blocks;
@@ -165,6 +176,7 @@ namespace evoBasic::il{
     Document::createExternalFunction(std::string name, std::string lib, ExtAlias alias, AccessFlag access,
                                      std::vector<Param*> params, Result *result) {
         auto ret = new il::Ext;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->lib = Lib(getTokenRef(lib));
         ret->access = Access(access);
@@ -176,11 +188,14 @@ namespace evoBasic::il{
 
     ExtAlias
     Document::createExtAlias(std::string text){
-        return ExtAlias(getTokenRef(text));
+        auto ret = ExtAlias(getTokenRef(text));
+        ret.setDocument(this);
+        return ret;
     }
 
     Regular *Document::createParam(std::string name, type::Prototype *prototype, bool byref) {
         auto ret = new Regular;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->type = getTokenRef(prototype->getFullName());
         ret->is_ref = byref;
@@ -189,6 +204,7 @@ namespace evoBasic::il{
 
     Opt *Document::createOption(std::string name, type::Prototype *prototype, bool byref, Block *initial) {
         auto ret = new Opt;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->type = getTokenRef(prototype->getFullName());
         ret->is_ref = byref;
@@ -198,6 +214,7 @@ namespace evoBasic::il{
 
     Inf *Document::createParamArray(std::string name, type::Prototype *prototype, bool byref) {
         auto ret = new Inf;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->type = getTokenRef(prototype->getFullName());
         ret->is_ref = byref;
@@ -206,6 +223,7 @@ namespace evoBasic::il{
 
     Pair Document::createPair(std::string name, data::u32 value) {
         il::Pair ret;
+        ret.setDocument(this);
         ret.name = getTokenRef(name);
         ret.value = value;
         return ret;
@@ -219,12 +237,14 @@ namespace evoBasic::il{
 
     Impl Document::createImplements(type::Interface *interface) {
         il::Impl ret;
+        ret.setDocument(this);
         ret.target = getTokenRef(interface->getFullName());
         return ret;
     }
 
     Local *Document::createLocal(std::string name, type::Prototype *prototype, data::u16 address) {
         auto ret = new il::Local;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->type = getTokenRef(prototype->getFullName());
         ret->address = address;
@@ -234,6 +254,7 @@ namespace evoBasic::il{
     FtnBase *Document::createInterfaceFunction(std::string name, AccessFlag access, std::vector<Param*> params,
                                                 Result *result) {
         auto ret = new il::FtnBase;
+        ret->setDocument(this);
         ret->name = getTokenRef(name);
         ret->access = Access(access);
         ret->params = std::move(params);
@@ -1140,10 +1161,9 @@ namespace evoBasic::il{
     void Opt::fromHex(istream &stream) {
         read(stream,Bytecode::OptDef);
         Param::fromHex(stream);
-        //todo
-//        read(stream,Bytecode::InstBeg);
-//        initial->toHex(stream);
-//        write(stream,Bytecode::EndMark);
+        read(stream,Bytecode::InstBeg);
+        // todo
+        read(stream,Bytecode::EndMark);
     }
 
     void Inf::toHex(std::ostream &stream) {
@@ -1225,7 +1245,7 @@ namespace evoBasic::il{
             locals.push_back(local);
         }
         read(stream,Bytecode::InstBeg);
-        for(auto block : blocks) block->fromHex(stream);
+        // todo
         read(stream,Bytecode::EndMark);
     }
 

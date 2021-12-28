@@ -90,6 +90,7 @@ namespace evoBasic::il{
     public:
 
         ConstructedTokenDef(Document *document,data::u64 id,std::list<data::u64> sub_tokens) : sub_token_list(sub_tokens){
+            this->setDocument(document);
             this->id = id;
         }
         ConstructedTokenDef(Document *document,data::u64 id) : ConstructedTokenDef(document,id,{}){}
@@ -492,6 +493,7 @@ namespace evoBasic::il{
 
         std::string toString()override;
         void toHex(std::ostream &stream)override;
+
         std::vector<Inst*> insts;
         Block(std::initializer_list<Inst*> inst_init);
         Block()=default;
