@@ -129,7 +129,7 @@ namespace evoBasic{
 
         auto error = [&](){
             state = START;
-            Logger::error(new Location(begin_x,x,begin_y,source_),"Token error");
+            Logger::error(new Location(begin_x,x,begin_y,source_),"TokenRef error");
         };
 
 

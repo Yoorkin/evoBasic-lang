@@ -37,19 +37,18 @@ namespace evoBasic{
         }
     }
 
-    il::Document *ILGen::visitGlobal(ast::Global *global_node) {
+    void ILGen::visitGlobal(ast::Global *global_node) {
         auto members = visitMember(global_node->member);
         for(auto member : members){
             document->add(member);
         }
-        return document;
     }
 
     il::Class *ILGen::visitClass(ast::Class *class_node) {
         auto members = visitMember(class_node->member);
         auto cls = class_node->class_symbol;
         auto extend = document->createExtend(cls->getExtend());
-        vector<Impl*> impls;
+        vector<Impl> impls;
         for(auto [_,interface] : cls->getImplMap()){
             impls.push_back(document->createImplements(interface));
         }
@@ -165,7 +164,7 @@ namespace evoBasic{
     }
 
     il::Enum *ILGen::visitEnum(ast::Enum *enum_node) {
-        vector<il::Pair*> pairs;
+        vector<il::Pair> pairs;
         for(auto symbol : *(enum_node->enum_symbol)){
             auto member = symbol->as<type::EnumMember*>();
             pairs.push_back(document->createPair(member->getName(), member->getIndex()));
@@ -213,7 +212,7 @@ namespace evoBasic{
         auto result = nullptr;
         if(symbol->getRetSignature()) document->createResult(symbol->getRetSignature());
 
-        ExtAlias *alias = nullptr;
+        ExtAlias alias;
         if(!symbol->getAlias().empty())alias = document->createExtAlias(symbol->getAlias());
         auto ext = document->createExternalFunction(symbol->getName(), symbol->getLibName(), alias, external_node->access, parameter, result);
         return ext;
@@ -346,7 +345,7 @@ namespace evoBasic{
                 auto sfld = (ast::SFld*)for_node->iterator;
                 auto il_type = mapILType(sfld->type->getPrototype());
                 visitExpression(for_node->begin,current);
-                current->Stsfld(il_type,document->createConstructedToken(sfld->variable->getFullName()));
+                current->Stsfld(il_type, document->getTokenRef(sfld->variable->getFullName()));
                 break;
             }
             case ast::Expression::Fld:{
@@ -354,7 +353,7 @@ namespace evoBasic{
                 auto il_type = mapILType(fld->type->getPrototype());
                 visitExpression(fld->ref,current);
                 visitExpression(for_node->begin,current);
-                current->Stfld(il_type,document->createConstructedToken(fld->variable->getFullName()));
+                current->Stfld(il_type, document->getTokenRef(fld->variable->getFullName()));
                 break;
             }
             case ast::Expression::ArgUse:{
@@ -425,7 +424,7 @@ namespace evoBasic{
                 visitExpression(for_node->iterator,cond_block);
                 visitExpression(for_node->step,cond_block);
                 cond_block->Add(il_type);
-                cond_block->Stsfld(il_type,document->createConstructedToken(sfld->variable->getFullName()));
+                cond_block->Stsfld(il_type, document->getTokenRef(sfld->variable->getFullName()));
                 break;
             }
             case ast::Expression::Fld:{
@@ -435,7 +434,7 @@ namespace evoBasic{
                 visitExpression(for_node->iterator,cond_block);
                 visitExpression(for_node->step,cond_block);
                 cond_block->Add(il_type);
-                cond_block->Stfld(il_type,document->createConstructedToken(fld->variable->getFullName()));
+                cond_block->Stfld(il_type, document->getTokenRef(fld->variable->getFullName()));
                 break;
             }
             case ast::Expression::ArgUse:{
@@ -664,14 +663,16 @@ namespace evoBasic{
                 auto fld = (ast::Fld*)expr;
                 visitFld(fld,current);
                 visitExpression(assign_node->rhs,current);
-                current->Stfld(mapILType(fld->variable->getPrototype()),document->createConstructedToken(fld->variable->getFullName()));
+                current->Stfld(mapILType(fld->variable->getPrototype()),
+                               document->getTokenRef(fld->variable->getFullName()));
                 break;
             }
             case ast::Expression::SFld:{
                 auto sfld = (ast::SFld*)expr;
                 visitSFld(sfld,current);
                 visitExpression(assign_node->rhs,current);
-                current->Stsfld(mapILType(sfld->variable->getPrototype()),document->createConstructedToken(sfld->variable->getFullName()));
+                current->Stsfld(mapILType(sfld->variable->getPrototype()),
+                                document->getTokenRef(sfld->variable->getFullName()));
                 break;
             }
             case ast::Expression::Element:{
@@ -724,62 +725,6 @@ namespace evoBasic{
         if(argument_node->byval){
             // pass byval
             visitExpression(expr,current);
-//            if(expr->expression_kind == ast::Expression::Assign){
-//                auto assign = (ast::Assign*)expr;
-//                visitAssign(assign,current);
-//                expr = assign->lhs;
-//            }
-//
-//            switch (expr->expression_kind) {
-//                case ast::Expression::Ftn:
-//                    visitFtnCall((ast::FtnCall*)expr,current);
-//                    break;
-//                case ast::Expression::VFtn:
-//                    visitVFtnCall((ast::VFtnCall*)expr,current);
-//                    break;
-//                case ast::Expression::SFtn:
-//                    visitSFtnCall((ast::SFtnCall*)expr,current);
-//                    break;
-//                case ast::Expression::Fld:{
-//                    auto fld = (ast::Fld*)expr;
-//                    visitFld(fld,current);
-//                    current->Ldfld(mapILType(fld->variable->getPrototype()),document->createConstructedToken(fld->variable->getFullName()));
-//                    break;
-//                }
-//                case ast::Expression::SFld:{
-//                    auto sfld = (ast::SFld*)expr;
-//                    visitSFld(sfld,current);
-//                    current->Ldsfld(mapILType(sfld->variable->getPrototype()),document->createConstructedToken(sfld->variable->getFullName()));
-//                    break;
-//                }
-//                case ast::Expression::Element:{
-//                    auto element = (ast::ArrayElement*)expr;
-//                    visitExpression(element->array,current);
-//                    visitExpression(element->offset,current);
-//                    current->Ldelem(mapILType(element->type->getPrototype()));
-//                    break;
-//                }
-//                case ast::Expression::ArgUse:{
-//                    auto arg = (ast::Arg*)expr;
-//                    current->Push(DataType::u16,arg->variable->getLayoutIndex())
-//                            .Ldarg(mapILType(arg->variable->getPrototype()));
-//                    break;
-//                }
-//                case ast::Expression::Unary:
-//                case ast::Expression::Binary:
-//                case ast::Expression::New:
-//                case ast::Expression::Digit:
-//                case ast::Expression::Decimal:
-//                case ast::Expression::String:
-//                case ast::Expression::Boolean:
-//                case ast::Expression::Char:
-//                case ast::Expression::Delegate:
-//                case ast::Expression::Parentheses:
-//                case ast::Expression::Cast:
-//                    // do nothing
-//                    break;
-//                default: PANIC;
-//            }
         }
         else{
             // pass byref
@@ -793,13 +738,13 @@ namespace evoBasic{
                 case ast::Expression::Fld:{
                     auto fld = (ast::Fld*)expr;
                     visitFld(fld,current);
-                    current->Ldflda(document->createConstructedToken(fld->variable->getFullName()));
+                    current->Ldflda(document->getTokenRef(fld->variable->getFullName()));
                     break;
                 }
                 case ast::Expression::SFld:{
                     auto sfld = (ast::SFld*)expr;
                     visitSFld(sfld,current);
-                    current->Ldsflda(document->createConstructedToken(sfld->variable->getFullName()));
+                    current->Ldsflda(document->getTokenRef(sfld->variable->getFullName()));
                     break;
                 }
                 case ast::Expression::Element:{
@@ -823,19 +768,19 @@ namespace evoBasic{
 
     void ILGen::visitNew(ast::New *new_node, il::Block *current) {
         loadCalleeArguments(new_node,current);
-        current->Newobj(document->createConstructedToken(new_node->target->getFullName()));
+        current->Newobj(document->getTokenRef(new_node->target->getFullName()));
     }
 
     void ILGen::visitFtnCall(ast::FtnCall *ftn_node, il::Block *current) {
         visitExpression(ftn_node->ref,current);
-        current->Ldftn(document->createConstructedToken(ftn_node->function->getFullName()));
+        current->Ldftn(document->getTokenRef(ftn_node->function->getFullName()));
         loadCalleeArguments(ftn_node,current);
         current->Call();
     }
 
     void ILGen::visitSFtnCall(ast::SFtnCall *sftn_node, il::Block *current) {
         loadCalleeArguments(sftn_node,current);
-        current->Ldsftn(document->createConstructedToken(sftn_node->function->getFullName()))
+        current->Ldsftn(document->getTokenRef(sftn_node->function->getFullName()))
                 .Callstatic();
     }
 
@@ -848,23 +793,23 @@ namespace evoBasic{
 
     void ILGen::visitVFtnCall(ast::VFtnCall *vftn_node, il::Block *current) {
         visitExpression(vftn_node->ref,current);
-        current->Ldvftn(document->createConstructedToken(vftn_node->function->getFullName()));
+        current->Ldvftn(document->getTokenRef(vftn_node->function->getFullName()));
         loadCalleeArguments(vftn_node,current);
         current->Callvirt();
     }
 
     void ILGen::visitExtCall(ast::ExtCall *ext_node, il::Block *current) {
         loadCalleeArguments(ext_node,current);
-        current->Invoke(document->createConstructedToken(ext_node->function->getFullName()));
+        current->Invoke(document->getTokenRef(ext_node->function->getFullName()));
     }
 
     void ILGen::visitSFld(ast::SFld *sfld_node, il::Block *current) {
-        auto token = document->createConstructedToken(sfld_node->variable->getFullName());
+        auto token = document->getTokenRef(sfld_node->variable->getFullName());
         current->Ldsfld(mapILType(sfld_node->variable->getPrototype()),token);
     }
 
     void ILGen::visitFld(ast::Fld *fld_node, il::Block *current) {
-        auto token = document->createConstructedToken(fld_node->variable->getFullName());
+        auto token = document->getTokenRef(fld_node->variable->getFullName());
         visitExpression(fld_node->ref,current);
         current->Ldfld(mapILType(fld_node->variable->getPrototype()),token);
     }
@@ -890,7 +835,7 @@ namespace evoBasic{
     }
 
     void ILGen::visitString(ast::String *string_node, il::Block *current) {
-        current->Ldc(document->createToken(string_node->value));
+        current->Ldc(document->getTokenRef(string_node->value));
         //todo: call ctor for String
     }
 
@@ -900,6 +845,10 @@ namespace evoBasic{
 
     void ILGen::visitBoolean(ast::Boolean *boolean_node, il::Block *current) {
         current->Push(DataType::boolean,boolean_node->value);
+    }
+
+    il::Document *ILGen::getDocument() {
+        return document;
     }
 
 }

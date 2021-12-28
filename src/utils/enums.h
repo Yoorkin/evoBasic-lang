@@ -17,7 +17,7 @@ namespace evoBasic{
     enum class FunctionFlag{Method=0,Static,Virtual,Override};
     enum class FunctionEnum{User,External,Intrinsic};
     enum class FunctionKind{InterfaceFunction,UserFunction,Operator,External,Constructor};
-    enum DataType{
+    enum class DataType{
         empty,i8,i16,i32,i64,u8,u16,u32,u64,f32,f64,
         ref,ftn,vftn,sftn,record,array,boolean,character,delegate
     };

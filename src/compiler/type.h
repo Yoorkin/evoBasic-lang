@@ -23,7 +23,7 @@
 
 namespace evoBasic::il{
     class Document;
-    class Token;
+    class TokenRef;
 }
 
 namespace evoBasic::ast{

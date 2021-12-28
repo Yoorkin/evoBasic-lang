@@ -190,7 +190,7 @@ namespace evoBasic{
             case SymbolKind::Array:
                 break;
         }
-        (*expression)->type = new ExpressionType(dst,ExpressionType::rvalue,DataType::empty);
+        (*expression)->type = new ExpressionType(dst,ExpressionType::rvalue);
     }
 
 

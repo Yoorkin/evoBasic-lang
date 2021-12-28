@@ -28,7 +28,8 @@ namespace evoBasic{
         il::Block *for_next = nullptr,*loop_next = nullptr;
         std::list<il::Block*> blocks;
     public:
-        il::Document *visitGlobal(ast::Global *global_node);
+        il::Document *getDocument();
+        void visitGlobal(ast::Global *global_node);
         il::Class *visitClass(ast::Class *class_node);
         il::Module *visitModule(ast::Module *module_node);
         il::Interface *visitInterface(ast::Interface *interface_node);
@@ -75,7 +76,7 @@ namespace evoBasic{
         std::vector<il::Member*> visitMember(ast::Member *member);
         il::SFld *visitStaticField(ast::Variable *variable_node);
         il::Fld *visitField(ast::Variable *variable_node);
-        std::vector<il::Param *> visitParameter(type::Function *function);
+        std::vector<il::Param*> visitParameter(type::Function *function);
 
         void visitEnumMember(ast::EnumMember *enum_member_node, il::Block *current);
     };

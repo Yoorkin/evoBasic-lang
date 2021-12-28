@@ -23,6 +23,7 @@ public:
 #define PANIC throw AssertionException(__FILE__,__func__,__LINE__,"")
 #define PANICMSG(Msg) throw AssertionException(__FILE__,__func__,__LINE__,Msg)
 #define ASSERT(Exp,Msg) if(Exp) PANICMSG(Msg)
+#define ASSERT_TRUE(Exp) if(Exp) PANICMSG(# Exp)
 #define NotNull(ptr) ASSERT(ptr==nullptr, #ptr " is null")
 
 #else

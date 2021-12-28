@@ -8,16 +8,8 @@
 #include "stack.h"
 namespace evoBasic::vm{
     enum class intrinsic : data::ptr{
-        allocate = 0,dynamicCast,printi32
+        putByte,getByte
     };
-
-//    void *allocate_intrinsic(data::ptr size){
-//
-//    }
-//
-//    void dynamic_cast_intrinsic(Stack *stack){
-//
-//    }
 
 }
 

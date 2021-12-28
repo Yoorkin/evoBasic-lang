@@ -43,7 +43,7 @@ Usage:
 Options:
      --help-info
      -h                          print help information
-     --output-name=<File Name>
+     --output=<File Name>
      --o=<File name>             set output file name
      --library-import
      -lib                        import dependencies
@@ -61,6 +61,12 @@ void printVersionInfo(string){
     enable_compile = false;
 }
 
+std::list<string> depend_libs;
+
+void addDependLib(string lib){
+    depend_libs.push_back(lib);
+}
+
 void unmatched(string str){
     Logger::error(Format() << "unsupported option '" << str << "'");
     enable_compile = false;
@@ -70,10 +76,12 @@ int main(int argc,char *argv[]) {
 
     CmdDistributor distributor;
     distributor.on("--dev-info",enableDevInfo)
-            .on("--output-name=",setOutputName)
+            .on("--output=",setOutputName)
             .on("-o=",setOutputName)
             .on("--help",printHelpInfo)
             .on("-h",printHelpInfo)
+            .on("--depend-lib",addDependLib)
+            .on("-l",addDependLib)
             .others(addSources)
             .unmatched(unmatched);
 
@@ -116,15 +124,20 @@ int main(int argc,char *argv[]) {
     Logger::dev(type::debugSymbolTable(context->getGlobal()->debug()));
 
     if(Logger::errorCount == 0){
+        ILGen gen;
+        Semantic::solveByteLengthDependencies(context);
         for(auto ast : asts){
-            Semantic::solveByteLengthDependencies(context);
-            ILGen gen;
-            auto ir = gen.visitGlobal(ast);
-            Logger::dev(ir->toString());
-            fstream file("out.evo",ios::binary | ios::out);
-            ir->toHex(file);
+            gen.visitGlobal(ast);
         }
+        auto ir = gen.getDocument();
+        for(auto &lib : depend_libs){
+            ir->addDependenceLibrary(lib);
+        }
+        Logger::dev(ir->toString());
+        fstream file(output_name,ios::binary | ios::out);
+        ir->toHex(file);
     }
+
 
     cout<<endl<<Logger::errorCount<<" error(s),"
         <<Logger::warningCount<<" warning(s)."<<endl;

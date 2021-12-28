@@ -16,7 +16,7 @@ namespace evoBasic{
 
 
     /*   ==============================Parameter passing strategy====================================
-     *   Param\Arg            ByVal                  ByRef                Undefined
+     *   Regular\Arg            ByVal                  ByRef                Undefined
      *   ByVal      Yes,allow implicit conversion.    Error         Yes,allow implicit conversion.
      *   ByRef      store value to tmp address,    Error when arg        Error when arg
      *              allow implicit conversion.      is not lvalue.        is not lvalue.
@@ -535,7 +535,7 @@ namespace evoBasic{
         auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::u16);
         auto ast_node = new ast::Char;
         ast_node->value = ch_node->value;
-        ast_node->type = new ExpressionType(primitive,ExpressionType::rvalue,DataType::u16);
+        ast_node->type = new ExpressionType(primitive,ExpressionType::rvalue);
         return (ast::Expression*)ast_node;
     }
 

@@ -3,30 +3,39 @@
 //
 
 #include "il.h"
+#include "nullSafe.h"
 
 namespace evoBasic::il{
     using namespace std;
 
+    void read(std::istream &stream,Bytecode code) {
+        if((data::u8)stream.get()!=(data::u8)code)
+            PANIC;
+    }
+
+    bool predict(std::istream &stream,Bytecode code){
+        data::u8 byte;
+        byte = stream.peek();
+        return byte == (data::u8)code;
+    }
 
     Result *Document::createResult(type::Prototype *prototype) {
         auto ret = new Result;
-        ret->type = createConstructedToken(prototype->getFullName());
+        ret->type = getTokenRef(prototype->getFullName());
         return ret;
     }
 
-    Token *Document::createToken(std::string text) {
+    TokenRef Document::getTokenRef(std::string text) {
         auto target = token_pool_map.find(text);
         if(target == token_pool_map.end()){
-            auto token = new il::Token(text);
-            token_pool.push_back(token);
-            token->setID(token_pool.size()-1);
+            token_pool.push_back(new TextTokenDef(this,token_pool.size(),text));
             token_pool_map.insert({text,token_pool.size()-1});
-            return token;
+            return TokenRef(this, token_pool.size() - 1);
         }
-        else return token_pool[target->second];
+        else return TokenRef(this, target->second);
     }
 
-    Token *Document::createConstructedToken(std::list<string> full_name_list) {
+    TokenRef Document::getTokenRef(std::list<string> full_name_list) {
         Format fullname;
         for(auto &name : full_name_list){
             if(&name != &full_name_list.front())fullname<<'.';
@@ -34,31 +43,30 @@ namespace evoBasic::il{
         }
         auto target = token_pool_map.find(fullname);
         if(target == token_pool_map.end()){
-            auto ret = new ConstructedToken;
+            list<data::u64> ls;
             for(auto &str : full_name_list){
-                ret->tokens.push_back(createToken(str));
+                ls.push_back(getTokenRef(str).getID());
             }
-            ret->setID(token_pool.size());
             token_pool_map.insert({fullname,token_pool.size()});
-            token_pool.push_back(ret);
-            return ret;
+            token_pool.emplace_back(new ConstructedTokenDef(this,token_pool.size(),ls));
+            return TokenRef(this, token_pool.size() - 1);
         }
-        else return token_pool[target->second];
+        else return TokenRef(this, target->second);
     }
 
     Module *Document::createModule(std::string name, AccessFlag access, std::vector<Member*> members) {
         auto mod = new il::Module;
-        mod->access = new Access(access);
-        mod->name = createToken(name);
+        mod->access = Access(access);
+        mod->name = getTokenRef(name);
         mod->members = std::move(members);
         return mod;
     }
 
-    Class *Document::createClass(std::string name, AccessFlag access, Extend *extend, std::vector<Impl*> impls,
+    Class *Document::createClass(std::string name, AccessFlag access, Extend extend, std::vector<Impl> impls,
                                   std::vector<Member*> members) {
         auto cls = new il::Class;
-        cls->name = createToken(name);
-        cls->access = new Access(access);
+        cls->name = getTokenRef(name);
+        cls->access = Access(access);
         cls->extend = extend;
         cls->impls = std::move(impls);
         cls->members = std::move(members);
@@ -67,49 +75,49 @@ namespace evoBasic::il{
 
     Interface *Document::createInterface(std::string name, AccessFlag access, std::vector<FtnBase*> ftns) {
         auto ret = new il::Interface;
-        ret->name = createToken(name);
-        ret->access = new Access(access);
+        ret->name = getTokenRef(name);
+        ret->access = Access(access);
         ret->ftns = std::move(ftns);
         return ret;
     }
 
-    Enum *Document::createEnum(std::string name, AccessFlag access, std::vector<Pair*> pairs) {
+    Enum *Document::createEnum(std::string name, AccessFlag access, std::vector<Pair> pairs) {
         auto ret = new il::Enum;
-        ret->name = createToken(name);
-        ret->access = new Access(access);
+        ret->name = getTokenRef(name);
+        ret->access = Access(access);
         ret->pairs = std::move(pairs);
         return ret;
     }
 
     Record *Document::createRecord(std::string name, AccessFlag access, std::vector<Fld*> fields) {
         auto ret = new il::Record;
-        ret->name = createToken(name);
-        ret->access = new Access(access);
+        ret->name = getTokenRef(name);
+        ret->access = Access(access);
         ret->fields = std::move(fields);
         return ret;
     }
 
     Fld *Document::createField(std::string name, AccessFlag access, type::Prototype *prototype) {
         auto ret = new il::Fld;
-        ret->name = createToken(name);
-        ret->access = new Access(access);
-        ret->type = createConstructedToken(prototype->getFullName());
+        ret->name = getTokenRef(name);
+        ret->access = Access(access);
+        ret->type = getTokenRef(prototype->getFullName());
         return ret;
     }
 
     SFld *Document::createStaticField(std::string name, AccessFlag access, type::Prototype *prototype) {
         auto ret = new il::SFld;
-        ret->name = createToken(name);
-        ret->access = new Access(access);
-        ret->type = createConstructedToken(prototype->getFullName());
+        ret->name = getTokenRef(name);
+        ret->access = Access(access);
+        ret->type = getTokenRef(prototype->getFullName());
         return ret;
     }
 
     Ftn *Document::createFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
                                   std::list<Block*> blocks) {
         auto ret = new il::Ftn;
-        ret->name = createToken(name);
-        ret->access = new Access(access);
+        ret->name = getTokenRef(name);
+        ret->access = Access(access);
         ret->blocks = blocks;
         ret->params = std::move(params);
         ret->locals = std::move(locals);
@@ -117,9 +125,9 @@ namespace evoBasic::il{
         return ret;
     }
 
-    Ctor *Document::createConstructor(AccessFlag access, std::vector<Param*> params, vector<Local*> locals, std::list<Block*> blocks) {
+    Ctor *Document::createConstructor(AccessFlag access, std::vector<Param*> params, std::vector<Local*> locals, std::list<Block*> blocks) {
         auto ret = new il::Ctor;
-        ret->access = new Access(access);
+        ret->access = Access(access);
         ret->blocks = blocks;
         ret->params = std::move(params);
         ret->locals = std::move(locals);
@@ -130,8 +138,8 @@ namespace evoBasic::il{
     Document::createVirtualFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
                                     std::list<Block*> blocks) {
         auto ret = new il::VFtn;
-        ret->name = createToken(name);
-        ret->access = new Access(access);
+        ret->name = getTokenRef(name);
+        ret->access = Access(access);
         ret->blocks = blocks;
         ret->params = std::move(params);
         ret->locals = std::move(locals);
@@ -140,11 +148,11 @@ namespace evoBasic::il{
     }
 
     SFtn *
-    Document::createStaticFunction(std::string name, AccessFlag access, std::vector<Param *> params, Result *result, vector<Local*> locals,
+    Document::createStaticFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
                                    std::list<Block*> blocks) {
         auto ret = new il::SFtn;
-        ret->name = createToken(name);
-        ret->access = new Access(access);
+        ret->name = getTokenRef(name);
+        ret->access = Access(access);
         ret->blocks = blocks;
         ret->params = std::move(params);
         ret->locals = std::move(locals);
@@ -154,35 +162,35 @@ namespace evoBasic::il{
 
 
     Ext *
-    Document::createExternalFunction(std::string name, std::string lib, ExtAlias *alias, AccessFlag access,
-                                          std::vector<Param *> params, Result *result) {
+    Document::createExternalFunction(std::string name, std::string lib, ExtAlias alias, AccessFlag access,
+                                     std::vector<Param*> params, Result *result) {
         auto ret = new il::Ext;
-        ret->name = createToken(name);
-        ret->lib = new Lib(createToken(lib));
-        ret->access = new Access(access);
+        ret->name = getTokenRef(name);
+        ret->lib = Lib(getTokenRef(lib));
+        ret->access = Access(access);
         ret->params = std::move(params);
         ret->result = result;
         ret->alias = alias;
         return ret;
     }
 
-    ExtAlias *
+    ExtAlias
     Document::createExtAlias(std::string text){
-        return new ExtAlias(createToken(text));
+        return ExtAlias(getTokenRef(text));
     }
 
-    Param *Document::createParam(std::string name, type::Prototype *prototype,bool byref) {
-        auto ret = new Param;
-        ret->name = createToken(name);
-        ret->type = createConstructedToken(prototype->getFullName());
+    Regular *Document::createParam(std::string name, type::Prototype *prototype, bool byref) {
+        auto ret = new Regular;
+        ret->name = getTokenRef(name);
+        ret->type = getTokenRef(prototype->getFullName());
         ret->is_ref = byref;
         return ret;
     }
 
     Opt *Document::createOption(std::string name, type::Prototype *prototype, bool byref, Block *initial) {
         auto ret = new Opt;
-        ret->name = createToken(name);
-        ret->type = createConstructedToken(prototype->getFullName());
+        ret->name = getTokenRef(name);
+        ret->type = getTokenRef(prototype->getFullName());
         ret->is_ref = byref;
         ret->initial = initial;
         return ret;
@@ -190,44 +198,44 @@ namespace evoBasic::il{
 
     Inf *Document::createParamArray(std::string name, type::Prototype *prototype, bool byref) {
         auto ret = new Inf;
-        ret->name = createToken(name);
-        ret->type = createConstructedToken(prototype->getFullName());
+        ret->name = getTokenRef(name);
+        ret->type = getTokenRef(prototype->getFullName());
         ret->is_ref = byref;
         return ret;
     }
 
-    Pair *Document::createPair(std::string name, data::u32 value) {
-        auto ret = new il::Pair;
-        ret->name = createToken(name);
-        ret->value = value;
+    Pair Document::createPair(std::string name, data::u32 value) {
+        il::Pair ret;
+        ret.name = getTokenRef(name);
+        ret.value = value;
         return ret;
     }
 
-    Extend *Document::createExtend(type::Class *cls) {
-        auto ret = new il::Extend;
-        ret->target = createConstructedToken(cls->getFullName());
+    Extend Document::createExtend(type::Class *cls) {
+        il::Extend ret;
+        ret.target = getTokenRef(cls->getFullName());
         return ret;
     }
 
-    Impl *Document::createImplements(type::Interface *interface) {
-        auto ret = new il::Impl;
-        ret->target = createConstructedToken(interface->getFullName());
+    Impl Document::createImplements(type::Interface *interface) {
+        il::Impl ret;
+        ret.target = getTokenRef(interface->getFullName());
         return ret;
     }
 
     Local *Document::createLocal(std::string name, type::Prototype *prototype, data::u16 address) {
         auto ret = new il::Local;
-        ret->name = createToken(name);
-        ret->type = createConstructedToken(prototype->getFullName());
+        ret->name = getTokenRef(name);
+        ret->type = getTokenRef(prototype->getFullName());
         ret->address = address;
         return ret;
     }
 
-    FtnBase *Document::createInterfaceFunction(std::string name, AccessFlag access, std::vector<Param *> params,
+    FtnBase *Document::createInterfaceFunction(std::string name, AccessFlag access, std::vector<Param*> params,
                                                 Result *result) {
         auto ret = new il::FtnBase;
-        ret->name = createToken(name);
-        ret->access = new Access(access);
+        ret->name = getTokenRef(name);
+        ret->access = Access(access);
         ret->params = std::move(params);
         ret->result = result;
         return ret;
@@ -236,7 +244,7 @@ namespace evoBasic::il{
 
 
     std::string Local::toString() {
-        return Format() << "(local " << name->getName() << "@" << to_string(address) << " " << type->getName() << ")";
+        return Format() << "(local " << name.toString() << "@" << to_string(address) << " " << type.toString() << ")";
     }
 
 
@@ -380,22 +388,22 @@ namespace evoBasic::il{
         return *this;
     }
 
-    Block &Block::Ldc(Token *token) {
+    Block &Block::Ldc(TokenRef token) {
         insts.push_back(new InstWithToken(InstWithToken::Op::Ldc,token));
         return *this;
     }
 
-    Block &Block::Ldftn(Token *ftn) {
+    Block &Block::Ldftn(TokenRef ftn) {
         insts.push_back(new InstWithToken(InstWithToken::Op::Ldftn,ftn));
         return *this;
     }
 
-    Block &Block::Ldsftn(Token *sftn) {
+    Block &Block::Ldsftn(TokenRef sftn) {
         insts.push_back(new InstWithToken(InstWithToken::Op::Ldsftn,sftn));
         return *this;
     }
 
-    Block &Block::Ldvftn(Token *vftn) {
+    Block &Block::Ldvftn(TokenRef vftn) {
         insts.push_back(new InstWithToken(InstWithToken::Op::Ldvftn,vftn));
         return *this;
     }
@@ -425,32 +433,32 @@ namespace evoBasic::il{
         return *this;
     }
 
-    Block &Block::Ldfld(DataType data, Token *fld) {
+    Block &Block::Ldfld(DataType data, TokenRef fld) {
         insts.push_back(new InstWithDataToken(InstWithDataToken::Op::Ldfld,data,fld));
         return *this;
     }
 
-    Block &Block::Ldsfld(DataType data, Token *sfld) {
+    Block &Block::Ldsfld(DataType data, TokenRef sfld) {
         insts.push_back(new InstWithDataToken(InstWithDataToken::Op::Ldsfld,data,sfld));
         return *this;
     }
 
-    Block &Block::Ldflda(Token *fld) {
+    Block &Block::Ldflda(TokenRef fld) {
         insts.push_back(new InstWithToken(InstWithToken::Op::Ldflda,fld));
         return *this;
     }
 
-    Block &Block::Ldsflda(Token *sfld) {
+    Block &Block::Ldsflda(TokenRef sfld) {
         insts.push_back(new InstWithToken(InstWithToken::Op::Ldflda,sfld));
         return *this;
     }
 
-    Block &Block::Stfld(DataType data, Token *fld) {
+    Block &Block::Stfld(DataType data, TokenRef fld) {
         insts.push_back(new InstWithDataToken(InstWithDataToken::Op::Stfld,data,fld));
         return *this;
     }
 
-    Block &Block::Stsfld(DataType data, Token *sfld) {
+    Block &Block::Stsfld(DataType data, TokenRef sfld) {
         insts.push_back(new InstWithDataToken(InstWithDataToken::Op::Stsfld,data,sfld));
         return *this;
     }
@@ -475,12 +483,12 @@ namespace evoBasic::il{
         return *this;
     }
 
-    Block &Block::Newobj(Token *cls) {
+    Block &Block::Newobj(TokenRef cls) {
         insts.push_back(new InstWithToken(InstWithToken::Op::Newobj,cls));
         return *this;
     }
 
-    Block &Block::Castcls(Token *src, Token *dst) {
+    Block &Block::Castcls(TokenRef src, TokenRef dst) {
         auto cast = new InstCastcls;
         cast->src_class = src;
         cast->dst_class = dst;
@@ -501,7 +509,7 @@ namespace evoBasic::il{
         return *this;
     }
 
-    Block &Block::Invoke(Token *external) {
+    Block &Block::Invoke(TokenRef external) {
         insts.push_back(new InstWithToken(InstWithToken::Invoke,external));
         return *this;
     }
@@ -534,41 +542,12 @@ namespace evoBasic::il{
         return size;
     }
 
-    std::string Token::toString() {
-        return Format() << "(token " << to_string(id) << " " << text << ")";
+    std::string TokenRef::toString() {
+        return getDocument()->getTokenDef(id)->getName();
     }
 
-
-    std::string Token::getName() {
-        return Format() << text;
-    }
-
-    void Token::setID(data::u64 value) {
-        id = value;
-    }
-
-    data::u64 Token::getID() {
+    data::u64 TokenRef::getID() {
         return id;
-    }
-
-    std::string ConstructedToken::toString() {
-        Format fmt;
-        fmt << "(constructed " << to_string(id);
-        for(auto sub_token : tokens){
-            fmt << ' ' << to_string(sub_token->getID());
-        }
-        fmt << ')';
-        return fmt;
-    }
-
-
-    std::string ConstructedToken::getName(){
-        Format fmt;
-        for(auto token : tokens){
-            if(token != tokens.front()) fmt << '.';
-            fmt << token->getName();
-        }
-        return fmt;
     }
 
     std::string Access::toString() {
@@ -577,27 +556,25 @@ namespace evoBasic::il{
     }
 
     std::string Extend::toString() {
-        return Format() << "(extend " << target->getName() << ")";
+        return Format() << "(extend " << target.toString() << ")";
     }
 
 
     std::string Impl::toString() {
-        return Format() << "(impl " << target->getName() << ")";
+        return Format() << "(impl " << target.toString() << ")";
     }
 
     std::string Lib::toString() {
-        return Format() << "(lib " << target->getName() << ")";
+        return Format() << "(lib " << target.toString() << ")";
     }
 
 
-    ConstructedToken *Member::getConstructedToken() {
 
-    }
 
     std::string Class::toString() {
         Format fmt;
-        fmt << "(cls " << access->toString() << ' ' << name->getName() << ' ' << extend->toString();
-        for(auto impl : impls) fmt << ' ' << impl->toString();
+        fmt << "(cls " << access.toString() << ' ' << name.toString() << ' ' << extend.toString();
+        for(auto impl : impls) fmt << ' ' << impl.toString();
         for(auto member : members) fmt << '\n' << member->toString();
         fmt << ")";
         return fmt;
@@ -606,7 +583,7 @@ namespace evoBasic::il{
 
     std::string Module::toString() {
         Format fmt;
-        fmt << "(mod " << access->toString() << ' ' << name->getName();
+        fmt << "(mod " << access.toString() << ' ' << name.toString();
         for(auto member : members) fmt << '\n' << member->toString();
         fmt << ")";
         return fmt;
@@ -615,7 +592,7 @@ namespace evoBasic::il{
 
     std::string Interface::toString() {
         Format fmt;
-        fmt << "(interface " << access->toString() << ' ' << name->getName();
+        fmt << "(interface " << access.toString() << ' ' << name.toString();
         for(auto ftn : ftns) fmt << '\n' << ftn->toString();
         fmt << ")";
         return fmt;
@@ -623,52 +600,52 @@ namespace evoBasic::il{
 
 
     std::string Pair::toString() {
-        return Format() << "(pair " << name->getName() << ' ' << to_string(value);
+        return Format() << "(pair " << name.toString() << ' ' << to_string(value);
     }
 
     std::string Enum::toString() {
         Format fmt;
-        fmt << "(Enum " << access->toString() << ' ' << name->getName();
-        for(auto p : pairs) fmt << '\n' << p->toString();
+        fmt << "(Enum " << access.toString() << ' ' << name.toString();
+        for(auto p : pairs) fmt << '\n' << p.toString();
         fmt << ")";
         return fmt;
     }
 
     std::string Fld::toString() {
-        return Format() << "(fld " << access->toString() << ' ' << name->getName() << ' ' << type->getName() <<")";
+        return Format() << "(fld " << access.toString() << ' ' << name.toString() << ' ' << type.toString() <<")";
     }
 
 
     std::string SFld::toString() {
-        return Format() << "(sfld " << access->toString() << ' ' << name->getName() << ' ' << type->getName() <<")";
+        return Format() << "(sfld " << access.toString() << ' ' << name.toString() << ' ' << type.toString() <<")";
     }
 
     std::string Record::toString() {
         Format fmt;
-        fmt << "(record " << access->toString() << ' ' << name->getName();
+        fmt << "(record " << access.toString() << ' ' << name.toString();
         for(auto fld : fields) fmt << '\n' << fld->toString();
         fmt << ")";
         return fmt;
     }
 
 
-    std::string Param::toString() {
-        return Format() << "(param " << name->getName() << " " << type->getName() << ")";
+    std::string Regular::toString() {
+        return Format() << "(param " << name.toString() << " " << type.toString() << ")";
     }
 
     std::string Opt::toString() {
-        return Format() << "(opt " << name->getName()
-                        << " " << type->getName()
+        return Format() << "(opt " << name.toString()
+                        << " " << type.toString()
                         << initial->toString() << ")";
     }
 
     std::string Inf::toString() {
-        return Format() << "(inf " << name->getName() << " " << type->getName() << ")";
+        return Format() << "(inf " << name.toString() << " " << type.toString() << ")";
     }
 
 
     std::string Result::toString() {
-        return Format() << "(result " << type->getName() << ")";
+        return Format() << "(result " << type.toString() << ")";
     }
 
 
@@ -679,8 +656,8 @@ namespace evoBasic::il{
 
     std::string FtnBase::toString() {
         Format fmt;
-        fmt << access->toString() << ' ';
-        if(name) fmt << name->getName();
+        fmt << access.toString() << ' ';
+        if(!name.isEmpty()) fmt << name.toString();
         for(auto p : params) fmt << ' ' << p->toString();
         if(result) fmt << ' ' << result->toString();
         return fmt;
@@ -718,8 +695,8 @@ namespace evoBasic::il{
 
     std::string Ext::toString() {
         Format fmt;
-        fmt << "(ext " << lib->toString();
-        if(alias)fmt << ' ' << alias->toString();
+        fmt << "(ext " << lib.toString();
+        fmt << ' ' << alias.toString();
         fmt << ' ' << FtnBase::toString() << ")";
         return fmt;
     }
@@ -735,7 +712,7 @@ namespace evoBasic::il{
     std::string InstWithToken::toString() {
         vector<string> str = {"Ldftn","Ldsftn","Ldvftn","Ldc","Newobj","Callext"};
         Format fmt;
-        fmt << str[(int)op] << ' ' << token->getName();
+        fmt << str[(int)op] << ' ' << token.toString();
         return fmt;
     }
 
@@ -809,13 +786,13 @@ namespace evoBasic::il{
                 "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
                 "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
         };
-        return Format() << inst[(int)op] << '.' << ty[(int)type] << token->getName();
+        return Format() << inst[(int)op] << '.' << ty[(int)type] << token.toString();
     }
 
 
 
     std::string InstCastcls::toString() {
-        return Format() << "cast." << src_class->getName() << " " << dst_class->getName();
+        return Format() << "cast." << src_class.toString() << " " << dst_class.toString();
     }
 
     std::string InstConv::toString() {
@@ -829,6 +806,7 @@ namespace evoBasic::il{
     std::string Document::toString() {
         Format fmt;
         fmt << "(Document ";
+        for(auto library : dependencies) fmt << '\n' << "(depend " << library.toString() << ")";
         for(auto token : token_pool) fmt << '\n' << token->toString();
         for(auto member : members) fmt << '\n' << member->toString();
         fmt << ")";
@@ -840,7 +818,7 @@ namespace evoBasic::il{
     }
 
     std::string ExtAlias::toString() {
-        return Format() << "(alias " << token->getName() <<")";
+        return Format() << "(alias " << token.toString() <<")";
     }
 
 
@@ -848,11 +826,11 @@ namespace evoBasic::il{
     
     
     Inst::ByteSize InstWithOp::getByteSize() {
-        return 2;
+        return 1;
     }
 
     Inst::ByteSize InstWithToken::getByteSize() {
-        return 1 + sizeof(Token::ID);
+        return 1 + sizeof(TokenRef::ID);
     }
 
     Inst::ByteSize InstJif::getByteSize() {
@@ -864,6 +842,7 @@ namespace evoBasic::il{
     }
     
     Inst::ByteSize InstPush::getByteSize() {
+        using enum DataType;
         switch(type){
             case i8:  return 2 + sizeof(data::i8);
             case i16: return 2 + sizeof(data::i16);
@@ -901,165 +880,332 @@ namespace evoBasic::il{
 
 
 
-    void Local::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::LocalDef);
-        write(stream,(data::u8)Bytecode::TokenRef);
-        write(stream,type->getID());
-    }
 
     void Block::toHex(std::ostream &stream) {
         for(auto inst : insts)inst->toHex(stream);
     }
 
-    void Token::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::TokenDef);
-        for(char c : text) write(stream,c);
-        write(stream,(data::u8)Bytecode::EndMark);
+    void TokenRef::toHex(std::ostream &stream) {
+        write(stream,Bytecode::TokenRef);
+        write(stream,id);
     }
 
-    void ConstructedToken::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::ConstructedDef);
-        for(auto t : tokens) write(stream,t->getID());
-        write(stream,(data::u8)Bytecode::EndMark);
+    void TokenRef::fromHex(istream &stream) {
+        read(stream,Bytecode::TokenRef);
+        read(stream,id);
     }
+
+
+    TokenRef::TokenRef(Document *document, data::u64 id) : id(id){
+        setDocument(document);
+    }
+
+    TokenRef::TokenRef(Document *document) : TokenRef(document, -1){}
+
+    bool TokenRef::isEmpty() {
+        return id == -1 || getDocument() == nullptr;
+    }
+
 
     void Access::toHex(std::ostream &stream) {
         switch (flag) {
             case AccessFlag::Private:
-                write(stream,(data::u8)Bytecode::PriAcsDef);
+                write(stream,Bytecode::PriAcsDef);
                 break;
             case AccessFlag::Public:
-                write(stream,(data::u8)Bytecode::PubAcsDef);
+                write(stream,Bytecode::PubAcsDef);
                 break;
             case AccessFlag::Protected:
-                write(stream,(data::u8)Bytecode::PtdAcsDef);
+                write(stream,Bytecode::PtdAcsDef);
                 break;
         }
     }
 
+    void Access::fromHex(istream &stream) {
+        auto hex = (data::u8)stream.get();
+        if(hex == (data::u8)Bytecode::PriAcsDef){
+            flag = AccessFlag::Private;
+        }
+        else if(hex == (data::u8)Bytecode::PubAcsDef){
+            flag = AccessFlag::Public;
+        }
+        else if(hex == (data::u8)Bytecode::PtdAcsDef){
+            flag = AccessFlag::Protected;
+        }
+    }
+
     void Extend::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::ExtendDef);
-        write(stream,target->getID());
+        write(stream,Bytecode::ExtendDef);
+        write(stream,Bytecode::TokenRef);
+        target.toHex(stream);
+    }
+
+    void Extend::fromHex(istream &stream) {
+        read(stream,Bytecode::ExtendDef);
+        read(stream,Bytecode::TokenRef);
+        target.fromHex(stream);
     }
 
     void Impl::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::ImplDef);
-        write(stream,target->getID());
+        write(stream,Bytecode::ImplDef);
+        target.toHex(stream);
+    }
+
+    void Impl::fromHex(istream &stream) {
+        read(stream,Bytecode::ImplDef);
+        target.fromHex(stream);
     }
 
     void Lib::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::LibDef);
-        write(stream,target->getID());
+        write(stream,Bytecode::LibDef);
+        target.toHex(stream);
     }
 
-    void Document::toHex(ostream &stream) {
-        write(stream,(data::u8)Bytecode::DocumentDef);
-        for(auto token : token_pool)token->toHex(stream);
-        for(auto member : members)member->toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
+    void Lib::fromHex(istream &stream) {
+        read(stream,Bytecode::LibDef);
+        target.fromHex(stream);
+    }
+
+    void Member::toHex(ostream &stream) {
+        write(stream,Bytecode::TokenRef);
+        name.toHex(stream);
+        access.toHex(stream);
+    }
+
+    void Member::fromHex(istream &stream) {
+        read(stream,Bytecode::TokenRef);
+        name.fromHex(stream);
+        access.fromHex(stream);
     }
 
     void Class::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::ClassDef);
-        name->toHex(stream);
-        access->toHex(stream);
-        extend->toHex(stream);
-        for(auto impl : impls)impl->toHex(stream);
+        write(stream,Bytecode::ClassDef);
+        Member::toHex(stream);
+        extend.toHex(stream);
+        for(auto &impl : impls)impl.toHex(stream);
         for(auto member : members)member->toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
+        write(stream,Bytecode::EndMark);
+    }
+
+    void Class::fromHex(std::istream &stream){
+        read(stream,Bytecode::ClassDef);
+        Member::fromHex(stream);
+        extend.fromHex(stream);
+        while(predict(stream,Bytecode::ImplDef)){
+            Impl impl;
+            impl.fromHex(stream);
+            impls.push_back(impl);
+        }
+        read(stream, members);
+        read(stream,Bytecode::EndMark);
     }
 
     void Module::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::ModuleDef);
-        name->toHex(stream);
-        access->toHex(stream);
+        write(stream,Bytecode::ModuleDef);
+        Member::toHex(stream);
         for(auto member : members)member->toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
+        write(stream,Bytecode::EndMark);
+    }
+
+    void Module::fromHex(istream &stream) {
+        read(stream,Bytecode::ModuleDef);
+        Member::fromHex(stream);
+        read(stream, members);
+        read(stream,Bytecode::EndMark);
     }
 
     void Interface::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::InterfaceDef);
-        name->toHex(stream);
-        access->toHex(stream);
+        write(stream,Bytecode::InterfaceDef);
+        Member::toHex(stream);
         for(auto member : ftns)member->toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
+        write(stream,Bytecode::EndMark);
+    }
+
+    void Interface::fromHex(istream &stream) {
+        read(stream,Bytecode::InterfaceDef);
+        Member::fromHex(stream);
+        read(stream, ftns);
+        read(stream,Bytecode::EndMark);
     }
 
     void Pair::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::InterfaceDef);
-        write(stream,name->getID());
+        write(stream,Bytecode::InterfaceDef);
+        name.toHex(stream);
         write(stream,value);//u32
     }
 
+    void Pair::fromHex(istream &stream) {
+        read(stream,Bytecode::InterfaceDef);
+        name.fromHex(stream);
+        read(stream,value);
+    }
+
     void Enum::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::EnumDef);
-        write(stream,name->getID());
-        access->toHex(stream);
-        for(auto p : pairs) p->toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
+        write(stream,Bytecode::EnumDef);
+        Member::toHex(stream);
+        for(auto &p : pairs) p.toHex(stream);
+        write(stream,Bytecode::EndMark);
+    }
+
+    void Enum::fromHex(istream &stream) {
+        read(stream,Bytecode::EnumDef);
+        Member::fromHex(stream);
+        while(predict(stream,Bytecode::PairDef)){
+            Pair p;
+            p.fromHex(stream);
+            pairs.push_back(p);
+        }
+        read(stream,Bytecode::EndMark);
     }
 
     void Fld::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::FldDef);
-        write(stream,name->getID());
-        write(stream,type->getID());
+        write(stream,Bytecode::FldDef);
+        Member::toHex(stream);
+        type.toHex(stream);
+    }
+
+    void Fld::fromHex(istream &stream) {
+        read(stream,Bytecode::FldDef);
+        Member::fromHex(stream);
+        type.fromHex(stream);
     }
 
     void SFld::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::SFldDef);
-        write(stream,name->getID());
-        write(stream,type->getID());
+        write(stream,Bytecode::SFldDef);
+        Member::toHex(stream);
+        type.toHex(stream);
+    }
+
+    void SFld::fromHex(istream &stream) {
+        read(stream,Bytecode::SFldDef);
+        Member::fromHex(stream);
+        type.fromHex(stream);
     }
 
     void Record::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::RecordDef);
-        name->toHex(stream);
-        access->toHex(stream);
+        write(stream,Bytecode::RecordDef);
+        Member::toHex(stream);
         for(auto member : fields)member->toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
+        write(stream,Bytecode::EndMark);
     }
 
-    void Param::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::ParamDef);
-        write(stream,name->getID());
-        write(stream,type->getID());
-        write(stream,(data::u8)(is_ref ? Bytecode::Byref : Bytecode::Byval));
+    void Record::fromHex(istream &stream) {
+        read(stream,Bytecode::RecordDef);
+        Member::fromHex(stream);
+        while(!predict(stream,Bytecode::EndMark)){
+            auto fld = new Fld;
+            fld->fromHex(stream);
+            fields.push_back(fld);
+        }
+        read(stream,Bytecode::EndMark);
+    }
+
+    void Param::toHex(ostream &stream) {
+        name.toHex(stream);
+        type.toHex(stream);
+        write(stream,(is_ref ? Bytecode::Byref : Bytecode::Byval));
+    }
+
+    void Param::fromHex(istream &stream) {
+        name.fromHex(stream);
+        type.fromHex(stream);
+        if(predict(stream,Bytecode::Byref)){
+            read(stream,Bytecode::Byref);
+            is_ref = true;
+        }
+        else{
+            read(stream,Bytecode::Byval);
+            is_ref = false;
+        }
+    }
+
+    void Regular::toHex(std::ostream &stream) {
+        write(stream,Bytecode::RegDef);
+        Param::toHex(stream);
+    }
+
+    void Regular::fromHex(istream &stream) {
+        read(stream,Bytecode::RegDef);
+        Param::fromHex(stream);
     }
 
     void Opt::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::OptDef);
-        write(stream,name->getID());
-        write(stream,type->getID());
-        write(stream,(data::u8)(is_ref ? Bytecode::Byref : Bytecode::Byval));
-        write(stream,(data::u8)Bytecode::InstBeg);
+        write(stream,Bytecode::OptDef);
+        Param::toHex(stream);
+        write(stream,Bytecode::InstBeg);
         initial->toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
+        write(stream,Bytecode::EndMark);
+    }
+
+    void Opt::fromHex(istream &stream) {
+        read(stream,Bytecode::OptDef);
+        Param::fromHex(stream);
+        //todo
+//        read(stream,Bytecode::InstBeg);
+//        initial->toHex(stream);
+//        write(stream,Bytecode::EndMark);
     }
 
     void Inf::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::InfDef);
-        write(stream,name->getID());
-        write(stream,type->getID());
-        write(stream,(data::u8)(is_ref ? Bytecode::Byref : Bytecode::Byval));
+        write(stream,Bytecode::InfDef);
+        Param::toHex(stream);
+    }
+
+    void Inf::fromHex(istream &stream) {
+        read(stream,Bytecode::InfDef);
+        Param::fromHex(stream);
+    }
+
+    void Local::toHex(std::ostream &stream) {
+        write(stream,Bytecode::LocalDef);
+        name.toHex(stream);
+        type.toHex(stream);
+    }
+
+    void Local::fromHex(istream &stream) {
+        read(stream,Bytecode::LocalDef);
+        name.fromHex(stream);
+        type.fromHex(stream);
     }
 
     void Result::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::ResultDef);
-        write(stream,type->getID());
+        write(stream,Bytecode::ResultDef);
+        type.toHex(stream);
     }
 
-    void Ctor::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::CtorDef);
-        access->toHex(stream);
-        FtnWithDefinition::toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
+    void Result::fromHex(istream &stream) {
+        read(stream,Bytecode::ResultDef);
+        type.fromHex(stream);
     }
 
     void FtnBase::toHex(ostream &stream) {
+        Member::toHex(stream);
         for(auto p : params) p->toHex(stream);
         if(result)result->toHex(stream);
     }
 
+    void FtnBase::fromHex(istream &stream) {
+        Member::fromHex(stream);
+        while(true){
+            Param *param = nullptr;
+            if(predict(stream,Bytecode::RegDef)){
+                param = new Regular;
+            }
+            else if(predict(stream,Bytecode::OptDef)){
+                param = new Opt;
+            }
+            else if(predict(stream,Bytecode::InfDef)){
+                param = new Inf;
+            }
+            else break;
+            param->fromHex(stream);
+            params.push_back(param);
+        }
+        if(predict(stream,Bytecode::ResultDef)){
+            result = new Result;
+            result->fromHex(stream);
+        }
+    }
 
     void FtnWithDefinition::toHex(ostream &stream) {
         generateAddressInfo(blocks);
@@ -1071,39 +1217,209 @@ namespace evoBasic::il{
         write(stream,(data::u8)Bytecode::EndMark);
     }
 
-    void Ftn::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::FtnDef);
-        write(stream,name->getID());
-        access->toHex(stream);
+    void FtnWithDefinition::fromHex(istream &stream) {
+        FtnBase::fromHex(stream);
+        while(predict(stream,Bytecode::LocalDef)){
+            auto local = new Local;
+            local->fromHex(stream);
+            locals.push_back(local);
+        }
+        read(stream,Bytecode::InstBeg);
+        for(auto block : blocks) block->fromHex(stream);
+        read(stream,Bytecode::EndMark);
+    }
+
+    void Ctor::toHex(std::ostream &stream) {
+        write(stream,Bytecode::CtorDef);
         FtnWithDefinition::toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
+    }
+
+    void Ctor::fromHex(istream &stream) {
+        read(stream,Bytecode::CtorDef);
+        FtnWithDefinition::fromHex(stream);
+    }
+
+    void Ftn::toHex(std::ostream &stream) {
+        write(stream,Bytecode::FtnDef);
+        FtnWithDefinition::toHex(stream);
+    }
+
+    void Ftn::fromHex(istream &stream) {
+        read(stream,Bytecode::FtnDef);
+        FtnWithDefinition::fromHex(stream);
     }
 
     void VFtn::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::VFtnDef);
-        write(stream,name->getID());
-        access->toHex(stream);
+        write(stream,Bytecode::VFtnDef);
         FtnWithDefinition::toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
+    }
+
+    void VFtn::fromHex(istream &stream) {
+        read(stream,Bytecode::VFtnDef);
+        FtnWithDefinition::fromHex(stream);
     }
 
     void SFtn::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::SFtnDef);
-        write(stream,name->getID());
-        access->toHex(stream);
+        write(stream,Bytecode::SFtnDef);
         FtnWithDefinition::toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
+    }
+
+    void SFtn::fromHex(istream &stream) {
+        read(stream,Bytecode::SFtnDef);
+        FtnWithDefinition::fromHex(stream);
+    }
+
+    void ExtAlias::toHex(ostream &stream) {
+        write(stream,Bytecode::ExtAliasDef);
+        token.toHex(stream);
+    }
+
+    void ExtAlias::fromHex(istream &stream) {
+        read(stream,Bytecode::ExtAliasDef);
+        token.fromHex(stream);
     }
 
     void Ext::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::ExtDef);
-        write(stream,name->getID());
-        access->toHex(stream);
-        lib->toHex(stream);
-        alias->toHex(stream);
+        write(stream,Bytecode::ExtDef);
         FtnBase::toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
+        lib.toHex(stream);
+        alias.toHex(stream);
     }
+
+    void Ext::fromHex(istream &stream) {
+        read(stream,Bytecode::ExtDef);
+        FtnBase::fromHex(stream);
+        lib.fromHex(stream);
+        alias.fromHex(stream);
+    }
+
+
+    void Document::toHex(ostream &stream) {
+        write(stream,Bytecode::DocumentDef);
+        for(auto library : dependencies){
+            write(stream,Bytecode::Depend);
+            library.toHex(stream);
+        }
+
+        for(auto token : token_pool){
+            token->toHex(stream);
+        }
+
+        for(auto member : members)member->toHex(stream);
+        write(stream,Bytecode::EndMark);
+    }
+
+    void Document::fromHex(istream &stream) {
+        read(stream,Bytecode::DocumentDef);
+        while(predict(stream,Bytecode::Depend)){
+            read(stream,Bytecode::Depend);
+            TokenRef library;
+            library.fromHex(stream);
+            dependencies.push_back(library);
+        }
+
+
+        while(true){
+            TokenDef *token = nullptr;
+            if(predict(stream,Bytecode::TokenDef)){
+                token = new TextTokenDef(this,token_pool.size());
+            }
+            else if(predict(stream,Bytecode::ConstructedDef)){
+                token = new ConstructedTokenDef(this,token_pool.size());
+            }
+            token->fromHex(stream);
+            token_pool.push_back(token);
+        }
+
+        read(stream,members);
+        read(stream,Bytecode::EndMark);
+    }
+
+
+
+    void Document::addDependenceLibrary(std::string name) {
+        dependencies.push_back(getTokenRef(name));
+    }
+
+
+    Document *Document::loadFromHex(std::istream &stream) {
+        auto ret = new Document;
+
+    }
+
+    TokenRef Document::getTokenRef(data::u64 id) {
+        ASSERT(id > token_pool.size(),"invalid token id");
+        return TokenRef(this, id);
+    }
+
+    TokenDef *Document::getTokenDef(data::u64 id) {
+        ASSERT(id > token_pool.size(),"invalid token id");
+        return token_pool[id];
+    }
+
+
+    void read(istream &stream, std::vector<Member*> &members){
+        while(true){
+            Member *member = nullptr;
+            if(predict(stream,Bytecode::ClassDef)){
+                read(stream,Bytecode::ClassDef);
+                member = new Class;
+            }
+            else if(predict(stream,Bytecode::ModuleDef)){
+                read(stream,Bytecode::ModuleDef);
+                member = new Module;
+            }
+            else if(predict(stream,Bytecode::RecordDef)){
+                read(stream,Bytecode::RecordDef);
+                member = new Record;
+            }
+            else if(predict(stream,Bytecode::EnumDef)){
+                read(stream,Bytecode::EnumDef);
+                member = new Enum;
+            }
+            else if(predict(stream,Bytecode::FldDef)){
+                read(stream,Bytecode::FldDef);
+                member = new Fld;
+            }
+            else if(predict(stream,Bytecode::SFldDef)){
+                read(stream,Bytecode::SFldDef);
+                member = new SFld;
+            }
+            else if(predict(stream,Bytecode::InterfaceDef)){
+                read(stream,Bytecode::InterfaceDef);
+                member = new Interface;
+            }
+            else if(predict(stream,Bytecode::ExtDef)){
+                read(stream,Bytecode::ExtDef);
+                member = new Ext;
+            }
+            else if(predict(stream,Bytecode::CtorDef)){
+                read(stream,Bytecode::CtorDef);
+                member = new Ctor;
+            }
+            else if(predict(stream,Bytecode::VFtnDef)){
+                read(stream,Bytecode::VFtnDef);
+                member = new VFtn;
+            }
+            else if(predict(stream,Bytecode::FtnDef)){
+                read(stream,Bytecode::FtnDef);
+                member = new Ftn;
+            }
+            else if(predict(stream,Bytecode::SFtnDef)){
+                read(stream,Bytecode::SFtnDef);
+                member = new SFtn;
+            }
+            else{
+                break;
+            }
+            member->fromHex(stream);
+            members.push_back(member);
+        }
+    }
+
+
+
+
 
     void InstWithOp::toHex(std::ostream &stream) {
         Bytecode code;
@@ -1140,7 +1456,7 @@ namespace evoBasic::il{
             case Ldsflda: code = Bytecode::Ldsflda;break;
         }
         write(stream,(data::u8)code);
-        write(stream,token->getID());
+        write(stream,token.getID());
     }
 
     void InstJif::toHex(std::ostream &stream) {
@@ -1156,8 +1472,9 @@ namespace evoBasic::il{
 
 
     Bytecode ILDataTypeToByteCode(DataType type){
+        using enum DataType;
         switch(type){
-            case i8:     return Bytecode::i8; 
+            case i8:     return Bytecode::i8;
             case i16:    return Bytecode::i16;
             case i32:    return Bytecode::i32;
             case i64:    return Bytecode::i64;
@@ -1182,6 +1499,7 @@ namespace evoBasic::il{
     }
 
     void InstPush::toHex(std::ostream &stream) {
+        using enum DataType;
         write(stream,(data::u8)Bytecode::Push);
         write(stream,(data::u8)ILDataTypeToByteCode(type));
         switch(type){
@@ -1260,13 +1578,13 @@ namespace evoBasic::il{
         }
         write(stream,(data::u8)code);
         write(stream,(data::u8)ILDataTypeToByteCode(type));
-        write(stream,token->getID());
+        write(stream,token.getID());
     }
     
     void InstCastcls::toHex(std::ostream &stream) {
         write(stream,(data::u8)Bytecode::CastCls);
-        write(stream,src_class->getID());
-        write(stream,dst_class->getID());
+        write(stream,src_class.getID());
+        write(stream,dst_class.getID());
     }
 
     void InstConv::toHex(std::ostream &stream) {
@@ -1275,9 +1593,81 @@ namespace evoBasic::il{
         write(stream,(data::u8)ILDataTypeToByteCode(dst));
     }
 
-    void ExtAlias::toHex(ostream &stream) {
-        write(stream,(data::u8)Bytecode::ExtAliasDef);
-        write(stream,token->getID());
+
+
+
+    Document *Node::getDocument(){
+        return document;
     }
 
+    void Node::setDocument(Document *document) {
+        this->document = document;
+    }
+
+
+    std::string TextTokenDef::toString() {
+        return Format() << "(token "<< to_string(id) << ' ' << text << ")";
+    }
+
+    std::string TextTokenDef::getName() {
+        return text;
+    }
+
+    void TextTokenDef::toHex(ostream &stream) {
+        write(stream,Bytecode::TokenDef);
+        for(auto c : text){
+            write(stream,c);
+        }
+        write(stream,Bytecode::EndMark);
+    }
+
+    void TextTokenDef::fromHex(istream &stream) {
+        text.clear();
+        read(stream,Bytecode::TokenDef);
+        while(!predict(stream,Bytecode::EndMark)){
+            char c;
+            read(stream,c);
+            text.push_back(c);
+        }
+        read(stream,Bytecode::EndMark);
+    }
+
+    std::string ConstructedTokenDef::toString() {
+        Format fmt;
+        fmt << "(Constructed " << to_string(id);
+        for(auto sub_id : sub_token_list){
+            fmt  << ' ' << to_string(sub_id);
+        }
+        fmt << ")";
+        return fmt;
+    }
+
+    std::string ConstructedTokenDef::getName() {
+        stringstream fmt;
+        for(auto sub_id : sub_token_list){
+            if(&sub_id == &sub_token_list.front()) fmt << '.';
+            fmt << getDocument()->getTokenRef(sub_id).toString();
+        }
+        return fmt.str();
+    }
+
+    void ConstructedTokenDef::toHex(ostream &stream) {
+        write(stream,Bytecode::ConstructedDef);
+        for(auto sub_id : sub_token_list){
+            write(stream,Bytecode::TokenRef);
+            write(stream,sub_id);
+        }
+        write(stream,Bytecode::EndMark);
+    }
+
+    void ConstructedTokenDef::fromHex(istream &stream) {
+        read(stream,Bytecode::ConstructedDef);
+        while(predict(stream,Bytecode::TokenRef)){
+            data::u64 sub_id;
+            read(stream,Bytecode::TokenRef);
+            read(stream,sub_id);
+            sub_token_list.push_back(sub_id);
+        }
+        read(stream,Bytecode::EndMark);
+    }
 }
