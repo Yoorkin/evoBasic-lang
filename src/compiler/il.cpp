@@ -9,7 +9,8 @@ namespace evoBasic::il{
     using namespace std;
 
     void read(std::istream &stream,Bytecode code) {
-        if((data::u8)stream.get()!=(data::u8)code)
+        auto c = stream.get();
+        if((data::u8)c!=(data::u8)code)
             PANIC;
     }
 
@@ -18,6 +19,56 @@ namespace evoBasic::il{
         byte = stream.peek();
         return byte == (data::u8)code;
     }
+
+    void read(istream &stream, std::vector<Member*> &members){
+        while(true){
+            Member *member = nullptr;
+            if(predict(stream,Bytecode::ClassDef)){
+                member = new Class;
+            }
+            else if(predict(stream,Bytecode::ModuleDef)){
+                member = new Module;
+            }
+            else if(predict(stream,Bytecode::RecordDef)){
+                member = new Record;
+            }
+            else if(predict(stream,Bytecode::EnumDef)){
+                member = new Enum;
+            }
+            else if(predict(stream,Bytecode::FldDef)){
+                member = new Fld;
+            }
+            else if(predict(stream,Bytecode::SFldDef)){
+                member = new SFld;
+            }
+            else if(predict(stream,Bytecode::InterfaceDef)){
+                member = new Interface;
+            }
+            else if(predict(stream,Bytecode::ExtDef)){
+                member = new Ext;
+            }
+            else if(predict(stream,Bytecode::CtorDef)){
+                member = new Ctor;
+            }
+            else if(predict(stream,Bytecode::VFtnDef)){
+                member = new VFtn;
+            }
+            else if(predict(stream,Bytecode::FtnDef)){
+                member = new Ftn;
+            }
+            else if(predict(stream,Bytecode::SFtnDef)){
+                member = new SFtn;
+            }
+            else{
+                break;
+            }
+            member->fromHex(stream);
+            members.push_back(member);
+        }
+    }
+
+
+
 
     Result *Document::createResult(type::Prototype *prototype) {
         auto ret = new Result;
@@ -1347,6 +1398,9 @@ namespace evoBasic::il{
             else if(predict(stream,Bytecode::ConstructedDef)){
                 token = new ConstructedTokenDef(this,token_pool.size());
             }
+            else{
+                break;
+            }
             token->fromHex(stream);
             token_pool.push_back(token);
         }
@@ -1376,69 +1430,6 @@ namespace evoBasic::il{
         ASSERT(id > token_pool.size(),"invalid token id");
         return token_pool[id];
     }
-
-
-    void read(istream &stream, std::vector<Member*> &members){
-        while(true){
-            Member *member = nullptr;
-            if(predict(stream,Bytecode::ClassDef)){
-                read(stream,Bytecode::ClassDef);
-                member = new Class;
-            }
-            else if(predict(stream,Bytecode::ModuleDef)){
-                read(stream,Bytecode::ModuleDef);
-                member = new Module;
-            }
-            else if(predict(stream,Bytecode::RecordDef)){
-                read(stream,Bytecode::RecordDef);
-                member = new Record;
-            }
-            else if(predict(stream,Bytecode::EnumDef)){
-                read(stream,Bytecode::EnumDef);
-                member = new Enum;
-            }
-            else if(predict(stream,Bytecode::FldDef)){
-                read(stream,Bytecode::FldDef);
-                member = new Fld;
-            }
-            else if(predict(stream,Bytecode::SFldDef)){
-                read(stream,Bytecode::SFldDef);
-                member = new SFld;
-            }
-            else if(predict(stream,Bytecode::InterfaceDef)){
-                read(stream,Bytecode::InterfaceDef);
-                member = new Interface;
-            }
-            else if(predict(stream,Bytecode::ExtDef)){
-                read(stream,Bytecode::ExtDef);
-                member = new Ext;
-            }
-            else if(predict(stream,Bytecode::CtorDef)){
-                read(stream,Bytecode::CtorDef);
-                member = new Ctor;
-            }
-            else if(predict(stream,Bytecode::VFtnDef)){
-                read(stream,Bytecode::VFtnDef);
-                member = new VFtn;
-            }
-            else if(predict(stream,Bytecode::FtnDef)){
-                read(stream,Bytecode::FtnDef);
-                member = new Ftn;
-            }
-            else if(predict(stream,Bytecode::SFtnDef)){
-                read(stream,Bytecode::SFtnDef);
-                member = new SFtn;
-            }
-            else{
-                break;
-            }
-            member->fromHex(stream);
-            members.push_back(member);
-        }
-    }
-
-
-
 
 
     void InstWithOp::toHex(std::ostream &stream) {
@@ -1664,8 +1655,8 @@ namespace evoBasic::il{
 
     std::string ConstructedTokenDef::getName() {
         stringstream fmt;
-        for(auto sub_id : sub_token_list){
-            if(&sub_id == &sub_token_list.front()) fmt << '.';
+        for(auto &sub_id : sub_token_list){
+            if(&sub_id != &sub_token_list.front()) fmt << '.';
             fmt << getDocument()->getTokenRef(sub_id).toString();
         }
         return fmt.str();

@@ -14,7 +14,7 @@ using namespace evoBasic;
 using namespace std;
 list<Source*> sources;
 bool enable_compile = true;
-string output_name = "out.evo";
+string output_name = "out.bkg";
 
 void enableDevInfo(string str){
     Logger::debugMode = true;
@@ -31,7 +31,7 @@ void addSources(string path){
 }
 
 void setOutputName(string name){
-    output_name = name + ".evo";
+    output_name = name + ".bkg";
 }
 
 void printHelpInfo(string){
@@ -44,9 +44,9 @@ Options:
      --help-info
      -h                          print help information
      --output=<File Name>
-     --o=<File name>             set output file name
-     --library-import
-     -lib                        import dependencies
+     --o=<File name>             set output package name
+     --backage
+     -b                          import .bkg dependencies
      --dev-info                  print information about lexeme,abstract tree,symbol table and IR
 
 )HELPTEXT"
@@ -64,6 +64,7 @@ void printVersionInfo(string){
 std::list<string> depend_libs;
 
 void addDependLib(string lib){
+    Logger::dev(Format() << "Dependencies Pack:"<<lib);
     depend_libs.push_back(lib);
 }
 
@@ -80,8 +81,8 @@ int main(int argc,char *argv[]) {
             .on("-o=",setOutputName)
             .on("--help",printHelpInfo)
             .on("-h",printHelpInfo)
-            .on("--depend-lib",addDependLib)
-            .on("-l",addDependLib)
+            .on("--backage=",addDependLib)
+            .on("-b=",addDependLib)
             .others(addSources)
             .unmatched(unmatched);
 
@@ -98,6 +99,15 @@ int main(int argc,char *argv[]) {
         Logger::error("no input files.");
         printHelpInfo("");
     }
+
+
+    for(const auto& package_path : depend_libs){
+        il::Document package;
+        fstream package_file(package_path,ios::binary | ios::in);
+        package.fromHex(package_file);
+        Logger::dev(package.toString());
+    }
+
 
     for(auto source : sources){
         Lexer lexer(source);
@@ -125,17 +135,18 @@ int main(int argc,char *argv[]) {
 
     if(Logger::errorCount == 0){
         ILGen gen;
+        il::Document document;
         Semantic::solveByteLengthDependencies(context);
         for(auto ast : asts){
-            gen.visitGlobal(ast);
+            gen.visitGlobal(ast,&document);
         }
-        auto ir = gen.getDocument();
+
         for(auto &lib : depend_libs){
-            ir->addDependenceLibrary(lib);
+            document.addDependenceLibrary(lib);
         }
-        Logger::dev(ir->toString());
+        Logger::dev(document.toString());
         fstream file(output_name,ios::binary | ios::out);
-        ir->toHex(file);
+        document.toHex(file);
     }
 
 

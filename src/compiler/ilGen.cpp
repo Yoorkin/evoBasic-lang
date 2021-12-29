@@ -37,7 +37,8 @@ namespace evoBasic{
         }
     }
 
-    void ILGen::visitGlobal(ast::Global *global_node) {
+    void ILGen::visitGlobal(ast::Global *global_node,Document *document) {
+        this->document = document;
         auto members = visitMember(global_node->member);
         for(auto member : members){
             document->add(member);
@@ -845,10 +846,6 @@ namespace evoBasic{
 
     void ILGen::visitBoolean(ast::Boolean *boolean_node, il::Block *current) {
         current->Push(DataType::boolean,boolean_node->value);
-    }
-
-    il::Document *ILGen::getDocument() {
-        return document;
     }
 
 }

@@ -30,7 +30,8 @@ namespace evoBasic {
         for (int i = 0; i < raw.size(); i++) {
             auto x = raw[i];
             if (current->isEnd) {
-                current->handler(raw.substr(i, raw.size()));
+                auto arg = raw.substr(i, raw.size()-i);
+                current->handler(arg);
                 return;
             }
             else if (current->childs[x] != nullptr){

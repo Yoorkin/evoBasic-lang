@@ -24,12 +24,11 @@ namespace evoBasic{
     };
 
     class ILGen{
-        il::Document *document = new il::Document;
+        il::Document *document = nullptr;
         il::Block *for_next = nullptr,*loop_next = nullptr;
         std::list<il::Block*> blocks;
     public:
-        il::Document *getDocument();
-        void visitGlobal(ast::Global *global_node);
+        void visitGlobal(ast::Global *global_node,il::Document *document);
         il::Class *visitClass(ast::Class *class_node);
         il::Module *visitModule(ast::Module *module_node);
         il::Interface *visitInterface(ast::Interface *interface_node);
