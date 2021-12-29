@@ -1,4 +1,5 @@
 # What is evoBasic
+ENG / [中文](/README_CN.md)
 
 EvoBasic is a "evolution version" of classic visual basic,which aims to offer simple syntax and modern features.
 
