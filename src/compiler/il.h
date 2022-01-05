@@ -14,6 +14,7 @@
 #include <list>
 #include <type.h>
 #include <variant>
+#include "utils.h"
 
 namespace evoBasic::il{
     class Class;
@@ -21,410 +22,400 @@ namespace evoBasic::il{
     class Inst;
     class SFtn;
     class VFtn;
-    class Block;
-    class FtnBase;
+    class BasicBlock;
+    class FunctionDeclare;
     class Node;
     class Member;
     class Document;
-
-//    using namespace data;
-//
-//    using MemberSet = std::vector<Member*>;
-//    using ConstantPack = std::tuple<DataType,std::any>;
-//    using BytecodePlaceholder = std::variant<i8*,i16*,i32*,i64*,u8*,u16*,u32*,u64*,f32*,f64*,
-//                           std::string*,Bytecode,Node*,MemberSet*,ConstantPack*>;
-//
-//    using BytecodeSeq = std::list<BytecodePlaceholder>;
-//
-//    enum class BytecodePlaceholderEnum {
-//        i8,i16,i32,i64,u8,u16,u32,u64,f32,f64,Notation,Constructed,MemberSet,ConstantPack
-//    };
-//
-//    BytecodeSeq getSeq(){
-//        data::u32 name;
-//        auto seq = BytecodeSeq{
-//            Bytecode::TokenRef,&name
-//        };
-//
-//    }
-
+    class InterfaceFunction;
 
 
     class Node {
         Document *document = nullptr;
+    protected:
+        Bytecode begin_mark;
     public:
+        Node(Document *document);
+        Node(Document *document,Bytecode begin_mark);
+        Node(Document *document,Bytecode begin_mark,std::istream &stream);
         Document *getDocument();
-        void setDocument(Document *document);
         virtual std::string toString()=0;
-        virtual void toHex(std::ostream &stream)=0;
-        virtual void fromHex(std::istream &stream){};
+        virtual void toHex(std::ostream &stream);
     };
 
 
     class TokenDef : public Node{
-    protected:
-        data::u64 id;
     public:
+        using ID = data::u64;
+    protected:
+        ID id;
+    public:
+        TokenDef(Document *document,Bytecode begin_mark,ID id);
+        TokenDef(Document *document,Bytecode begin_mark,std::istream &stream);
         virtual std::string getName()=0;
-        data::u64 getID();
+        void toHex(std::ostream &stream)override;
+        ID getID();
     };
 
     class TextTokenDef : public TokenDef{
         std::string text;
     public:
-
-        TextTokenDef(Document *document,data::u64 id,std::string text) : text(text){
-            this->id = id;
-            this->setDocument(document);
-        }
-        TextTokenDef(Document *document,data::u64 id) : TextTokenDef(document,id,"") {}
-
+        TextTokenDef(Document *document,ID id,std::string text);
+        TextTokenDef(Document *document,std::istream &stream);
         std::string toString()override;
         std::string getName()override;
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
 
     class ConstructedTokenDef : public TokenDef{
-        std::list<data::u64> sub_token_list;
+        std::list<TokenRef*> sub_token_list;
     public:
-
-        ConstructedTokenDef(Document *document,data::u64 id,std::list<data::u64> sub_tokens) : sub_token_list(sub_tokens){
-            this->setDocument(document);
-            this->id = id;
-        }
-        ConstructedTokenDef(Document *document,data::u64 id) : ConstructedTokenDef(document,id,{}){}
+        ConstructedTokenDef(Document *document,ID id,std::list<TokenRef*> sub_tokens);
+        ConstructedTokenDef(Document *document,std::istream &stream);
         std::string toString()override;
         std::string getName()override;
-        virtual void toHex(std::ostream &stream)override;
-        virtual void fromHex(std::istream &stream)override;
+        void toHex(std::ostream &stream)override;
     };
 
     class TokenRef : public Node{
-        data::u64 id = -1;
+        TokenDef::ID id = -1;
     public:
         using ID = data::u64;
-        TokenRef()=default;
         TokenRef(Document *document, data::u64 id);
-        explicit TokenRef(Document *document);
-
+        TokenRef(Document *document, std::istream &stream);
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
         std::string toString()override;
-        data::u64 getID();
+        TokenDef::ID getID();
         bool isEmpty();
     };
 
-
-    class Access : public Node{
-        AccessFlag flag = AccessFlag::Private;
-    public:
-        Access()=default;
-        explicit Access(AccessFlag flag) : flag(flag){}
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
-    };
-
-    class Extend : public Node{
-    public:
-        TokenRef target;
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
-    };
-
-    class Impl : public Node{
-    public:
-        TokenRef target;
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
-    };
-
-    class Lib : public Node{
-    public:
-        Lib()=default;
-        explicit Lib(TokenRef target) : target(target){}
-        TokenRef target;
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
-    };
-
     class Member : public Node{
+        AccessFlag access = AccessFlag::Private;
+        TokenRef *name = nullptr;
+        Bytecode mark;
     public:
-        TokenRef name;
-        Access access;
+        Member(Document *document,Bytecode begin_mark,AccessFlag access,TokenRef *name);
+        Member(Document *document,Bytecode begin_mark,std::istream &stream);
+        std::string toString()override;
+        virtual DebugInfo *toStructuredInfo();
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
 
     class Class : public Member{
+        TokenRef *extend_class = nullptr;
+        std::list<TokenRef*> impl_interface_list;
+        std::list<Member*> members;
     public:
-        Extend extend;
-        std::vector<Impl> impls;
-        std::vector<Member*> members;
+        Class(Document *document,AccessFlag access,TokenRef *name,TokenRef *extend,std::list<TokenRef*> impl,std::list<Member*> members);
+        Class(Document *document,std::istream &stream);
         std::string toString()override;
+        DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
 
     class Module : public Member{
+        std::list<Member*> members;
     public:
-        std::vector<Member*> members;
+        Module(Document *document,AccessFlag access,TokenRef *name,std::list<Member*> members);
+        Module(Document *document,std::istream &stream);
         std::string toString()override;
+        DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
 
     class Interface : public Member{
+        std::list<InterfaceFunction*> ftns;
     public:
-        std::vector<FtnBase*> ftns;
+        Interface(Document *document,AccessFlag access,TokenRef *name,std::list<InterfaceFunction*> functions);
+        Interface(Document *document,std::istream &stream);
         std::string toString()override;
+        DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
-    };
-
-    class Pair : public Node{
-    public:
-        TokenRef name;
-        data::u32 value;
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
 
     class Enum : public Member{
     public:
-        std::vector<Pair> pairs;
+        using Value = data::u32;
+        using Pair = std::pair<TokenRef*,Value>;
+    private:
+        std::list<Pair> enums;
+    public:
+        Enum(Document *document,AccessFlag access,TokenRef *name,std::list<Pair> enums);
+        Enum(Document *document,std::istream &stream);
         std::string toString()override;
+        DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
+
 
     class Fld : public Member{
+        TokenRef *type = nullptr;
     public:
-        TokenRef type;
+        Fld(Document *document,AccessFlag access,TokenRef *name,TokenRef *type);
+        Fld(Document *document,std::istream &stream);
         std::string toString()override;
+        DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
 
-    class SFld : public Fld{
+    class SFld : public Member{
+        TokenRef *type = nullptr;
     public:
+        SFld(Document *document,AccessFlag access,TokenRef *name,TokenRef *type);
+        SFld(Document *document,std::istream &stream);
         std::string toString()override;
+        DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
 
     class Record : public Member{
+        std::list<Fld*> fields;
     public:
-        std::vector<Fld*> fields;
+        Record(Document *document,AccessFlag access,TokenRef *name,std::list<Fld*> fields);
+        Record(Document *document,std::istream &stream);
         std::string toString()override;
+        DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
 
     class Param : public Node{
-    public:
         bool is_ref = false;
-        TokenRef name,type;
+        TokenRef *name = nullptr,*type = nullptr;
+    public:
+        Param(Document *document,TokenRef *name,TokenRef *type,bool ref,Bytecode begin_mark);
+        Param(Document *document,Bytecode begin_mark,std::istream &stream);
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
+        std::string toString()override;
     };
 
     class Regular : public Param{
     public:
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
+        Regular(Document *document,TokenRef *name,TokenRef *type,bool ref);
+        Regular(Document *document,std::istream &stream);
     };
 
     class Opt : public Param{
+        BasicBlock *initial = nullptr;
     public:
-        Block *initial = nullptr;
+        Opt(Document *document,TokenRef *name,TokenRef *type,bool ref,BasicBlock *initial);
+        Opt(Document *document,std::istream &stream);
         std::string toString()override;
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
 
     class Inf : public Param{
     public:
+        Inf(Document *document,TokenRef *name,TokenRef *type,bool ref);
+        Inf(Document *document,std::istream &stream);
         std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
 
     class Local : public Node{
     public:
-        data::u16 address = -1;
-        TokenRef name,type;
+        using ID = data::u16;
+    private:
+        ID address = -1;
+        TokenRef *name = nullptr,*type = nullptr;
+    public:
+        Local(Document *document,TokenRef *name,TokenRef *type,ID address);
+        Local(Document *document,std::istream &stream,ID address);
         std::string toString()override;
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
 
     class Result : public Node{
+        TokenRef *type = nullptr;
     public:
-        TokenRef type;
+        Result(Document *document,TokenRef *type);
+        Result(Document *document,std::istream &stream);
         std::string toString()override;
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
     };
 
-    class FtnBase : public Member{
-    public:
-        std::vector<Param*> params;
+    class FunctionDeclare : public Member{
+        std::list<Param*> params;
         Result *result = nullptr;
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
-    };
-
-    class FtnWithDefinition : public FtnBase{
     public:
-        std::vector<Local*> locals;
-        std::string toString()override;
-        std::list<Block*> blocks;
+        FunctionDeclare(Document *document, Bytecode begin_mark, AccessFlag access, TokenRef *name, std::list<Param*> params, Result *result);
+        FunctionDeclare(Document *document, Bytecode begin_mark, std::istream &stream);
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
+        DebugInfo *toStructuredInfo()override;
     };
-
-    class Ctor : public FtnWithDefinition{
-    public:
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
-    };
-
-    class Ftn : public FtnWithDefinition{
-    public:
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
-    };
-
-    class VFtn : public FtnWithDefinition{
-    public:
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
-    };
-
-    class SFtn : public FtnWithDefinition{
-    public:
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
-    };
-
-    class ExtAlias : public Node{
-        TokenRef token;
-    public:
-        ExtAlias()=default;
-        explicit ExtAlias(TokenRef token) : token(token){}
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
-    };
-
-    class Ext : public FtnBase{
-    public:
-        Lib lib;
-        ExtAlias alias;
-        std::string toString()override;
-        void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
-    };
-
 
     class Inst : public Node{
     public:
-        using ByteSize = data::u32;
+        Inst(Document *document,Bytecode begin_mark);
+        Inst(Document *document,Bytecode begin_mark,std::istream &stream);
+        using ByteSize = data::u64;
         virtual ByteSize getByteSize() = 0;
     };
+
+    class FunctionDefine : public FunctionDeclare{
+        Inst::ByteSize block_byte_length = 0;
+        data::Byte *blocks_memory = nullptr;
+    protected:
+        std::list<Local*> locals;
+        std::list<BasicBlock*> blocks;
+    public:
+        FunctionDefine(Document *document, Bytecode begin_mark, AccessFlag access, TokenRef *name,
+                       std::list<Param*> params, Result *result, std::list<Local*> locals, std::list<BasicBlock*> blocks);
+        FunctionDefine(Document *document, Bytecode begin_mark, std::istream &stream);
+        void toHex(std::ostream &stream)override;
+        DebugInfo *toStructuredInfo()override;
+        data::Byte *getBlocksMemory();
+        ~FunctionDefine();
+    };
+
+    class Ctor : public FunctionDefine{
+    public:
+        Ctor(Document *document, std::list<Param*> params, std::list<Local*> locals, std::list<BasicBlock*> blocks);
+        Ctor(Document *document, std::istream &stream);
+        std::string toString()override;
+    };
+
+    class Ftn : public FunctionDefine{
+    public:
+        Ftn(Document *document, AccessFlag access, TokenRef *name,
+            std::list<Param*> params, Result *result, std::list<Local*> locals, std::list<BasicBlock*> blocks);
+        Ftn(Document *document, std::istream &stream);
+        std::string toString()override;
+    };
+
+    class VFtn : public FunctionDefine{
+    public:
+        VFtn(Document *document, AccessFlag access, TokenRef *name,
+             std::list<Param*> params, Result *result, std::list<Local*> locals, std::list<BasicBlock*> blocks);
+        VFtn(Document *document, std::istream &stream);
+        std::string toString()override;
+    };
+
+    class SFtn : public FunctionDefine{
+    public:
+        SFtn(Document *document, AccessFlag access, TokenRef *name,
+             std::list<Param*> params, Result *result, std::list<Local*> locals, std::list<BasicBlock*> blocks);
+        SFtn(Document *document, std::istream &stream);
+        std::string toString()override;
+    };
+
+
+    class Ext : public FunctionDeclare{
+        TokenRef *lib = nullptr;
+        TokenRef *alias = nullptr;
+    public:
+        Ext(Document *document, AccessFlag access, TokenRef *name,TokenRef *library,TokenRef *alias,
+            std::list<Param*> params, Result *result);
+        Ext(Document *document, std::istream &stream);
+        std::string toString()override;
+        void toHex(std::ostream &stream)override;
+    };
+
+    class InterfaceFunction : public FunctionDeclare{
+    public:
+        InterfaceFunction(Document *document, TokenRef *name,std::list<Param*> params, Result *result);
+        InterfaceFunction(Document *document, std::istream &stream);
+        std::string toString()override;
+    };
+
 
     class InstWithOp : public Inst{
     public:
         enum Op{Nop,Ret,CallVirt,CallExt,Callstatic,Call,Ldnull,And,Or,Xor,Ldloca,Ldarga,Ldelema,Not}op;
+    private:
+        Bytecode opToBytecode(Op op);
+    public:
+        InstWithOp(Document *document,Op op);
         std::string toString()override;
         void toHex(std::ostream &stream)override;
-        data::u32 getByteSize()override;
-        InstWithOp(Op op):op(op){}
+        ByteSize getByteSize()override;
     };
 
     class InstWithToken : public Inst{
     public:
         enum Op{Ldftn,Ldsftn,Ldvftn,Ldc,Newobj,Invoke,Ldflda,Ldsflda}op;
-        InstWithToken(Op op, TokenRef token): op(op), token(token){}
-        TokenRef token;
+    private:
+        TokenRef *token = nullptr;
+        Bytecode opToBytecode(Op op);
+    public:
+        InstWithToken(Document *document,Op op,TokenRef *token);
         std::string toString()override;
-        data::u32 getByteSize()override;
+        ByteSize getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
     class InstJif : public Inst{
+        BasicBlock *target = nullptr;
     public:
-        Block *target = nullptr;
+        InstJif(Document *document, BasicBlock *target);
         std::string toString()override;
-        data::u32 getByteSize()override;
+        ByteSize getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
     struct InstBr : public Inst{
+        BasicBlock *target = nullptr;
     public:
-        Block *target = nullptr;
+        InstBr(Document *document, BasicBlock *target);
         std::string toString()override;
-        data::u32 getByteSize()override;
+        ByteSize getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
     class InstPush : public Inst{
-    public:
         DataType type;
         std::any value;
+    public:
+        InstPush(Document *document,DataType type,std::any value);
         std::string toString()override;
-        data::u32 getByteSize()override;
+        ByteSize getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
     class InstWithData : public Inst{
     public:
         enum Op{Ldelem,Stelem,Stelema,Ldarg,Starg,Ldloc,Stloc,
-                Add,Sub,Mul,Div,FDiv,EQ,NE,LT,GT,LE,GE,Neg,Pop,Dup}op;
+                Add,Sub,Mul,Div,FDiv,EQ,NE,LT,GT,LE,GE,Neg,Pop,Dup};
+    private:
+        Op op;
         DataType type;
+        Bytecode opToBytecode(Op op);
+    public:
+        InstWithData(Document *document,Op op,DataType type);
         std::string toString()override;
         void toHex(std::ostream &stream)override;
-        data::u32 getByteSize()override;
-        InstWithData(Op op,DataType type):op(op),type(type){}
+        ByteSize getByteSize()override;
     };
 
     class InstWithDataToken : public Inst{
     public:
-        enum Op{Ldfld,Ldsfld,Stfld,Stsfld}op;
-        InstWithDataToken(Op op, DataType type, TokenRef token) : op(op), type(type), token(token){}
+        enum Op{Ldfld,Ldsfld,Stfld,Stsfld};
+    private:
+        Op op;
         DataType type;
-        TokenRef token;
+        TokenRef *token = nullptr;
+        Bytecode opToBytecode(Op op);
+    public:
+        InstWithDataToken(Document *document,Op op, DataType type, TokenRef *token);
         std::string toString()override;
-        data::u32 getByteSize()override;
+        ByteSize getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
     class InstCastcls : public Inst{
+        TokenRef *src_class = nullptr,*dst_class = nullptr;
     public:
-        TokenRef src_class,dst_class;
+        InstCastcls(Document *document,TokenRef *src_class,TokenRef *dst_class);
         std::string toString()override;
-        data::u32 getByteSize()override;
+        ByteSize getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
 
     class InstConv : public Inst{
-    public:
         DataType src,dst;
+    public:
+        InstConv(Document *document,DataType src,DataType dst);
         std::string toString()override;
-        data::u32 getByteSize()override;
+        ByteSize getByteSize()override;
         void toHex(std::ostream &stream)override;
     };
 
@@ -436,56 +427,35 @@ namespace evoBasic::il{
         std::vector<TokenDef*> token_pool;
 
         std::vector<Member*> members;
-        std::list<TokenRef> dependencies;
-    public:
-        Document()=default;
-        static Document* loadFromHex(std::istream &stream);
+        std::list<TokenRef*> dependencies;
 
+        std::list<Node*> resources;
+    public:
+        explicit Document();
+        explicit Document(std::istream &stream);
+
+
+        void addResource(Node* node);
         std::string toString()override;
         void toHex(std::ostream &stream)override;
-        void fromHex(std::istream &stream)override;
 
-        TokenRef getTokenRef(data::u64 id);
-        TokenRef getTokenRef(std::string text);
-        TokenRef getTokenRef(std::list<std::string> full_name_list);
+        TokenRef *getTokenRef(data::u64 id);
+        TokenRef *getTokenRef(std::string text);
+        TokenRef *getTokenRef(std::list<std::string> full_name_list);
 
-        TokenDef *getTokenDef(data::u64 id);
-
-        Module *createModule(std::string name,AccessFlag access,std::vector<Member*> members);
-        Class *createClass(std::string name,AccessFlag access,Extend extend,std::vector<Impl> impls,std::vector<Member*> members);
-        Interface *createInterface(std::string name,AccessFlag access,std::vector<FtnBase*> ftns);
-        Enum *createEnum(std::string name,AccessFlag access,std::vector<Pair> pairs);
-        Record *createRecord(std::string name,AccessFlag access,std::vector<Fld*> fields);
-        Fld *createField(std::string name,AccessFlag access,type::Prototype *prototype);
-        SFld *createStaticField(std::string name,AccessFlag access,type::Prototype *prototype);
-
-        Ftn *createFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, std::vector<Local*> locals, std::list<Block*> blocks);
-        Ctor *createConstructor(AccessFlag access, std::vector<Param*> params, std::vector<Local*> locals, std::list<Block*> blocks);
-        VFtn *createVirtualFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, std::vector<Local*> locals, std::list<Block*> blocks);
-        SFtn *createStaticFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, std::vector<Local*> locals, std::list<Block*> blocks);
-
-        FtnBase *createInterfaceFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result);
-        Ext *createExternalFunction(std::string name, std::string lib, ExtAlias alias, AccessFlag access, std::vector<Param*> params, Result *result);
-
-        Regular *createParam(std::string name, type::Prototype *prototype, bool byref);
-        Opt *createOption(std::string name,type::Prototype *prototype,bool byref,Block *initial);
-        Inf *createParamArray(std::string name,type::Prototype *prototype,bool byref);
-        Pair createPair(std::string name,data::u32 value);
-        Extend createExtend(type::Class *cls);
-        Impl createImplements(type::Interface *interface);
-        Local *createLocal(std::string name,type::Prototype *prototype, data::u16 address);
-        Result *createResult(type::Prototype *prototype);
-
-        void add(Member* member);
+        TokenDef *findTokenDef(data::u64 id);
+        TokenDef *findTokenDef(std::string text);
 
         void addDependenceLibrary(std::string name);
-        ExtAlias createExtAlias(std::string text);
+
+        void add(Member *member);
     };
 
 
-    class Block : public Node{
+    class BasicBlock : public Node{
         Inst::ByteSize address = -1;
         Inst::ByteSize size = -1;
+        std::vector<Inst*> insts;
     public:
         Inst::ByteSize getAddress();
         Inst::ByteSize getByteSize();
@@ -494,59 +464,58 @@ namespace evoBasic::il{
         std::string toString()override;
         void toHex(std::ostream &stream)override;
 
-        std::vector<Inst*> insts;
-        Block(std::initializer_list<Inst*> inst_init);
-        Block()=default;
-        Block &Br(Block *block);
-        Block &Jif(Block *block);
-        Block &EQ(DataType data);
-        Block &NE(DataType data);
-        Block &LT(DataType data);
-        Block &GT(DataType data);
-        Block &LE(DataType data);
-        Block &GE(DataType data);
-        Block &Add(DataType data);
-        Block &Sub(DataType data);
-        Block &Mul(DataType data);
-        Block &Div(DataType data);
-        Block &FDiv(DataType data);
-        Block &Neg(DataType data);
-        Block &And();
-        Block &Or();
-        Block &Xor();
-        Block &Not();
-        Block &Nop();
-        Block &Pop(DataType data);
-        Block &Dup(DataType data);
-        Block &Ret();
-        Block &Push(DataType data, std::any value);
-        Block &Ldc(TokenRef token);
-        Block &Ldftn(TokenRef ftn);
-        Block &Ldsftn(TokenRef sftn);
-        Block &Ldvftn(TokenRef vftn);
-        Block &Ldarg(DataType data);
-        Block &Starg(DataType data);
-        Block &Ldarga();
-        Block &Ldloc(DataType data);
-        Block &Ldloca();
-        Block &Stloc(DataType data);
-        Block &Ldfld(DataType data, TokenRef fld);
-        Block &Ldsfld(DataType data, TokenRef sfld);
-        Block &Ldflda(TokenRef fld);
-        Block &Ldsflda(TokenRef sfld);
-        Block &Stfld(DataType data, TokenRef fld);
-        Block &Stsfld(DataType data, TokenRef sfld);
-        Block &Ldelem(DataType data);
-        Block &Ldelema();
-        Block &Stelem(DataType data);
-        Block &Ldnull();
-        Block &Newobj(TokenRef cls);
-        Block &Castcls(TokenRef src, TokenRef dst);
-        Block &Conv(DataType src, DataType dst);
-        Block &Callvirt();
-        Block &Invoke(TokenRef external);
-        Block &Callstatic();
-        Block &Call();
+        BasicBlock(Document *document);
+
+        BasicBlock &Br(BasicBlock *block);
+        BasicBlock &Jif(BasicBlock *block);
+        BasicBlock &EQ(DataType data);
+        BasicBlock &NE(DataType data);
+        BasicBlock &LT(DataType data);
+        BasicBlock &GT(DataType data);
+        BasicBlock &LE(DataType data);
+        BasicBlock &GE(DataType data);
+        BasicBlock &Add(DataType data);
+        BasicBlock &Sub(DataType data);
+        BasicBlock &Mul(DataType data);
+        BasicBlock &Div(DataType data);
+        BasicBlock &FDiv(DataType data);
+        BasicBlock &Neg(DataType data);
+        BasicBlock &And();
+        BasicBlock &Or();
+        BasicBlock &Xor();
+        BasicBlock &Not();
+        BasicBlock &Nop();
+        BasicBlock &Pop(DataType data);
+        BasicBlock &Dup(DataType data);
+        BasicBlock &Ret();
+        BasicBlock &Push(DataType data, std::any value);
+        BasicBlock &Ldc(TokenRef *token);
+        BasicBlock &Ldftn(TokenRef *ftn);
+        BasicBlock &Ldsftn(TokenRef *sftn);
+        BasicBlock &Ldvftn(TokenRef *vftn);
+        BasicBlock &Ldarg(DataType data);
+        BasicBlock &Starg(DataType data);
+        BasicBlock &Ldarga();
+        BasicBlock &Ldloc(DataType data);
+        BasicBlock &Ldloca();
+        BasicBlock &Stloc(DataType data);
+        BasicBlock &Ldfld(DataType data, TokenRef *fld);
+        BasicBlock &Ldsfld(DataType data, TokenRef *sfld);
+        BasicBlock &Ldflda(TokenRef *fld);
+        BasicBlock &Ldsflda(TokenRef *sfld);
+        BasicBlock &Stfld(DataType data, TokenRef *fld);
+        BasicBlock &Stsfld(DataType data, TokenRef *sfld);
+        BasicBlock &Ldelem(DataType data);
+        BasicBlock &Ldelema();
+        BasicBlock &Stelem(DataType data);
+        BasicBlock &Ldnull();
+        BasicBlock &Newobj(TokenRef *cls);
+        BasicBlock &Castcls(TokenRef *src, TokenRef *dst);
+        BasicBlock &Conv(DataType src, DataType dst);
+        BasicBlock &Callvirt();
+        BasicBlock &Invoke(TokenRef *external);
+        BasicBlock &Callstatic();
+        BasicBlock &Call();
     };
 
 

@@ -108,7 +108,6 @@ namespace evoBasic::type{
         bool isExtern();
     };
 
-
     class Prototype : public Symbol{
         data::ptr byte_length = 0;
 
@@ -120,6 +119,7 @@ namespace evoBasic::type{
         virtual data::ptr getByteLength();
         virtual void setByteLength(data::ptr value);
     };
+
 
     class Error : public Prototype{
     public:

@@ -43,7 +43,7 @@
 //    return (sa.str() == sb.str());
 //}
 //
-//bool is_block_eq(Block *a,Block *b){
+//bool is_block_eq(BasicBlock *a,BasicBlock *b){
 //    auto al = a->getInstructions().size();
 //    auto bl = a->getInstructions().size();
 //    if(al!=bl)return false;

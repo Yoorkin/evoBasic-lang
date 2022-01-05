@@ -48,26 +48,30 @@ namespace evoBasic{
     il::Class *ILGen::visitClass(ast::Class *class_node) {
         auto members = visitMember(class_node->member);
         auto cls = class_node->class_symbol;
-        auto extend = document->createExtend(cls->getExtend());
-        vector<Impl> impls;
+        auto extend = document->getTokenRef(cls->getExtend()->getFullName());
+        list<TokenRef*> impls;
         for(auto [_,interface] : cls->getImplMap()){
-            impls.push_back(document->createImplements(interface));
+            impls.push_back(document->getTokenRef(interface->getFullName()));
         }
-        return document->createClass(cls->getName(), cls->getAccessFlag(), extend, impls, members);
+        return new il::Class(document,cls->getAccessFlag(),document->getTokenRef(cls->getName()), extend, impls, members);
     }
 
     il::SFld *ILGen::visitStaticField(ast::Variable *variable_node){
         auto variable = variable_node->variable_symbol;
-        return document->createStaticField(variable->getName(), variable->getAccessFlag(), variable->getPrototype());
+        auto name = document->getTokenRef(variable->getName());
+        auto type = document->getTokenRef(variable->getPrototype()->getName());
+        return new SFld(document,variable->getAccessFlag(),name,type);
     }
 
     il::Fld *ILGen::visitField(ast::Variable *variable_node){
         auto variable = variable_node->variable_symbol;
-        return document->createField(variable->getName(), variable->getAccessFlag(), variable->getPrototype());
+        auto name = document->getTokenRef(variable->getName());
+        auto type = document->getTokenRef(variable->getPrototype()->getFullName());
+        return new Fld(document,variable->getAccessFlag(),name,type);
     }
 
-    vector<Member*> ILGen::visitMember(ast::Member *member){
-        vector<Member*> members;
+    list<Member*> ILGen::visitMember(ast::Member *member){
+        list<Member*> members;
         FOR_EACH(iter,member){
             switch(iter->member_kind){
                 case ast::Member::function_:
@@ -113,23 +117,31 @@ namespace evoBasic{
         return members;
     }
 
-    vector<il::Param*> ILGen::visitParameter(type::Function *function){
-        vector<Param*> params;
+    list<il::Param*> ILGen::visitParameter(type::Function *function){
+        list<Param*> params;
 
         for(auto iter : function->getArgsSignature()){
-            params.push_back(document->createParam(iter->getName(), iter->getPrototype(), !iter->isByval()));
+            auto name = document->getTokenRef(iter->getName());
+            auto type = document->getTokenRef(iter->getPrototype()->getFullName());
+            auto param = new Regular(document,name,type,!iter->isByval());
+            params.push_back(param);
         }
 
         for(auto iter : function->getArgsOptions()){
-            auto block = new il::Block;
+            auto block = new il::BasicBlock(document);
             visitExpression(iter->getDefaultArgument()->expr,block);
-            params.push_back(document->createOption(iter->getName(), iter->getPrototype(), !iter->isByval(), block));
+            auto name = document->getTokenRef(iter->getName());
+            auto type = document->getTokenRef(iter->getPrototype()->getFullName());
+            auto param = new Opt(document,name,type,!iter->isByval(),block);
+            params.push_back(param);
         }
 
-        if(function->getParamArray())
-            params.push_back(document->createParamArray(function->getParamArray()->getName(),
-                                                        function->getParamArray()->getPrototype(),
-                                                        !function->getParamArray()->isByval()));
+        if(function->getParamArray()){
+            auto name = document->getTokenRef(function->getParamArray()->getName());
+            auto type = document->getTokenRef(function->getParamArray()->getPrototype()->getFullName());
+            auto param = new Inf(document,name,type,!function->getParamArray()->isByval());
+            params.push_back(param);
+        }
 
         return params;
     }
@@ -137,45 +149,59 @@ namespace evoBasic{
     il::Module *ILGen::visitModule(ast::Module *module_node) {
         auto members = visitMember(module_node->member);
         auto mod = module_node->module_symbol;
-        return document->createModule(mod->getName(), mod->getAccessFlag(), members);
+        auto name = document->getTokenRef(mod->getName());
+        return new Module(document,mod->getAccessFlag(),name,members);
     }
 
     il::Interface *ILGen::visitInterface(ast::Interface *interface_node) {
-        vector<FtnBase*> ftns;
+        list<InterfaceFunction*> ftns;
         for(auto symbol : *(interface_node->interface_symbol)){
             auto member = symbol->as<type::Function*>();
             auto parameter = visitParameter(member);
-            auto result = nullptr;
-            if(member->getRetSignature())document->createResult(member->getRetSignature());
-            auto ftn = document->createInterfaceFunction(member->getName(), member->getAccessFlag(), parameter, result);
+            Result *result = nullptr;
+            if(member->getRetSignature()){
+                auto type = document->getTokenRef(member->getRetSignature()->getFullName());
+                result = new Result(document,type);
+            }
+            auto name = document->getTokenRef(member->getName());
+            auto ftn = new InterfaceFunction(document,name,parameter,result);
             ftns.push_back(ftn);
         }
         auto itf = interface_node->interface_symbol;
-        return document->createInterface(itf->getName(), itf->getAccessFlag(), ftns);
+        auto itf_name = document->getTokenRef(itf->getName());
+        return new Interface(document,itf->getAccessFlag(),itf_name,ftns);
     }
 
     il::Record *ILGen::visitType(ast::Type *type_node) {
-        vector<Fld*> fields;
+        list<Fld*> fields;
         for(auto symbol : *(type_node->type_symbol)){
             auto variable = symbol->as<type::Variable*>();
-            fields.push_back(document->createField(variable->getName(), variable->getAccessFlag(), variable->getPrototype()));
+            auto name = document->getTokenRef(variable->getName());
+            auto type = document->getTokenRef(variable->getPrototype()->getFullName());
+            auto fld = new Fld(document,variable->getAccessFlag(),name,type);
+            fields.push_back(fld);
         }
         auto ty = type_node->type_symbol;
-        return document->createRecord(ty->getName(), ty->getAccessFlag(), fields);
+        auto ty_name = document->getTokenRef(ty->getName());
+        return new Record(document,ty->getAccessFlag(),ty_name,fields);
     }
 
     il::Enum *ILGen::visitEnum(ast::Enum *enum_node) {
-        vector<il::Pair> pairs;
+        list<il::Enum::Pair> pairs;
         for(auto symbol : *(enum_node->enum_symbol)){
             auto member = symbol->as<type::EnumMember*>();
-            pairs.push_back(document->createPair(member->getName(), member->getIndex()));
+            il::Enum::Pair pair;
+            pair.first = document->getTokenRef(member->getName());
+            pair.second = member->getIndex();
+            pairs.push_back(pair);
         }
         auto em = enum_node->enum_symbol;
-        return document->createEnum(em->getName(), em->getAccessFlag(), pairs);
+        auto em_name = document->getTokenRef(em->getName());
+        return new Enum(document,em->getAccessFlag(),em_name,pairs);
     }
 
-    il::FtnWithDefinition *ILGen::visitFunction(ast::Function *function_node) {
-        auto entry = new il::Block;
+    il::FunctionDefine *ILGen::visitFunction(ast::Function *function_node) {
+        auto entry = new il::BasicBlock(document);
         blocks.clear();
         blocks.push_back(entry);
         auto symbol = function_node->function_symbol->as<type::UserFunction*>();
@@ -183,25 +209,32 @@ namespace evoBasic{
         tail_block->Ret();
 
         auto parameter = visitParameter(symbol);
-        auto result = nullptr;
-        if(symbol->getRetSignature()) document->createResult(symbol->getRetSignature());
-
-        vector<il::Local*> locals;
-        for(auto variable : symbol->getMemoryLayout()){
-            locals.push_back(document->createLocal(variable->getName(), variable->getPrototype(), variable->getLayoutIndex()));
+        Result *result = nullptr;
+        if(symbol->getRetSignature()){
+            auto type = document->getTokenRef(symbol->getRetSignature()->getFullName());
+            result = new Result(document,type);
         }
 
-        FtnWithDefinition *ftn = nullptr;
+        list<il::Local*> locals;
+        for(auto variable : symbol->getMemoryLayout()){
+            auto name = document->getTokenRef(variable->getName());
+            auto type = document->getTokenRef(variable->getPrototype()->getFullName());
+            auto local = new Local(document,name,type,locals.size());
+            locals.push_back(local);
+        }
+
+        FunctionDefine *ftn = nullptr;
+        auto ftn_name = document->getTokenRef(symbol->getName());
         switch(symbol->getFunctionFlag()){
             case FunctionFlag::Method:
-                ftn = document->createFunction(symbol->getName(), function_node->access, parameter, result, locals, blocks);
+                ftn = new Ftn(document,function_node->access,ftn_name,parameter,result,locals,blocks);
                 break;
             case FunctionFlag::Static:
-                ftn = document->createStaticFunction(symbol->getName(), function_node->access, parameter, result, locals, blocks);
+                ftn = new SFtn(document,function_node->access,ftn_name,parameter,result,locals,blocks);
                 break;
             case FunctionFlag::Virtual:
             case FunctionFlag::Override:
-                ftn = document->createVirtualFunction(symbol->getName(), function_node->access, parameter, result, locals, blocks);
+                ftn = new VFtn(document,function_node->access,ftn_name,parameter,result,locals,blocks);
                 break;
         }
         return ftn;
@@ -210,33 +243,41 @@ namespace evoBasic{
     il::Ext *ILGen::visitExternal(ast::External *external_node) {
         auto parameter = visitParameter(external_node->function_symbol);
         auto symbol = external_node->function_symbol;
-        auto result = nullptr;
-        if(symbol->getRetSignature()) document->createResult(symbol->getRetSignature());
+        Result *result = nullptr;
+        if(symbol->getRetSignature()){
+            auto type = document->getTokenRef(symbol->getRetSignature()->getFullName());
+            result = new Result(document,type);
+        }
 
-        ExtAlias alias;
-        if(!symbol->getAlias().empty())alias = document->createExtAlias(symbol->getAlias());
-        auto ext = document->createExternalFunction(symbol->getName(), symbol->getLibName(), alias, external_node->access, parameter, result);
-        return ext;
+        TokenRef *alias = nullptr;
+        auto library = document->getTokenRef(symbol->getLibName());
+        if(!symbol->getAlias().empty()){
+            alias = document->getTokenRef(symbol->getAlias());
+        }
+        auto name = document->getTokenRef(symbol->getName());
+        return new Ext(document,symbol->getAccessFlag(),name,library,alias,parameter,result);
     }
 
     il::Ctor *ILGen::visitConstructor(ast::Constructor *ctor_node) {
-        auto entry = new il::Block;
+        auto entry = new il::BasicBlock(document);
         blocks.clear();
         blocks.push_back(entry);
         auto parameter = visitParameter(ctor_node->constructor_symbol);
         auto tail_block = visitStatement(ctor_node->statement,entry,nullptr);
         tail_block->Ret();
 
-        vector<il::Local*> locals;
+        list<il::Local*> locals;
         for(auto variable : ctor_node->constructor_symbol->getMemoryLayout()){
-            locals.push_back(document->createLocal(variable->getName(), variable->getPrototype(), variable->getLayoutIndex()));
+            auto name = document->getTokenRef(variable->getName());
+            auto type = document->getTokenRef(variable->getPrototype()->getFullName());
+            auto local = new Local(document,name,type,locals.size());
+            locals.push_back(local);
         }
-        auto ctor = document->createConstructor(ctor_node->access, parameter, locals, blocks);
-        return ctor;
+        return new Ctor(document,parameter,locals,blocks);
     }
 
 
-    il::Block *ILGen::visitStatement(ast::Statement *statement_node, il::Block *current, il::Block *next) {
+    il::BasicBlock *ILGen::visitStatement(ast::Statement *statement_node, il::BasicBlock *current, il::BasicBlock *next) {
         FOR_EACH(iter,statement_node){
             switch(iter->stmt_flag){
                 case ast::Statement::let_:
@@ -274,7 +315,7 @@ namespace evoBasic{
         return current;
     }
 
-    void ILGen::visitLet(ast::Let *let_node, il::Block *current, il::Block *next) {
+    void ILGen::visitLet(ast::Let *let_node, il::BasicBlock *current, il::BasicBlock *next) {
         FOR_EACH(iter,let_node->variable){
             current->Push(DataType::u16,(data::u16)iter->variable_symbol->getLayoutIndex());
             visitExpression(iter->initial,current);
@@ -282,14 +323,14 @@ namespace evoBasic{
         }
     }
 
-    il::Block *ILGen::visitSelect(ast::Select *select_node, il::Block *current, il::Block *next) {
+    il::BasicBlock *ILGen::visitSelect(ast::Select *select_node, il::BasicBlock *current, il::BasicBlock *next) {
         //todo
     }
 
-    il::Block *ILGen::visitLoop(ast::Loop *loop_node, il::Block *current, il::Block *next) {
-        auto cond_block = new il::Block,
-             loop_block = new il::Block,
-             after_block = new il::Block;
+    il::BasicBlock *ILGen::visitLoop(ast::Loop *loop_node, il::BasicBlock *current, il::BasicBlock *next) {
+        auto cond_block = new il::BasicBlock(document),
+             loop_block = new il::BasicBlock(document),
+             after_block = new il::BasicBlock(document);
 
         blocks.push_back(cond_block);
         blocks.push_back(loop_block);
@@ -307,18 +348,18 @@ namespace evoBasic{
         return after_block;
     }
 
-    il::Block *ILGen::visitIf(ast::If *if_node, il::Block *current, il::Block *next) {
-        auto after_block = new il::Block;
+    il::BasicBlock *ILGen::visitIf(ast::If *if_node, il::BasicBlock *current, il::BasicBlock *next) {
+        auto after_block = new il::BasicBlock(document);
         blocks.push_back(after_block);
         visitCase(if_node->case_,current,after_block);
         return after_block;
     }
 
-    void ILGen::visitCase(ast::Case *case_node, il::Block *current, il::Block *next) {
-        map<ast::Case*,il::Block*> case_blocks;
+    void ILGen::visitCase(ast::Case *case_node, il::BasicBlock *current, il::BasicBlock *next) {
+        map<ast::Case*,il::BasicBlock*> case_blocks;
         FOR_EACH(iter,case_node){
             if(iter->condition){
-                auto bl = new il::Block;
+                auto bl = new il::BasicBlock(document);
                 blocks.push_back(bl);
                 case_blocks.insert({iter,bl});
             }
@@ -339,7 +380,7 @@ namespace evoBasic{
         }
     }
 
-    il::Block *ILGen::visitFor(ast::For *for_node, il::Block *current, il::Block *next) {
+    il::BasicBlock *ILGen::visitFor(ast::For *for_node, il::BasicBlock *current, il::BasicBlock *next) {
 
         switch(for_node->iterator->expression_kind){
             case ast::Expression::SFld:{
@@ -401,9 +442,9 @@ namespace evoBasic{
             current->Stloc(iter_il_type);
         }
 
-        auto stmt_block = new il::Block;
-        auto cond_block = new il::Block;
-        auto after_block = new il::Block;
+        auto stmt_block = new il::BasicBlock(document);
+        auto cond_block = new il::BasicBlock(document);
+        auto after_block = new il::BasicBlock(document);
 
         blocks.push_back(stmt_block);
         blocks.push_back(cond_block);
@@ -507,13 +548,13 @@ namespace evoBasic{
         return after_block;
     }
 
-    il::Block *ILGen::visitExprStmt(ast::ExprStmt *expr_stmt_node, il::Block *current, il::Block *next) {
+    il::BasicBlock *ILGen::visitExprStmt(ast::ExprStmt *expr_stmt_node, il::BasicBlock *current, il::BasicBlock *next) {
         visitExpression(expr_stmt_node->expr,current);
         return current;
         // todo: clean operand stack
     }
 
-    il::Block *ILGen::visitExit(ast::Exit *exit_node, il::Block *current) {
+    il::BasicBlock *ILGen::visitExit(ast::Exit *exit_node, il::BasicBlock *current) {
         switch(exit_node->exit_flag){
             case ast::Exit::For:
                 NotNull(for_next);
@@ -530,18 +571,18 @@ namespace evoBasic{
         return current;
     }
 
-    il::Block *ILGen::visitContinue(ast::Continue *continue_node, il::Block *current, il::Block *next) {
+    il::BasicBlock *ILGen::visitContinue(ast::Continue *continue_node, il::BasicBlock *current, il::BasicBlock *next) {
         current->Br(next);
     }
 
-    void ILGen::visitReturn(ast::Return *return_node, il::Block *current, il::Block *next) {
+    void ILGen::visitReturn(ast::Return *return_node, il::BasicBlock *current, il::BasicBlock *next) {
         visitExpression(return_node->expr,current);
         current->Ret();
     }
 
 
 
-    void ILGen::visitExpression(ast::Expression *expression_node, il::Block *current) {
+    void ILGen::visitExpression(ast::Expression *expression_node, il::BasicBlock *current) {
         switch(expression_node->expression_kind){
             case ast::Expression::Element:
                 visitArrayElement((ast::ArrayElement*)expression_node,current);
@@ -617,11 +658,11 @@ namespace evoBasic{
         }
     }
 
-    void ILGen::visitEnumMember(ast::EnumMember* enum_member_node, il::Block *current){
+    void ILGen::visitEnumMember(ast::EnumMember* enum_member_node, il::BasicBlock *current){
         current->Push(DataType::i32,enum_member_node->member->getIndex());
     }
 
-    void ILGen::visitUnary(ast::Unary *unary_node, il::Block *current) {
+    void ILGen::visitUnary(ast::Unary *unary_node, il::BasicBlock *current) {
         visitExpression(unary_node->terminal,current);
         auto il_type = mapILType(unary_node->type->getPrototype());
         using Op = ast::Unary::Op;
@@ -632,7 +673,7 @@ namespace evoBasic{
         }
     }
 
-    void ILGen::visitBinary(ast::Binary *binary_node, il::Block *current) {
+    void ILGen::visitBinary(ast::Binary *binary_node, il::BasicBlock *current) {
         visitExpression(binary_node->lhs,current);
         visitExpression(binary_node->rhs,current);
         auto il_type = mapILType(binary_node->lhs->type->getPrototype());
@@ -657,7 +698,7 @@ namespace evoBasic{
         }
     }
 
-    void ILGen::visitAssign(ast::Assign *assign_node, il::Block *current) {
+    void ILGen::visitAssign(ast::Assign *assign_node, il::BasicBlock *current) {
         auto expr = assign_node->lhs;
         switch (expr->expression_kind) {
             case ast::Expression::Fld:{
@@ -702,26 +743,26 @@ namespace evoBasic{
         }
     }
 
-    void ILGen::visitCast(ast::Cast *cast_node, il::Block *current) {
+    void ILGen::visitCast(ast::Cast *cast_node, il::BasicBlock *current) {
         visitExpression(cast_node->expr,current);
         current->Conv(mapILType(cast_node->expr->type->getPrototype()),mapILType(cast_node->target));
     }
 
-    void ILGen::visitParentheses(ast::Parentheses *parentheses_node, il::Block *current) {
+    void ILGen::visitParentheses(ast::Parentheses *parentheses_node, il::BasicBlock *current) {
         visitExpression(parentheses_node->expr,current);
     }
 
-    void ILGen::visitArrayElement(ast::ArrayElement *element_node, il::Block *current) {
+    void ILGen::visitArrayElement(ast::ArrayElement *element_node, il::BasicBlock *current) {
         visitExpression(element_node->array,current);
         current->Ldelem(mapILType(element_node->type->getPrototype()));
     }
 
-    void ILGen::visitDelegate(ast::Delegate *delegate_node, il::Block *current) {
+    void ILGen::visitDelegate(ast::Delegate *delegate_node, il::BasicBlock *current) {
         //todo
     }
 
 
-    void ILGen::visitArgument(ast::Argument *argument_node, il::Block *current) {
+    void ILGen::visitArgument(ast::Argument *argument_node, il::BasicBlock *current) {
         auto expr = argument_node->expr;
         if(argument_node->byval){
             // pass byval
@@ -767,84 +808,84 @@ namespace evoBasic{
     }
 
 
-    void ILGen::visitNew(ast::New *new_node, il::Block *current) {
+    void ILGen::visitNew(ast::New *new_node, il::BasicBlock *current) {
         loadCalleeArguments(new_node,current);
         current->Newobj(document->getTokenRef(new_node->target->getFullName()));
     }
 
-    void ILGen::visitFtnCall(ast::FtnCall *ftn_node, il::Block *current) {
+    void ILGen::visitFtnCall(ast::FtnCall *ftn_node, il::BasicBlock *current) {
         visitExpression(ftn_node->ref,current);
         current->Ldftn(document->getTokenRef(ftn_node->function->getFullName()));
         loadCalleeArguments(ftn_node,current);
         current->Call();
     }
 
-    void ILGen::visitSFtnCall(ast::SFtnCall *sftn_node, il::Block *current) {
+    void ILGen::visitSFtnCall(ast::SFtnCall *sftn_node, il::BasicBlock *current) {
         loadCalleeArguments(sftn_node,current);
         current->Ldsftn(document->getTokenRef(sftn_node->function->getFullName()))
                 .Callstatic();
     }
 
-    void ILGen::loadCalleeArguments(ast::Call *call,il::Block *current){
+    void ILGen::loadCalleeArguments(ast::Call *call,il::BasicBlock *current){
         // load regular argument by declaration order
         FOR_EACH(iter,call->argument){
             visitArgument(iter,current);
         }
     }
 
-    void ILGen::visitVFtnCall(ast::VFtnCall *vftn_node, il::Block *current) {
+    void ILGen::visitVFtnCall(ast::VFtnCall *vftn_node, il::BasicBlock *current) {
         visitExpression(vftn_node->ref,current);
         current->Ldvftn(document->getTokenRef(vftn_node->function->getFullName()));
         loadCalleeArguments(vftn_node,current);
         current->Callvirt();
     }
 
-    void ILGen::visitExtCall(ast::ExtCall *ext_node, il::Block *current) {
+    void ILGen::visitExtCall(ast::ExtCall *ext_node, il::BasicBlock *current) {
         loadCalleeArguments(ext_node,current);
         current->Invoke(document->getTokenRef(ext_node->function->getFullName()));
     }
 
-    void ILGen::visitSFld(ast::SFld *sfld_node, il::Block *current) {
+    void ILGen::visitSFld(ast::SFld *sfld_node, il::BasicBlock *current) {
         auto token = document->getTokenRef(sfld_node->variable->getFullName());
         current->Ldsfld(mapILType(sfld_node->variable->getPrototype()),token);
     }
 
-    void ILGen::visitFld(ast::Fld *fld_node, il::Block *current) {
+    void ILGen::visitFld(ast::Fld *fld_node, il::BasicBlock *current) {
         auto token = document->getTokenRef(fld_node->variable->getFullName());
         visitExpression(fld_node->ref,current);
         current->Ldfld(mapILType(fld_node->variable->getPrototype()),token);
     }
 
-    void ILGen::visitLocal(ast::Local *local_node, il::Block *current) {
+    void ILGen::visitLocal(ast::Local *local_node, il::BasicBlock *current) {
         auto index = local_node->variable->getLayoutIndex();
         current->Push(DataType::u16,(data::u16)index);
         current->Ldloc(mapILType(local_node->variable->getPrototype()));
     }
 
-    void ILGen::visitArg(ast::Arg *arg_node, il::Block *current) {
+    void ILGen::visitArg(ast::Arg *arg_node, il::BasicBlock *current) {
         auto index = arg_node->variable->getLayoutIndex();
         current->Push(DataType::u16,(data::u16)index);
         current->Ldarg(mapILType(arg_node->variable->getPrototype()));
     }
 
-    void ILGen::visitDigit(ast::Digit *digit_node, il::Block *current) {
+    void ILGen::visitDigit(ast::Digit *digit_node, il::BasicBlock *current) {
         current->Push(DataType::i32,digit_node->value);
     }
 
-    void ILGen::visitDecimal(ast::Decimal *decimal_node, il::Block *current) {
+    void ILGen::visitDecimal(ast::Decimal *decimal_node, il::BasicBlock *current) {
         current->Push(DataType::f64,decimal_node->value);
     }
 
-    void ILGen::visitString(ast::String *string_node, il::Block *current) {
+    void ILGen::visitString(ast::String *string_node, il::BasicBlock *current) {
         current->Ldc(document->getTokenRef(string_node->value));
         //todo: call ctor for String
     }
 
-    void ILGen::visitChar(ast::Char *char_node, il::Block *current) {
+    void ILGen::visitChar(ast::Char *char_node, il::BasicBlock *current) {
         current->Push(DataType::character,char_node->value);
     }
 
-    void ILGen::visitBoolean(ast::Boolean *boolean_node, il::Block *current) {
+    void ILGen::visitBoolean(ast::Boolean *boolean_node, il::BasicBlock *current) {
         current->Push(DataType::boolean,boolean_node->value);
     }
 

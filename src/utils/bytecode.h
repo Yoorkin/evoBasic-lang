@@ -12,7 +12,7 @@ namespace evoBasic{
 
     enum class Bytecode : data::u8 {
         EndMark=0,Depend,
-        TokenDef,ConstructedDef,TokenRef,
+        TextTokenDef,ConstructedDef,TokenRef,
         PtdAcsDef,PriAcsDef,PubAcsDef,ExtendDef,ImplDef,LibDef,ExtAliasDef,
         DocumentDef,ClassDef,ModuleDef,InterfaceDef,EnumDef,RecordDef,
         FtnDef,VFtnDef,SFtnDef,CtorDef,ExtDef,ItfFtnDef,FldDef,SFldDef,PairDef,

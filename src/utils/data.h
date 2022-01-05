@@ -17,6 +17,7 @@ namespace evoBasic::data{
     using f64 = double;
 
     using u8 = unsigned char;
+    using Byte = u8;
     using u16 = unsigned char;
     using u32 = unsigned int;
     using u64 = unsigned long long;

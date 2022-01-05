@@ -5,3 +5,5 @@ test/cmake-build-debug
 doxygen.config
 latex
 html
+build
+.cache

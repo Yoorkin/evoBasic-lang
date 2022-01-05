@@ -20,73 +20,64 @@ namespace evoBasic::il{
         return byte == (data::u8)code;
     }
 
-    void read(istream &stream, std::vector<Member*> &members){
+    void read(istream &stream, std::vector<Member*> &members,Document *document){
         while(true){
             Member *member = nullptr;
             if(predict(stream,Bytecode::ClassDef)){
-                member = new Class;
+                member = new Class(document,stream);
             }
             else if(predict(stream,Bytecode::ModuleDef)){
-                member = new Module;
+                member = new Module(document,stream);
             }
             else if(predict(stream,Bytecode::RecordDef)){
-                member = new Record;
+                member = new Record(document,stream);
             }
             else if(predict(stream,Bytecode::EnumDef)){
-                member = new Enum;
+                member = new Enum(document,stream);
             }
             else if(predict(stream,Bytecode::FldDef)){
-                member = new Fld;
+                member = new Fld(document,stream);
             }
             else if(predict(stream,Bytecode::SFldDef)){
-                member = new SFld;
+                member = new SFld(document,stream);
             }
             else if(predict(stream,Bytecode::InterfaceDef)){
-                member = new Interface;
+                member = new Interface(document,stream);
             }
             else if(predict(stream,Bytecode::ExtDef)){
-                member = new Ext;
+                member = new Ext(document,stream);
             }
             else if(predict(stream,Bytecode::CtorDef)){
-                member = new Ctor;
+                member = new Ctor(document,stream);
             }
             else if(predict(stream,Bytecode::VFtnDef)){
-                member = new VFtn;
+                member = new VFtn(document,stream);
             }
             else if(predict(stream,Bytecode::FtnDef)){
-                member = new Ftn;
+                member = new Ftn(document,stream);
             }
             else if(predict(stream,Bytecode::SFtnDef)){
-                member = new SFtn;
+                member = new SFtn(document,stream);
             }
             else{
                 break;
             }
-            member->fromHex(stream);
             members.push_back(member);
         }
     }
 
 
-
-
-    Result *Document::createResult(type::Prototype *prototype) {
-        auto ret = new Result;
-        ret->type = getTokenRef(prototype->getFullName());
-        return ret;
-    }
-
-    TokenRef Document::getTokenRef(std::string text) {
+    TokenRef *Document::getTokenRef(std::string text) {
         auto target = token_pool_map.find(text);
         if(target == token_pool_map.end()){
             token_pool.push_back(new TextTokenDef(this,token_pool.size(),text));
             token_pool_map.insert({text,token_pool.size()-1});
-            return TokenRef(this, token_pool.size() - 1);
+            return new TokenRef(this, token_pool.size() - 1);
         }
-        else return TokenRef(this, target->second);
+        else return new TokenRef(this, target->second);
     }
 
-    TokenRef Document::getTokenRef(std::list<string> full_name_list) {
+    TokenRef *Document::getTokenRef(std::list<string> full_name_list) {
         Format fullname;
         for(auto &name : full_name_list){
             if(&name != &full_name_list.front())fullname<<'.';
@@ -94,238 +85,29 @@ namespace evoBasic::il{
         }
         auto target = token_pool_map.find(fullname);
         if(target == token_pool_map.end()){
-            list<data::u64> ls;
+            list<TokenRef*> ls;
             for(auto &str : full_name_list){
-                ls.push_back(getTokenRef(str).getID());
+                ls.push_back(getTokenRef(str));
             }
             token_pool_map.insert({fullname,token_pool.size()});
             token_pool.emplace_back(new ConstructedTokenDef(this,token_pool.size(),ls));
-            return TokenRef(this, token_pool.size() - 1);
+            return new TokenRef(this, token_pool.size() - 1);
         }
-        else return TokenRef(this, target->second);
+        else return new TokenRef(this, target->second);
     }
-
-    Module *Document::createModule(std::string name, AccessFlag access, std::vector<Member*> members) {
-        auto mod = new il::Module;
-        mod->setDocument(this);
-        mod->access = Access(access);
-        mod->name = getTokenRef(name);
-        mod->members = std::move(members);
-        return mod;
-    }
-
-    Class *Document::createClass(std::string name, AccessFlag access, Extend extend, std::vector<Impl> impls,
-                                  std::vector<Member*> members) {
-        auto cls = new il::Class;
-        cls->setDocument(this);
-        cls->name = getTokenRef(name);
-        cls->access = Access(access);
-        cls->extend = extend;
-        cls->impls = std::move(impls);
-        cls->members = std::move(members);
-        return cls;
-    }
-
-    Interface *Document::createInterface(std::string name, AccessFlag access, std::vector<FtnBase*> ftns) {
-        auto ret = new il::Interface;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->access = Access(access);
-        ret->ftns = std::move(ftns);
-        return ret;
-    }
-
-    Enum *Document::createEnum(std::string name, AccessFlag access, std::vector<Pair> pairs) {
-        auto ret = new il::Enum;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->access = Access(access);
-        ret->pairs = std::move(pairs);
-        return ret;
-    }
-
-    Record *Document::createRecord(std::string name, AccessFlag access, std::vector<Fld*> fields) {
-        auto ret = new il::Record;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->access = Access(access);
-        ret->fields = std::move(fields);
-        return ret;
-    }
-
-    Fld *Document::createField(std::string name, AccessFlag access, type::Prototype *prototype) {
-        auto ret = new il::Fld;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->access = Access(access);
-        ret->type = getTokenRef(prototype->getFullName());
-        return ret;
-    }
-
-    SFld *Document::createStaticField(std::string name, AccessFlag access, type::Prototype *prototype) {
-        auto ret = new il::SFld;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->access = Access(access);
-        ret->type = getTokenRef(prototype->getFullName());
-        return ret;
-    }
-
-    Ftn *Document::createFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
-                                  std::list<Block*> blocks) {
-        auto ret = new il::Ftn;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->access = Access(access);
-        ret->blocks = blocks;
-        ret->params = std::move(params);
-        ret->locals = std::move(locals);
-        ret->result = result;
-        return ret;
-    }
-
-    Ctor *Document::createConstructor(AccessFlag access, std::vector<Param*> params, std::vector<Local*> locals, std::list<Block*> blocks) {
-        auto ret = new il::Ctor;
-        ret->setDocument(this);
-        ret->access = Access(access);
-        ret->blocks = blocks;
-        ret->params = std::move(params);
-        ret->locals = std::move(locals);
-        return ret;
-    }
-
-    VFtn *
-    Document::createVirtualFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
-                                    std::list<Block*> blocks) {
-        auto ret = new il::VFtn;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->access = Access(access);
-        ret->blocks = blocks;
-        ret->params = std::move(params);
-        ret->locals = std::move(locals);
-        ret->result = result;
-        return ret;
-    }
-
-    SFtn *
-    Document::createStaticFunction(std::string name, AccessFlag access, std::vector<Param*> params, Result *result, vector<Local*> locals,
-                                   std::list<Block*> blocks) {
-        auto ret = new il::SFtn;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->access = Access(access);
-        ret->blocks = blocks;
-        ret->params = std::move(params);
-        ret->locals = std::move(locals);
-        ret->result = result;
-        return ret;
-    }
-
-
-    Ext *
-    Document::createExternalFunction(std::string name, std::string lib, ExtAlias alias, AccessFlag access,
-                                     std::vector<Param*> params, Result *result) {
-        auto ret = new il::Ext;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->lib = Lib(getTokenRef(lib));
-        ret->access = Access(access);
-        ret->params = std::move(params);
-        ret->result = result;
-        ret->alias = alias;
-        return ret;
-    }
-
-    ExtAlias
-    Document::createExtAlias(std::string text){
-        auto ret = ExtAlias(getTokenRef(text));
-        ret.setDocument(this);
-        return ret;
-    }
-
-    Regular *Document::createParam(std::string name, type::Prototype *prototype, bool byref) {
-        auto ret = new Regular;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->type = getTokenRef(prototype->getFullName());
-        ret->is_ref = byref;
-        return ret;
-    }
-
-    Opt *Document::createOption(std::string name, type::Prototype *prototype, bool byref, Block *initial) {
-        auto ret = new Opt;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->type = getTokenRef(prototype->getFullName());
-        ret->is_ref = byref;
-        ret->initial = initial;
-        return ret;
-    }
-
-    Inf *Document::createParamArray(std::string name, type::Prototype *prototype, bool byref) {
-        auto ret = new Inf;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->type = getTokenRef(prototype->getFullName());
-        ret->is_ref = byref;
-        return ret;
-    }
-
-    Pair Document::createPair(std::string name, data::u32 value) {
-        il::Pair ret;
-        ret.setDocument(this);
-        ret.name = getTokenRef(name);
-        ret.value = value;
-        return ret;
-    }
-
-    Extend Document::createExtend(type::Class *cls) {
-        il::Extend ret;
-        ret.target = getTokenRef(cls->getFullName());
-        return ret;
-    }
-
-    Impl Document::createImplements(type::Interface *interface) {
-        il::Impl ret;
-        ret.setDocument(this);
-        ret.target = getTokenRef(interface->getFullName());
-        return ret;
-    }
-
-    Local *Document::createLocal(std::string name, type::Prototype *prototype, data::u16 address) {
-        auto ret = new il::Local;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->type = getTokenRef(prototype->getFullName());
-        ret->address = address;
-        return ret;
-    }
-
-    FtnBase *Document::createInterfaceFunction(std::string name, AccessFlag access, std::vector<Param*> params,
-                                                Result *result) {
-        auto ret = new il::FtnBase;
-        ret->setDocument(this);
-        ret->name = getTokenRef(name);
-        ret->access = Access(access);
-        ret->params = std::move(params);
-        ret->result = result;
-        return ret;
-    }
-    
 
 
     std::string Local::toString() {
-        return Format() << "(local " << name.toString() << "@" << to_string(address) << " " << type.toString() << ")";
+        return Format() << name->toString() << "@" << to_string(address) << " " << type->toString();
     }
 
 
-    Block &Block::Ldarg(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Ldarg,data));
+    BasicBlock &BasicBlock::Ldarg(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Ldarg,data));
         return *this;
     }
 
-    std::string Block::toString() {
+    std::string BasicBlock::toString() {
         Format fmt;
         fmt << '\n' << to_string(getAddress()) << ":";
         for(auto i : insts){
@@ -334,277 +116,260 @@ namespace evoBasic::il{
         return fmt;
     }
 
-    Block::Block(std::initializer_list<Inst *> inst_init) {
-
-    }
-
-    Block &Block::Br(Block *block) {
-        auto br = new InstBr;
-        br->target = block;
-        insts.push_back(br);
+    BasicBlock &BasicBlock::Br(BasicBlock *block) {
+        insts.push_back(new InstBr(getDocument(),block));
         return *this;
     }
 
-    Block &Block::Jif(Block *block) {
-        auto jif = new InstJif;
-        jif->target = block;
-        insts.push_back(jif);
+    BasicBlock &BasicBlock::Jif(BasicBlock *block) {
+        insts.push_back(new InstJif(getDocument(),block));
         return *this;
     }
 
-    Block &Block::EQ(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::EQ,data));
+    BasicBlock &BasicBlock::EQ(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::EQ,data));
         return *this;
     }
 
-    Block &Block::NE(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::NE,data));
+    BasicBlock &BasicBlock::NE(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::NE,data));
         return *this;
     }
 
-    Block &Block::LT(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::LT,data));
+    BasicBlock &BasicBlock::LT(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::LT,data));
         return *this;
     }
 
-    Block &Block::GT(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::GT,data));
+    BasicBlock &BasicBlock::GT(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::GT,data));
         return *this;
     }
 
-    Block &Block::LE(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::LE,data));
+    BasicBlock &BasicBlock::LE(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::LE,data));
         return *this;
     }
 
-    Block &Block::GE(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::GE,data));
+    BasicBlock &BasicBlock::GE(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::GE,data));
         return *this;
     }
 
-    Block &Block::Add(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::Add,data));
+    BasicBlock &BasicBlock::Add(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Add,data));
         return *this;
     }
 
-    Block &Block::Sub(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::Sub,data));
+    BasicBlock &BasicBlock::Sub(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Sub,data));
         return *this;
     }
 
-    Block &Block::Mul(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::Mul,data));
+    BasicBlock &BasicBlock::Mul(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Mul,data));
         return *this;
     }
 
-    Block &Block::Div(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::Div,data));
+    BasicBlock &BasicBlock::Div(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Div,data));
         return *this;
     }
 
-    Block &Block::FDiv(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::FDiv,data));
+    BasicBlock &BasicBlock::FDiv(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::FDiv,data));
         return *this;
     }
 
-    Block &Block::Neg(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::Neg,data));
+    BasicBlock &BasicBlock::Neg(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Neg,data));
         return *this;
     }
 
-    Block &Block::And() {
-        insts.push_back(new InstWithOp(InstWithOp::Op::And));
+    BasicBlock &BasicBlock::And() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Op::And));
         return *this;
     }
 
-    Block &Block::Or() {
-        insts.push_back(new InstWithOp(InstWithOp::Op::Or));
+    BasicBlock &BasicBlock::Or() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Op::Or));
         return *this;
     }
 
-    Block &Block::Xor() {
-        insts.push_back(new InstWithOp(InstWithOp::Op::Xor));
+    BasicBlock &BasicBlock::Xor() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Op::Xor));
         return *this;
     }
 
-    Block &Block::Not() {
-        insts.push_back(new InstWithOp(InstWithOp::Op::Not));
+    BasicBlock &BasicBlock::Not() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Op::Not));
         return *this;
     }
 
-    Block &Block::Nop() {
-        insts.push_back(new InstWithOp(InstWithOp::Op::Nop));
+    BasicBlock &BasicBlock::Nop() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Op::Nop));
         return *this;
     }
 
-    Block &Block::Pop(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::Pop,data));
+    BasicBlock &BasicBlock::Pop(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Pop,data));
         return *this;
     }
 
-    Block &Block::Dup(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::Dup,data));
+    BasicBlock &BasicBlock::Dup(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Dup,data));
         return *this;
     }
 
-    Block &Block::Ret() {
-        insts.push_back(new InstWithOp(InstWithOp::Op::Ret));
+    BasicBlock &BasicBlock::Ret() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Op::Ret));
         return *this;
     }
 
-    Block &Block::Push(DataType data, std::any value) {
-        auto push = new InstPush;
-        push->value = value;
-        push->type = data;
-        insts.push_back(push);
+    BasicBlock &BasicBlock::Push(DataType data, std::any value) {
+        insts.push_back(new InstPush(getDocument(),data,value));
         return *this;
     }
 
-    Block &Block::Ldc(TokenRef token) {
-        insts.push_back(new InstWithToken(InstWithToken::Op::Ldc,token));
+    BasicBlock &BasicBlock::Ldc(TokenRef *token) {
+        insts.push_back(new InstWithToken(getDocument(),InstWithToken::Op::Ldc,token));
         return *this;
     }
 
-    Block &Block::Ldftn(TokenRef ftn) {
-        insts.push_back(new InstWithToken(InstWithToken::Op::Ldftn,ftn));
+    BasicBlock &BasicBlock::Ldftn(TokenRef *ftn) {
+        insts.push_back(new InstWithToken(getDocument(),InstWithToken::Op::Ldftn,ftn));
         return *this;
     }
 
-    Block &Block::Ldsftn(TokenRef sftn) {
-        insts.push_back(new InstWithToken(InstWithToken::Op::Ldsftn,sftn));
+    BasicBlock &BasicBlock::Ldsftn(TokenRef *sftn) {
+        insts.push_back(new InstWithToken(getDocument(),InstWithToken::Op::Ldsftn,sftn));
         return *this;
     }
 
-    Block &Block::Ldvftn(TokenRef vftn) {
-        insts.push_back(new InstWithToken(InstWithToken::Op::Ldvftn,vftn));
+    BasicBlock &BasicBlock::Ldvftn(TokenRef *vftn) {
+        insts.push_back(new InstWithToken(getDocument(),InstWithToken::Op::Ldvftn,vftn));
         return *this;
     }
 
-    Block &Block::Starg(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::Starg,data));
+    BasicBlock &BasicBlock::Starg(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Starg,data));
         return *this;
     }
 
-    Block &Block::Ldarga() {
-        insts.push_back(new InstWithOp(InstWithOp::Op::Ldarga));
+    BasicBlock &BasicBlock::Ldarga() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Op::Ldarga));
         return *this;
     }
 
-    Block &Block::Ldloc(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::Ldloc,data));
+    BasicBlock &BasicBlock::Ldloc(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Ldloc,data));
         return *this;
     }
 
-    Block &Block::Ldloca() {
-        insts.push_back(new InstWithOp(InstWithOp::Op::Ldloca));
+    BasicBlock &BasicBlock::Ldloca() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Op::Ldloca));
         return *this;
     }
 
-    Block &Block::Stloc(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::Stloc,data));
+    BasicBlock &BasicBlock::Stloc(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Stloc,data));
         return *this;
     }
 
-    Block &Block::Ldfld(DataType data, TokenRef fld) {
-        insts.push_back(new InstWithDataToken(InstWithDataToken::Op::Ldfld,data,fld));
+    BasicBlock &BasicBlock::Ldfld(DataType data, TokenRef *fld) {
+        insts.push_back(new InstWithDataToken(getDocument(),InstWithDataToken::Op::Ldfld,data,fld));
         return *this;
     }
 
-    Block &Block::Ldsfld(DataType data, TokenRef sfld) {
-        insts.push_back(new InstWithDataToken(InstWithDataToken::Op::Ldsfld,data,sfld));
+    BasicBlock &BasicBlock::Ldsfld(DataType data, TokenRef *sfld) {
+        insts.push_back(new InstWithDataToken(getDocument(),InstWithDataToken::Op::Ldsfld,data,sfld));
         return *this;
     }
 
-    Block &Block::Ldflda(TokenRef fld) {
-        insts.push_back(new InstWithToken(InstWithToken::Op::Ldflda,fld));
+    BasicBlock &BasicBlock::Ldflda(TokenRef *fld) {
+        insts.push_back(new InstWithToken(getDocument(),InstWithToken::Op::Ldflda,fld));
         return *this;
     }
 
-    Block &Block::Ldsflda(TokenRef sfld) {
-        insts.push_back(new InstWithToken(InstWithToken::Op::Ldflda,sfld));
+    BasicBlock &BasicBlock::Ldsflda(TokenRef *sfld) {
+        insts.push_back(new InstWithToken(getDocument(),InstWithToken::Op::Ldflda,sfld));
         return *this;
     }
 
-    Block &Block::Stfld(DataType data, TokenRef fld) {
-        insts.push_back(new InstWithDataToken(InstWithDataToken::Op::Stfld,data,fld));
+    BasicBlock &BasicBlock::Stfld(DataType data, TokenRef *fld) {
+        insts.push_back(new InstWithDataToken(getDocument(),InstWithDataToken::Op::Stfld,data,fld));
         return *this;
     }
 
-    Block &Block::Stsfld(DataType data, TokenRef sfld) {
-        insts.push_back(new InstWithDataToken(InstWithDataToken::Op::Stsfld,data,sfld));
+    BasicBlock &BasicBlock::Stsfld(DataType data, TokenRef *sfld) {
+        insts.push_back(new InstWithDataToken(getDocument(),InstWithDataToken::Op::Stsfld,data,sfld));
         return *this;
     }
 
-    Block &Block::Ldelem(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::Stloc,data));
+    BasicBlock &BasicBlock::Ldelem(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Stloc,data));
         return *this;
     }
 
-    Block &Block::Ldelema() {
-        insts.push_back(new InstWithOp(InstWithOp::Op::Ldelema));
+    BasicBlock &BasicBlock::Ldelema() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Op::Ldelema));
         return *this;
     }
 
-    Block &Block::Stelem(DataType data) {
-        insts.push_back(new InstWithData(InstWithData::Op::Stelem,data));
+    BasicBlock &BasicBlock::Stelem(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Stelem,data));
         return *this;
     }
 
-    Block &Block::Ldnull() {
-        insts.push_back(new InstWithOp(InstWithOp::Op::Ldnull));
+    BasicBlock &BasicBlock::Ldnull() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Op::Ldnull));
         return *this;
     }
 
-    Block &Block::Newobj(TokenRef cls) {
-        insts.push_back(new InstWithToken(InstWithToken::Op::Newobj,cls));
+    BasicBlock &BasicBlock::Newobj(TokenRef *cls) {
+        insts.push_back(new InstWithToken(getDocument(),InstWithToken::Op::Newobj,cls));
         return *this;
     }
 
-    Block &Block::Castcls(TokenRef src, TokenRef dst) {
-        auto cast = new InstCastcls;
-        cast->src_class = src;
-        cast->dst_class = dst;
-        insts.push_back(cast);
+    BasicBlock &BasicBlock::Castcls(TokenRef *src, TokenRef *dst) {
+        insts.push_back(new InstCastcls(getDocument(),src,dst));
         return *this;
     }
 
-    Block &Block::Conv(DataType src, DataType dst) {
-        auto conv = new InstConv;
-        conv->src = src;
-        conv->dst = dst;
-        insts.push_back(conv);
+    BasicBlock &BasicBlock::Conv(DataType src, DataType dst) {
+        insts.push_back(new InstConv(getDocument(),src,dst));
         return *this;
     }
 
-    Block &Block::Callvirt() {
-        insts.push_back(new InstWithOp(InstWithOp::CallVirt));
+    BasicBlock &BasicBlock::Callvirt() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::CallVirt));
         return *this;
     }
 
-    Block &Block::Invoke(TokenRef external) {
-        insts.push_back(new InstWithToken(InstWithToken::Invoke,external));
+    BasicBlock &BasicBlock::Invoke(TokenRef *external) {
+        insts.push_back(new InstWithToken(getDocument(),InstWithToken::Invoke,external));
         return *this;
     }
 
-    Block &Block::Callstatic() {
-        insts.push_back(new InstWithOp(InstWithOp::Callstatic));
+    BasicBlock &BasicBlock::Callstatic() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Callstatic));
         return *this;
     }
 
-    Block &Block::Call() {
-        insts.push_back(new InstWithOp(InstWithOp::Call));
+    BasicBlock &BasicBlock::Call() {
+        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Call));
         return *this;
     }
 
-    data::u32 Block::getAddress() {
+    Inst::ByteSize BasicBlock::getAddress() {
         return address;
     }
 
-    void Block::setAddress(data::u32 value) {
+    void BasicBlock::setAddress(Inst::ByteSize value) {
         address = value;
     }
 
-    data::u32 Block::getByteSize(){
+    Inst::ByteSize BasicBlock::getByteSize(){
         if(size == -1){
             size = 0;
             for(auto inst : insts){
@@ -615,127 +380,35 @@ namespace evoBasic::il{
     }
 
     std::string TokenRef::toString() {
-        return getDocument()->getTokenDef(id)->getName();
+        return getDocument()->findTokenDef(id)->getName();
     }
 
     data::u64 TokenRef::getID() {
         return id;
     }
 
-    std::string Access::toString() {
-        vector<string> str = {"Public","Private","Friend","Protected"};
-        return Format() << "(Access " << str[(int)flag] << ")";
-    }
-
-    std::string Extend::toString() {
-        return Format() << "(extend " << target.toString() << ")";
-    }
-
-
-    std::string Impl::toString() {
-        return Format() << "(impl " << target.toString() << ")";
-    }
-
-    std::string Lib::toString() {
-        return Format() << "(lib " << target.toString() << ")";
-    }
-
-
-
-
-    std::string Class::toString() {
-        Format fmt;
-        fmt << "(cls " << access.toString() << ' ' << name.toString() << ' ' << extend.toString();
-        for(auto impl : impls) fmt << ' ' << impl.toString();
-        for(auto member : members) fmt << '\n' << member->toString();
-        fmt << ")";
-        return fmt;
-    }
-
-
-    std::string Module::toString() {
-        Format fmt;
-        fmt << "(mod " << access.toString() << ' ' << name.toString();
-        for(auto member : members) fmt << '\n' << member->toString();
-        fmt << ")";
-        return fmt;
-    }
-
-
-    std::string Interface::toString() {
-        Format fmt;
-        fmt << "(interface " << access.toString() << ' ' << name.toString();
-        for(auto ftn : ftns) fmt << '\n' << ftn->toString();
-        fmt << ")";
-        return fmt;
-    }
-
-
-    std::string Pair::toString() {
-        return Format() << "(pair " << name.toString() << ' ' << to_string(value);
-    }
-
-    std::string Enum::toString() {
-        Format fmt;
-        fmt << "(Enum " << access.toString() << ' ' << name.toString();
-        for(auto p : pairs) fmt << '\n' << p.toString();
-        fmt << ")";
-        return fmt;
-    }
-
-    std::string Fld::toString() {
-        return Format() << "(fld " << access.toString() << ' ' << name.toString() << ' ' << type.toString() <<")";
-    }
-
-
-    std::string SFld::toString() {
-        return Format() << "(sfld " << access.toString() << ' ' << name.toString() << ' ' << type.toString() <<")";
-    }
-
-    std::string Record::toString() {
-        Format fmt;
-        fmt << "(record " << access.toString() << ' ' << name.toString();
-        for(auto fld : fields) fmt << '\n' << fld->toString();
-        fmt << ")";
-        return fmt;
-    }
-
-
-    std::string Regular::toString() {
-        return Format() << "(param " << name.toString() << " " << type.toString() << ")";
-    }
-
     std::string Opt::toString() {
-        return Format() << "(opt " << name.toString()
-                        << " " << type.toString()
-                        << initial->toString() << ")";
+        return Format() << "optional " << Param::toString();
     }
 
     std::string Inf::toString() {
-        return Format() << "(inf " << name.toString() << " " << type.toString() << ")";
+        return Format() << "ParamArray " << Param::toString();
     }
+
+    Inf::Inf(Document *document, TokenRef *name, TokenRef *type, bool ref)
+        : Param(document,name,type,ref,Bytecode::InfDef){}
+
+    Inf::Inf(Document *document, istream &stream)
+        : Param(document,Bytecode::InfDef,stream){}
 
 
     std::string Result::toString() {
-        return Format() << "(result " << type.toString() << ")";
+        return Format() << "result " << type->toString();
     }
 
 
-    std::string Ctor::toString() {
-        return Format() << "(ctor " << FtnWithDefinition::toString() << ")";
-    }
 
-
-    std::string FtnBase::toString() {
-        Format fmt;
-        fmt << access.toString() << ' ';
-        if(!name.isEmpty()) fmt << name.toString();
-        for(auto p : params) fmt << ' ' << p->toString();
-        if(result) fmt << ' ' << result->toString();
-        return fmt;
-    }
-
-    void generateAddressInfo(list<Block*> blocks){
+    void generateAddressInfo(list<BasicBlock*> blocks){
         Inst::ByteSize address = 0;
         for(auto block : blocks){
             block->setAddress(address);
@@ -743,39 +416,36 @@ namespace evoBasic::il{
         }
     }
 
-    std::string FtnWithDefinition::toString() {
-        generateAddressInfo(blocks);
-        Format fmt;
-        fmt << FtnBase::toString();
-        for(auto l : locals) fmt << '\n' << l->toString();
-        for(auto b : blocks) fmt << b->toString();
-        return fmt;
-    }
-
     std::string Ftn::toString() {
-        return Format() << "(ftn " << FtnWithDefinition::toString() << ")";
+        return FunctionDefine::toString() + " ftn";
     }
 
 
     std::string VFtn::toString() {
-        return Format() << "(vftn " << FtnWithDefinition::toString() << ")";
+        return FunctionDefine::toString() + " vftn";
     }
+
+    VFtn::VFtn(Document *document,AccessFlag access,TokenRef *name,std::list<Param*> params,Result *result,std::list<Local*> locals,std::list<BasicBlock*> blocks)
+           : FunctionDefine(document,Bytecode::VFtnDef,access,name,std::move(params),result,std::move(locals),std::move(blocks)){}
+
+    VFtn::VFtn(Document *document, istream &stream) : FunctionDefine(document,Bytecode::VFtnDef,stream){}
 
     std::string SFtn::toString() {
-        return Format() << "(sftn " << FtnWithDefinition::toString() << ")";
+        return FunctionDefine::toString() + " sftn";
     }
 
+    SFtn::SFtn(Document *document,AccessFlag access,TokenRef *name,std::list<Param*> params,Result *result,std::list<Local*> locals,std::list<BasicBlock*> blocks)
+        : FunctionDefine(document,Bytecode::SFtnDef,access,name,std::move(params),result,std::move(locals),std::move(blocks)){}
+
+    SFtn::SFtn(Document *document, istream &stream) : FunctionDefine(document,Bytecode::SFtnDef,stream){}
+
     std::string Ext::toString() {
-        Format fmt;
-        fmt << "(ext " << lib.toString();
-        fmt << ' ' << alias.toString();
-        fmt << ' ' << FtnBase::toString() << ")";
-        return fmt;
+        return FunctionDeclare::toString() + " ext";
     }
 
     std::string InstWithOp::toString() {
         vector<string> str = {"Nop","Ret","CallVirt","CallExt","Callstatic","Call",
-                           "Ldnull","And","Or","Xor","Ldloca","Ldarga","Ldelema","Not"};
+                              "Ldnull","And","Or","Xor","Ldloca","Ldarga","Ldelema","Not"};
         Format fmt;
         fmt << str[(int)op];
         return fmt;
@@ -784,7 +454,7 @@ namespace evoBasic::il{
     std::string InstWithToken::toString() {
         vector<string> str = {"Ldftn","Ldsftn","Ldvftn","Ldc","Newobj","Callext"};
         Format fmt;
-        fmt << str[(int)op] << ' ' << token.toString();
+        fmt << str[(int)op] << ' ' << token->toString();
         return fmt;
     }
 
@@ -798,8 +468,8 @@ namespace evoBasic::il{
 
     std::string InstPush::toString() {
         vector<string> str = {
-            "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
-            "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
+                "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
+                "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
         };
         Format fmt;
         fmt << "Push." << str[(int)type] << ' ';
@@ -844,7 +514,7 @@ namespace evoBasic::il{
 
     std::string InstWithData::toString() {
         vector<string> inst = {"Ldelem","Stelem","Stelema","Ldarg","Starg","Ldloc","Stloc",
-                           "Add","Sub","Mul","Div","FDiv","EQ","NE","LT","GT","LE","GE","Neg","Pop","Dup"};
+                               "Add","Sub","Mul","Div","FDiv","EQ","NE","LT","GT","LE","GE","Neg","Pop","Dup"};
         vector<string> ty = {
                 "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
                 "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
@@ -858,13 +528,11 @@ namespace evoBasic::il{
                 "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
                 "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
         };
-        return Format() << inst[(int)op] << '.' << ty[(int)type] << token.toString();
+        return Format() << inst[(int)op] << '.' << ty[(int)type] << token->toString();
     }
 
-
-
     std::string InstCastcls::toString() {
-        return Format() << "cast." << src_class.toString() << " " << dst_class.toString();
+        return Format() << "cast." << src_class->toString() << " " << dst_class->toString();
     }
 
     std::string InstConv::toString() {
@@ -876,27 +544,13 @@ namespace evoBasic::il{
     }
 
     std::string Document::toString() {
-        Format fmt;
-        fmt << "(Document ";
-        for(auto library : dependencies) fmt << '\n' << "(depend " << library.toString() << ")";
-        for(auto token : token_pool) fmt << '\n' << token->toString();
-        for(auto member : members) fmt << '\n' << member->toString();
-        fmt << ")";
-        return fmt;
+        return "Document";
     }
 
     void Document::add(Member *member) {
         members.push_back(member);
     }
 
-    std::string ExtAlias::toString() {
-        return Format() << "(alias " << token.toString() <<")";
-    }
-
-
-
-    
-    
     Inst::ByteSize InstWithOp::getByteSize() {
         return 1;
     }
@@ -912,7 +566,7 @@ namespace evoBasic::il{
     Inst::ByteSize InstBr::getByteSize() {
         return 1 + sizeof(ByteSize);
     }
-    
+
     Inst::ByteSize InstPush::getByteSize() {
         using enum DataType;
         switch(type){
@@ -930,7 +584,7 @@ namespace evoBasic::il{
             default: PANIC;
         }
     }
-    
+
     Inst::ByteSize InstWithData::getByteSize() {
         return 2;
     }
@@ -938,7 +592,7 @@ namespace evoBasic::il{
     Inst::ByteSize InstWithDataToken::getByteSize() {
         return 2 + sizeof(ByteSize);
     }
-    
+
     Inst::ByteSize InstCastcls::getByteSize() {
         return 1 + 2 * sizeof(ByteSize);
     }
@@ -953,137 +607,151 @@ namespace evoBasic::il{
 
 
 
-    void Block::toHex(std::ostream &stream) {
+    void BasicBlock::toHex(std::ostream &stream) {
         for(auto inst : insts)inst->toHex(stream);
     }
+
+    BasicBlock::BasicBlock(Document *document) : Node(document){}
 
     void TokenRef::toHex(std::ostream &stream) {
         write(stream,Bytecode::TokenRef);
         write(stream,id);
     }
 
-    void TokenRef::fromHex(istream &stream) {
-        read(stream,Bytecode::TokenRef);
+
+
+    TokenRef::TokenRef(Document *document, data::u64 id) : Node(document,Bytecode::TokenRef),id(id){}
+
+    TokenRef::TokenRef(Document *document, istream &stream) : Node(document,Bytecode::TokenRef,stream) {
         read(stream,id);
     }
 
-
-    TokenRef::TokenRef(Document *document, data::u64 id) : id(id){
-        setDocument(document);
-    }
-
-    TokenRef::TokenRef(Document *document) : TokenRef(document, -1){}
 
     bool TokenRef::isEmpty() {
         return id == -1 || getDocument() == nullptr;
     }
 
+    Member::Member(Document *document,Bytecode begin_mark,AccessFlag access,TokenRef *name)
+        : Node(document,begin_mark),mark(begin_mark),access(access),name(name){}
 
-    void Access::toHex(std::ostream &stream) {
-        switch (flag) {
-            case AccessFlag::Private:
-                write(stream,Bytecode::PriAcsDef);
-                break;
+    Member::Member(Document *document,Bytecode begin_mark,std::istream &stream)
+        : Node(document,begin_mark,stream),mark(begin_mark){
+        read(stream, begin_mark);
+        if(predict(stream,Bytecode::PubAcsDef)){
+            access = AccessFlag::Public;
+        }
+        else if(predict(stream,Bytecode::PriAcsDef)){
+            access = AccessFlag::Private;
+        }
+        else if(predict(stream,Bytecode::PtdAcsDef)){
+            access = AccessFlag::Protected;
+        }
+        else PANIC;
+
+        name = new TokenRef(document,stream);
+    }
+
+    void Member::toHex(ostream &stream) {
+        write(stream,mark);
+        switch(access){
             case AccessFlag::Public:
                 write(stream,Bytecode::PubAcsDef);
+                break;
+            case AccessFlag::Private:
+                write(stream,Bytecode::PriAcsDef);
                 break;
             case AccessFlag::Protected:
                 write(stream,Bytecode::PtdAcsDef);
                 break;
         }
+        name->toHex(stream);
     }
 
-    void Access::fromHex(istream &stream) {
-        auto hex = (data::u8)stream.get();
-        if(hex == (data::u8)Bytecode::PriAcsDef){
-            flag = AccessFlag::Private;
+    std::string Member::toString() {
+        Format fmt;
+        fmt<<name->toString()<<" : ";
+        switch(access){
+            case AccessFlag::Public:
+                fmt<<"public";
+                break;
+            case AccessFlag::Private:
+                fmt<<"private";
+                break;
+            case AccessFlag::Protected:
+                fmt<<"protected";
+                break;
         }
-        else if(hex == (data::u8)Bytecode::PubAcsDef){
-            flag = AccessFlag::Public;
+        return fmt;
+    }
+
+    DebugInfo *Member::toStructuredInfo() {
+        return new DebugInfo{toString()};
+    }
+
+    Class::Class(Document *document, AccessFlag access, TokenRef *name, TokenRef *extend, std::list<TokenRef*> impl, std::list<Member*> members)
+        : Member(document,Bytecode::ClassDef,access,name),extend_class(extend),impl_interface_list(std::move(impl)),members(std::move(members)){}
+
+    Class::Class(Document *document, istream &stream) : Member(document,Bytecode::ClassDef,stream) {
+        extend_class = new TokenRef(document,stream);
+        while(predict(stream,Bytecode::ImplDef)){
+            impl_interface_list.push_back(new TokenRef(document,stream));
         }
-        else if(hex == (data::u8)Bytecode::PtdAcsDef){
-            flag = AccessFlag::Protected;
-        }
+        read(stream,members);
+        read(stream,Bytecode::EndMark);
     }
 
-    void Extend::toHex(std::ostream &stream) {
-        write(stream,Bytecode::ExtendDef);
-        write(stream,Bytecode::TokenRef);
-        target.toHex(stream);
-    }
-
-    void Extend::fromHex(istream &stream) {
-        read(stream,Bytecode::ExtendDef);
-        read(stream,Bytecode::TokenRef);
-        target.fromHex(stream);
-    }
-
-    void Impl::toHex(std::ostream &stream) {
-        write(stream,Bytecode::ImplDef);
-        target.toHex(stream);
-    }
-
-    void Impl::fromHex(istream &stream) {
-        read(stream,Bytecode::ImplDef);
-        target.fromHex(stream);
-    }
-
-    void Lib::toHex(std::ostream &stream) {
-        write(stream,Bytecode::LibDef);
-        target.toHex(stream);
-    }
-
-    void Lib::fromHex(istream &stream) {
-        read(stream,Bytecode::LibDef);
-        target.fromHex(stream);
-    }
-
-    void Member::toHex(ostream &stream) {
-        write(stream,Bytecode::TokenRef);
-        name.toHex(stream);
-        access.toHex(stream);
-    }
-
-    void Member::fromHex(istream &stream) {
-        read(stream,Bytecode::TokenRef);
-        name.fromHex(stream);
-        access.fromHex(stream);
-    }
-
-    void Class::toHex(std::ostream &stream) {
-        write(stream,Bytecode::ClassDef);
+    void Class::toHex(ostream &stream) {
         Member::toHex(stream);
-        extend.toHex(stream);
-        for(auto &impl : impls)impl.toHex(stream);
-        for(auto member : members)member->toHex(stream);
+        extend_class->toHex(stream);
+        for(auto impl:impl_interface_list){
+            write(stream,Bytecode::ImplDef);
+            impl->toHex(stream);
+        }
+        for(auto member:members){
+            member->toHex(stream);
+        }
         write(stream,Bytecode::EndMark);
     }
 
-    void Class::fromHex(std::istream &stream){
-        read(stream,Bytecode::ClassDef);
-        Member::fromHex(stream);
-        extend.fromHex(stream);
-        while(predict(stream,Bytecode::ImplDef)){
-            Impl impl;
-            impl.fromHex(stream);
-            impls.push_back(impl);
+    DebugInfo *Class::toStructuredInfo() {
+        list<DebugInfo*> info;
+        info.push_back(new DebugInfo{Format()<<"extend "<<extend_class->toString()});
+        if(!impl_interface_list.empty()){
+            auto impl_info = new DebugInfo{"impl"};
+            for(auto interface:impl_interface_list){
+                impl_info->childs.push_back(new DebugInfo{interface->toString()});
+            }
         }
-        read(stream, members);
-        read(stream,Bytecode::EndMark);
+        for(auto member : members)info.push_back(member->toStructuredInfo());
+        return new DebugInfo{toString(),info};
+    }
+
+    std::string Class::toString() {
+        return Member::toString() + " class";
     }
 
     void Module::toHex(std::ostream &stream) {
-        write(stream,Bytecode::ModuleDef);
         Member::toHex(stream);
         for(auto member : members)member->toHex(stream);
         write(stream,Bytecode::EndMark);
     }
 
-    void Module::fromHex(istream &stream) {
-        read(stream,Bytecode::ModuleDef);
-        Member::fromHex(stream);
-        read(stream, members);
+    Module::Module(Document *document, AccessFlag access, TokenRef *name, std::list<Member*> members)
+        : Member(document,Bytecode::ModuleDef,access,name),members(std::move(members)){}
+
+    Module::Module(Document *document, std::istream &stream) : Member(document,Bytecode::ModuleDef,stream){
+        read(stream,members);
         read(stream,Bytecode::EndMark);
+    }
+
+    DebugInfo *Module::toStructuredInfo() {
+        list<DebugInfo*> info;
+        for(auto member : members)info.push_back(member->toStructuredInfo());
+        return new DebugInfo{toString(),info};
+    }
+
+    std::string Module::toString() {
+        return Member::toString() + " module";
     }
 
     void Interface::toHex(std::ostream &stream) {
@@ -1093,65 +761,103 @@ namespace evoBasic::il{
         write(stream,Bytecode::EndMark);
     }
 
-    void Interface::fromHex(istream &stream) {
-        read(stream,Bytecode::InterfaceDef);
-        Member::fromHex(stream);
-        read(stream, ftns);
-        read(stream,Bytecode::EndMark);
+    Interface::Interface(Document *document, AccessFlag access, TokenRef *name, std::list<InterfaceFunction*> functions)
+        : Member(document,Bytecode::InterfaceDef,access,name),ftns(std::move(functions)){}
+
+    DebugInfo *Interface::toStructuredInfo() {
+        list<DebugInfo*> info;
+        for(auto ftn : ftns)info.push_back(ftn->toStructuredInfo());
+        return new DebugInfo{toString(),info};
     }
 
-    void Pair::toHex(std::ostream &stream) {
-        write(stream,Bytecode::InterfaceDef);
-        name.toHex(stream);
-        write(stream,value);//u32
+    Interface::Interface(Document *document, istream &stream) : Member(document,Bytecode::InterfaceDef,stream){
+        while(predict(stream,Bytecode::ItfFtnDef)){
+            ftns.push_back(new InterfaceFunction(document,stream));
+        }
     }
 
-    void Pair::fromHex(istream &stream) {
-        read(stream,Bytecode::InterfaceDef);
-        name.fromHex(stream);
-        read(stream,value);
+    std::string Interface::toString() {
+        return Member::toString() + " interface";
     }
 
     void Enum::toHex(std::ostream &stream) {
         write(stream,Bytecode::EnumDef);
         Member::toHex(stream);
-        for(auto &p : pairs) p.toHex(stream);
+        for(auto &p : enums){
+            p.first->toHex(stream);
+            write(stream,p.second);
+        }
         write(stream,Bytecode::EndMark);
     }
 
-    void Enum::fromHex(istream &stream) {
-        read(stream,Bytecode::EnumDef);
-        Member::fromHex(stream);
+    Enum::Enum(Document *document, AccessFlag access, TokenRef *name, list<Pair> enums)
+        : Member(document,Bytecode::EnumDef,access,name),enums(std::move(enums)){}
+
+    Enum::Enum(Document *document, istream &stream)
+        : Member(document,Bytecode::EnumDef,stream){
         while(predict(stream,Bytecode::PairDef)){
+            read(stream,Bytecode::PairDef);
             Pair p;
-            p.fromHex(stream);
-            pairs.push_back(p);
+            p.first = new TokenRef(document,stream);
+            read(stream,p.second);
+            enums.push_back(p);
         }
         read(stream,Bytecode::EndMark);
     }
 
-    void Fld::toHex(std::ostream &stream) {
-        write(stream,Bytecode::FldDef);
-        Member::toHex(stream);
-        type.toHex(stream);
+    DebugInfo *Enum::toStructuredInfo() {
+        list<DebugInfo*> info;
+        for(auto pair : enums){
+            info.push_back(new DebugInfo{pair.first->toString() + '=' + to_string(pair.second)});
+        }
+        return new DebugInfo{toString(),info};
     }
 
-    void Fld::fromHex(istream &stream) {
-        read(stream,Bytecode::FldDef);
-        Member::fromHex(stream);
-        type.fromHex(stream);
+    std::string Enum::toString() {
+        return Member::toString() + " enum";
+    }
+
+    Fld::Fld(Document *document, AccessFlag access, TokenRef *name, TokenRef *type)
+        : Member(document,Bytecode::FldDef,access,name),type(type){}
+
+    Fld::Fld(Document *document, istream &stream)
+        : Member(document,Bytecode::FldDef,stream){
+        type = new TokenRef(document,stream);
+    }
+
+    void Fld::toHex(std::ostream &stream) {
+        Member::toHex(stream);
+        type->toHex(stream);
+    }
+
+    DebugInfo *Fld::toStructuredInfo() {
+        return new DebugInfo{toString()};
+    }
+
+    std::string Fld::toString() {
+        return Member::toString() + " fld(" + type->toString() + ")";
+    }
+
+
+    SFld::SFld(Document *document, AccessFlag access, TokenRef *name, TokenRef *type)
+        : Member(document,Bytecode::SFldDef,access,name),type(type){}
+
+    SFld::SFld(Document *document, istream &stream)
+        : Member(document,Bytecode::SFldDef,stream){
+        type = new TokenRef(document,stream);
     }
 
     void SFld::toHex(std::ostream &stream) {
-        write(stream,Bytecode::SFldDef);
         Member::toHex(stream);
-        type.toHex(stream);
+        type->toHex(stream);
     }
 
-    void SFld::fromHex(istream &stream) {
-        read(stream,Bytecode::SFldDef);
-        Member::fromHex(stream);
-        type.fromHex(stream);
+    DebugInfo *SFld::toStructuredInfo() {
+        return new DebugInfo{toString()};
+    }
+
+    std::string SFld::toString() {
+        return Member::toString() + " sfld(" + type->toString() + ")";
     }
 
     void Record::toHex(std::ostream &stream) {
@@ -1161,26 +867,36 @@ namespace evoBasic::il{
         write(stream,Bytecode::EndMark);
     }
 
-    void Record::fromHex(istream &stream) {
-        read(stream,Bytecode::RecordDef);
-        Member::fromHex(stream);
-        while(!predict(stream,Bytecode::EndMark)){
-            auto fld = new Fld;
-            fld->fromHex(stream);
-            fields.push_back(fld);
+    Record::Record(Document *document, AccessFlag access, TokenRef *name, std::list<Fld*> fields)
+        : Member(document,Bytecode::RecordDef,access,name),fields(std::move(fields)){}
+
+    Record::Record(Document *document, istream &stream)
+        : Member(document,Bytecode::RecordDef,stream){
+        while(predict(stream,Bytecode::FldDef)){
+            fields.push_back(new Fld(document,stream));
         }
         read(stream,Bytecode::EndMark);
     }
 
-    void Param::toHex(ostream &stream) {
-        name.toHex(stream);
-        type.toHex(stream);
-        write(stream,(is_ref ? Bytecode::Byref : Bytecode::Byval));
+    DebugInfo *Record::toStructuredInfo() {
+        list<DebugInfo*> info;
+        for(auto field:fields){
+            info.push_back(field->toStructuredInfo());
+        }
+        return new DebugInfo{toString(),info};
     }
 
-    void Param::fromHex(istream &stream) {
-        name.fromHex(stream);
-        type.fromHex(stream);
+    std::string Record::toString() {
+        return Member::toString() + " record";
+    }
+
+    Param::Param(Document *document, TokenRef *name, TokenRef *type, bool ref, Bytecode begin_mark)
+        : Node(document,begin_mark),name(name),type(type),is_ref(ref){}
+
+    Param::Param(Document *document, Bytecode begin_mark, istream &stream)
+        : Node(document, begin_mark, stream) {
+        name = new TokenRef(document,stream);
+        type = new TokenRef(document,stream);
         if(predict(stream,Bytecode::Byref)){
             read(stream,Bytecode::Byref);
             is_ref = true;
@@ -1191,15 +907,24 @@ namespace evoBasic::il{
         }
     }
 
-    void Regular::toHex(std::ostream &stream) {
-        write(stream,Bytecode::RegDef);
-        Param::toHex(stream);
+    void Param::toHex(ostream &stream) {
+        Node::toHex(stream);
+        name->toHex(stream);
+        type->toHex(stream);
+        write(stream,(is_ref ? Bytecode::Byref : Bytecode::Byval));
     }
 
-    void Regular::fromHex(istream &stream) {
-        read(stream,Bytecode::RegDef);
-        Param::fromHex(stream);
+    std::string Param::toString() {
+        return name->toString() + ':' + type->toString();
     }
+
+    Regular::Regular(Document *document, TokenRef *name, TokenRef *type, bool ref)
+        : Param(document,name,type,ref,Bytecode::RegDef) {}
+
+    Regular::Regular(Document *document, istream &stream)
+        : Param(document,Bytecode::RegDef,stream){}
+
+
 
     void Opt::toHex(std::ostream &stream) {
         write(stream,Bytecode::OptDef);
@@ -1209,277 +934,309 @@ namespace evoBasic::il{
         write(stream,Bytecode::EndMark);
     }
 
-    void Opt::fromHex(istream &stream) {
-        read(stream,Bytecode::OptDef);
-        Param::fromHex(stream);
+    Opt::Opt(Document *document, TokenRef *name, TokenRef *type, bool ref, BasicBlock *initial)
+        : Param(document,name,type,ref,Bytecode::OptDef),initial(initial){}
+
+    Opt::Opt(Document *document, istream &stream)
+        : Param(document,Bytecode::OptDef,stream){
         read(stream,Bytecode::InstBeg);
-        // todo
+        // todo: read initial BasicBlock
         read(stream,Bytecode::EndMark);
     }
 
-    void Inf::toHex(std::ostream &stream) {
-        write(stream,Bytecode::InfDef);
-        Param::toHex(stream);
-    }
+    Local::Local(Document *document, TokenRef *name, TokenRef *type, Local::ID address)
+        : Node(document,Bytecode::LocalDef),name(name),type(type),address(address){}
 
-    void Inf::fromHex(istream &stream) {
-        read(stream,Bytecode::InfDef);
-        Param::fromHex(stream);
+    Local::Local(Document *document, istream &stream, ID address)
+            : Node(document,Bytecode::LocalDef),address(address) {
+        name = new TokenRef(document,stream);
+        type = new TokenRef(document,stream);
     }
 
     void Local::toHex(std::ostream &stream) {
-        write(stream,Bytecode::LocalDef);
-        name.toHex(stream);
-        type.toHex(stream);
+        Node::toHex(stream);
+        name->toHex(stream);
+        type->toHex(stream);
     }
 
-    void Local::fromHex(istream &stream) {
-        read(stream,Bytecode::LocalDef);
-        name.fromHex(stream);
-        type.fromHex(stream);
+    Result::Result(Document *document, TokenRef *type)
+        : Node(document,Bytecode::ResultDef){}
+
+    Result::Result(Document *document, istream &stream)
+        : Node(document,Bytecode::ResultDef,stream){
+        type = new TokenRef(document,stream);
     }
 
     void Result::toHex(std::ostream &stream) {
-        write(stream,Bytecode::ResultDef);
-        type.toHex(stream);
+        Node::toHex(stream);
+        type->toHex(stream);
     }
 
-    void Result::fromHex(istream &stream) {
-        read(stream,Bytecode::ResultDef);
-        type.fromHex(stream);
+
+    FunctionDeclare::FunctionDeclare(Document *document,Bytecode begin_mark,AccessFlag access,TokenRef *name,std::list<Param*> params,Result *result)
+        : Member(document,begin_mark,access,name),params(std::move(params)),result(result){}
+
+    FunctionDeclare::FunctionDeclare(Document *document, Bytecode begin_mark, istream &stream)
+            : Member(document, begin_mark, stream) {
+        while(true){
+            if(predict(stream,Bytecode::RegDef)){
+                params.push_back(new Regular(document,stream));
+            }
+            else if(predict(stream,Bytecode::OptDef)){
+                params.push_back(new Opt(document,stream));
+            }
+            else if(predict(stream,Bytecode::InfDef)){
+                params.push_back(new Inf(document,stream));
+            }
+            else{
+                break;
+            }
+        }
+        if(predict(stream,Bytecode::ResultDef)){
+            result = new Result(document,stream);
+        }
     }
 
-    void FtnBase::toHex(ostream &stream) {
+    void FunctionDeclare::toHex(ostream &stream) {
         Member::toHex(stream);
         for(auto p : params) p->toHex(stream);
         if(result)result->toHex(stream);
     }
 
-    void FtnBase::fromHex(istream &stream) {
-        Member::fromHex(stream);
-        while(true){
-            Param *param = nullptr;
-            if(predict(stream,Bytecode::RegDef)){
-                param = new Regular;
-            }
-            else if(predict(stream,Bytecode::OptDef)){
-                param = new Opt;
-            }
-            else if(predict(stream,Bytecode::InfDef)){
-                param = new Inf;
-            }
-            else break;
-            param->fromHex(stream);
-            params.push_back(param);
+    DebugInfo *FunctionDeclare::toStructuredInfo() {
+        auto ret = new DebugInfo{toString()};
+        auto param_info = new DebugInfo{"Parameters"};
+        for(auto param : params){
+            param_info->add(param->toString());
         }
-        if(predict(stream,Bytecode::ResultDef)){
-            result = new Result;
-            result->fromHex(stream);
+        ret->add(param_info);
+        if(result){
+            ret->add(result->toString());
+        }
+        return ret;
+    }
+
+
+    FunctionDefine::FunctionDefine(Document *document, Bytecode begin_mark, AccessFlag access, TokenRef *name,
+                                   std::list<Param*> params, Result *result, std::list<Local*> locals, std::list<BasicBlock*> blocks)
+        : FunctionDeclare(document, begin_mark, access, name, std::move(params), result), locals(locals), blocks(std::move(blocks)){
+        for(auto block : blocks){
+            block->setAddress(block_byte_length);
+            block_byte_length += block->getByteSize();
         }
     }
 
-    void FtnWithDefinition::toHex(ostream &stream) {
-        generateAddressInfo(blocks);
-
-        FtnBase::toHex(stream);
-        for(auto local : locals) local->toHex(stream);
-        write(stream,(data::u8)Bytecode::InstBeg);
-        for(auto block : blocks) block->toHex(stream);
-        write(stream,(data::u8)Bytecode::EndMark);
-    }
-
-    void FtnWithDefinition::fromHex(istream &stream) {
-        FtnBase::fromHex(stream);
+    FunctionDefine::FunctionDefine(Document *document, Bytecode begin_mark, istream &stream)
+        : FunctionDeclare(document, begin_mark, stream) {
+        Local::ID id = 0;
         while(predict(stream,Bytecode::LocalDef)){
-            auto local = new Local;
-            local->fromHex(stream);
-            locals.push_back(local);
+            locals.push_back(new Local(document,stream,id));
+            id++;
         }
         read(stream,Bytecode::InstBeg);
-        // todo
+        read(stream,block_byte_length);
+        blocks_memory = (data::Byte*)malloc(block_byte_length);
+        stream.read((char*)blocks_memory,block_byte_length);
         read(stream,Bytecode::EndMark);
     }
 
-    void Ctor::toHex(std::ostream &stream) {
-        write(stream,Bytecode::CtorDef);
-        FtnWithDefinition::toHex(stream);
+    void FunctionDefine::toHex(ostream &stream) {
+        FunctionDeclare::toHex(stream);
+        for(auto local : locals) local->toHex(stream);
+        write(stream,Bytecode::InstBeg);
+        write(stream,block_byte_length);
+        for(auto block : blocks) block->toHex(stream);
+        write(stream,Bytecode::EndMark);
     }
 
-    void Ctor::fromHex(istream &stream) {
-        read(stream,Bytecode::CtorDef);
-        FtnWithDefinition::fromHex(stream);
+    data::Byte *FunctionDefine::getBlocksMemory() {
+        return blocks_memory;
     }
 
-    void Ftn::toHex(std::ostream &stream) {
-        write(stream,Bytecode::FtnDef);
-        FtnWithDefinition::toHex(stream);
+    FunctionDefine::~FunctionDefine() {
+        delete blocks_memory;
     }
 
-    void Ftn::fromHex(istream &stream) {
-        read(stream,Bytecode::FtnDef);
-        FtnWithDefinition::fromHex(stream);
+    DebugInfo *FunctionDefine::toStructuredInfo() {
+        auto ret = FunctionDeclare::toStructuredInfo();
+        auto local_info = new DebugInfo{"locals"};
+        for(auto local : locals){
+            local_info->add(local->toString());
+        }
+        ret->add(local_info);
+        auto block_info = new DebugInfo{"blocks"};
+        for(auto block : blocks){
+            block_info->add(block->toString());
+        }
+        ret->add(block_info);
+        return ret;
     }
 
-    void VFtn::toHex(std::ostream &stream) {
-        write(stream,Bytecode::VFtnDef);
-        FtnWithDefinition::toHex(stream);
+    Ctor::Ctor(Document *document,std::list<Param*> params, std::list<Local*> locals,std::list<BasicBlock*> blocks)
+            : FunctionDefine(document,Bytecode::CtorDef,AccessFlag::Public,document->getTokenRef("#ctor"),std::move(params),nullptr,std::move(locals),std::move(blocks)){}
+
+    Ctor::Ctor(Document *document, istream &stream) : FunctionDefine(document,Bytecode::CtorDef,stream){}
+
+    std::string Ctor::toString() {
+        return Member::toString() + " ctor";
     }
 
-    void VFtn::fromHex(istream &stream) {
-        read(stream,Bytecode::VFtnDef);
-        FtnWithDefinition::fromHex(stream);
-    }
+    Ftn::Ftn(Document *document,AccessFlag access,TokenRef *name,std::list<Param*> params,Result *result,std::list<Local*> locals,std::list<BasicBlock*> blocks)
+        : FunctionDefine(document,Bytecode::FtnDef,access,name,std::move(params),result,std::move(locals),std::move(blocks)){}
 
-    void SFtn::toHex(std::ostream &stream) {
-        write(stream,Bytecode::SFtnDef);
-        FtnWithDefinition::toHex(stream);
-    }
+    Ftn::Ftn(Document *document, istream &stream) : FunctionDefine(document,Bytecode::FtnDef,stream) {}
 
-    void SFtn::fromHex(istream &stream) {
-        read(stream,Bytecode::SFtnDef);
-        FtnWithDefinition::fromHex(stream);
-    }
+    Ext::Ext(Document *document,AccessFlag access,TokenRef *name,
+             TokenRef *library,TokenRef *alias,std::list<Param *> params,Result *result)
+         : FunctionDeclare(document,Bytecode::ExtDef,access,name,std::move(params),result),lib(library),alias(alias){}
 
-    void ExtAlias::toHex(ostream &stream) {
-        write(stream,Bytecode::ExtAliasDef);
-        token.toHex(stream);
-    }
-
-    void ExtAlias::fromHex(istream &stream) {
-        read(stream,Bytecode::ExtAliasDef);
-        token.fromHex(stream);
+    Ext::Ext(Document *document, istream &stream) : FunctionDeclare(document,Bytecode::ExtDef,stream){
+        lib = new TokenRef(document,stream);
+        alias = new TokenRef(document,stream);
     }
 
     void Ext::toHex(std::ostream &stream) {
-        write(stream,Bytecode::ExtDef);
-        FtnBase::toHex(stream);
-        lib.toHex(stream);
-        alias.toHex(stream);
+        FunctionDeclare::toHex(stream);
+        lib->toHex(stream);
+        alias->toHex(stream);
     }
-
-    void Ext::fromHex(istream &stream) {
-        read(stream,Bytecode::ExtDef);
-        FtnBase::fromHex(stream);
-        lib.fromHex(stream);
-        alias.fromHex(stream);
-    }
-
 
     void Document::toHex(ostream &stream) {
         write(stream,Bytecode::DocumentDef);
-        for(auto library : dependencies){
-            write(stream,Bytecode::Depend);
-            library.toHex(stream);
-        }
 
         for(auto token : token_pool){
             token->toHex(stream);
+        }
+
+        for(auto library : dependencies){
+            write(stream,Bytecode::Depend);
+            library->toHex(stream);
         }
 
         for(auto member : members)member->toHex(stream);
         write(stream,Bytecode::EndMark);
     }
 
-    void Document::fromHex(istream &stream) {
-        read(stream,Bytecode::DocumentDef);
-        while(predict(stream,Bytecode::Depend)){
-            read(stream,Bytecode::Depend);
-            TokenRef library;
-            library.fromHex(stream);
-            dependencies.push_back(library);
-        }
 
+    TokenRef *Document::getTokenRef(data::u64 id) {
+        ASSERT(id > token_pool.size(),"invalid token id");
+        return new TokenRef(this, id);
+    }
 
+    TokenDef *Document::findTokenDef(data::u64 id) {
+        ASSERT(id > token_pool.size(),"invalid token id");
+        return token_pool[id];
+    }
+
+    void Document::addResource(Node* node) {
+        resources.push_back(node);
+    }
+
+    TokenDef *Document::findTokenDef(std::string text) {
+        auto target = token_pool_map.find(text);
+        if(target == token_pool_map.end())PANIC;
+        return token_pool[target->second];
+    }
+
+    Document::Document() : Node(nullptr,Bytecode::DocumentDef){}
+
+    Document::Document(istream &stream) : Node(nullptr,Bytecode::DocumentDef){
         while(true){
-            TokenDef *token = nullptr;
-            if(predict(stream,Bytecode::TokenDef)){
-                token = new TextTokenDef(this,token_pool.size());
+            TokenDef *token;
+            if(predict(stream,Bytecode::TextTokenDef)){
+                read(stream,Bytecode::TextTokenDef);
+                token = new TextTokenDef(this,stream);
+                token_pool.push_back(token);
             }
             else if(predict(stream,Bytecode::ConstructedDef)){
-                token = new ConstructedTokenDef(this,token_pool.size());
+                read(stream,Bytecode::ConstructedDef);
+                token = new ConstructedTokenDef(this,stream);
+                token_pool.push_back(token);
             }
             else{
                 break;
             }
-            token->fromHex(stream);
-            token_pool.push_back(token);
+            token_pool_map.insert({token->getName(),token_pool.size()});
         }
-
-        read(stream,members);
+        
+        while(predict(stream,Bytecode::Depend)){
+            dependencies.push_back(new TokenRef(this,stream));
+        }
+        
+        read(stream,members,this);
         read(stream,Bytecode::EndMark);
     }
-
-
 
     void Document::addDependenceLibrary(std::string name) {
         dependencies.push_back(getTokenRef(name));
     }
 
-
-    Document *Document::loadFromHex(std::istream &stream) {
-        auto ret = new Document;
-
+    Bytecode InstWithOp::opToBytecode(InstWithOp::Op op) {
+        switch(op){
+            case Nop:           return Bytecode::Nop;
+            case Ret:           return Bytecode::Ret;
+            case CallVirt:      return Bytecode::CallVirt;
+            case CallExt:       return Bytecode::Invoke;
+            case Callstatic:    return Bytecode::Callstatic;
+            case Call:          return Bytecode::Call;
+            case Ldnull:        return Bytecode::Ldnull;
+            case And:           return Bytecode::And;
+            case Or:            return Bytecode::Or;
+            case Xor:           return Bytecode::Xor;
+            case Ldloca:        return Bytecode::Ldloca;
+            case Ldarga:        return Bytecode::Ldarga;
+            case Ldelema:       return Bytecode::Ldelema;
+            case Not:           return Bytecode::Not;
+        }
     }
 
-    TokenRef Document::getTokenRef(data::u64 id) {
-        ASSERT(id > token_pool.size(),"invalid token id");
-        return TokenRef(this, id);
-    }
-
-    TokenDef *Document::getTokenDef(data::u64 id) {
-        ASSERT(id > token_pool.size(),"invalid token id");
-        return token_pool[id];
-    }
-
+    InstWithOp::InstWithOp(Document *document, InstWithOp::Op op)
+        : Inst(document,opToBytecode(op)),op(op){}
 
     void InstWithOp::toHex(std::ostream &stream) {
-        Bytecode code;
-        switch(op){
-            case Nop:           code = Bytecode::Nop;           break;
-            case Ret:           code = Bytecode::Nop;           break;
-            case CallVirt:      code = Bytecode::Nop;           break;
-            case CallExt:       code = Bytecode::Nop;           break;
-            case Callstatic:    code = Bytecode::Callstatic;    break;
-            case Call:          code = Bytecode::Call;          break;
-            case Ldnull:        code = Bytecode::Ldnull;        break;
-            case And:           code = Bytecode::And;           break;
-            case Or:            code = Bytecode::Or;            break;
-            case Xor:           code = Bytecode::Xor;           break;
-            case Ldloca:        code = Bytecode::Ldloca;        break;
-            case Ldarga:        code = Bytecode::Ldarga;        break;
-            case Ldelema:       code = Bytecode::Ldelema;       break;
-            case Not:           code = Bytecode::Not;           break;
-        }
-        write(stream,(data::u8)code);
+        Bytecode code = opToBytecode(op);
+        write(stream,code);
     }
 
+    Bytecode InstWithToken::opToBytecode(Op op) {
+        switch(op){
+            case Ldftn:   return Bytecode::Ldftn;
+            case Ldsftn:  return Bytecode::Ldsftn;
+            case Ldvftn:  return Bytecode::Ldvftn;
+            case Ldc:     return Bytecode::Ldc;
+            case Newobj:  return Bytecode::Newobj;
+            case Invoke:  return Bytecode::Invoke;
+            case Ldflda:  return Bytecode::Ldflda;
+            case Ldsflda: return Bytecode::Ldsflda;
+        }
+    }
+
+    InstWithToken::InstWithToken(Document *document,InstWithToken::Op op, TokenRef *token)
+            : Inst(document,opToBytecode(op)),op(op),token(token){}
 
     void InstWithToken::toHex(std::ostream &stream) {
-        Bytecode code;
-        switch(op){
-            case Ldftn:   code = Bytecode::Ldftn;  break;
-            case Ldsftn:  code = Bytecode::Ldsftn; break;
-            case Ldvftn:  code = Bytecode::Ldvftn; break;
-            case Ldc:     code = Bytecode::Ldc;    break;
-            case Newobj:  code = Bytecode::Newobj; break;
-            case Invoke:  code = Bytecode::Invoke; break;
-            case Ldflda:  code = Bytecode::Ldflda; break;
-            case Ldsflda: code = Bytecode::Ldsflda;break;
-        }
-        write(stream,(data::u8)code);
-        write(stream,token.getID());
+        Bytecode code = opToBytecode(op);
+        write(stream,code);
+        token->toHex(stream);
     }
+
 
     void InstJif::toHex(std::ostream &stream) {
         write(stream,(data::u8)Bytecode::Jif);
         write(stream,target->getAddress());
     }
 
+    InstJif::InstJif(Document *document, BasicBlock *target)
+        : Inst(document,Bytecode::Jif),target(target){}
+
 
     void InstBr::toHex(std::ostream &stream) {
         write(stream,(data::u8)Bytecode::Br);
         write(stream,target->getAddress());
     }
+
+    InstBr::InstBr(Document *document, BasicBlock *target)
+        : Inst(document,Bytecode::Br),target(target){}
 
 
     Bytecode ILDataTypeToByteCode(DataType type){
@@ -1489,22 +1246,22 @@ namespace evoBasic::il{
             case i16:    return Bytecode::i16;
             case i32:    return Bytecode::i32;
             case i64:    return Bytecode::i64;
-            case u8:     return Bytecode::u8; 
+            case u8:     return Bytecode::u8;
             case u16:    return Bytecode::u16;
             case u32:    return Bytecode::u32;
             case u64:    return Bytecode::u64;
             case f32:    return Bytecode::f32;
             case f64:    return Bytecode::f64;
-            case empty: 
-            case ref:   
-            case boolean:    
-            case character:  
-            case delegate:   
+            case empty:
+            case ref:
+            case boolean:
+            case character:
+            case delegate:
             case record:
-            case array:  
-            case ftn:  
-            case vftn:  
-            case sftn:   
+            case array:
+            case ftn:
+            case vftn:
+            case sftn:
                 PANIC;
         }
     }
@@ -1549,75 +1306,101 @@ namespace evoBasic::il{
         }
     }
 
+    InstPush::InstPush(Document *document, DataType type, std::any value)
+        : Inst(document,Bytecode::Push),type(type),value(value){}
+
 
     void InstWithData::toHex(std::ostream &stream) {
-        Bytecode code;
-        switch(op){
-            case Ldelem:    code = Bytecode::Ldelem;    break;
-            case Stelem:    code = Bytecode::Stelem;    break;
-            case Stelema:   code = Bytecode::Stelema;   break;
-            case Ldarg:     code = Bytecode::Ldarg;     break;
-            case Starg:     code = Bytecode::Starg;     break;
-            case Ldloc:     code = Bytecode::Ldloc;     break;
-            case Stloc:     code = Bytecode::Stloc;     break;
-            case Add:       code = Bytecode::Add;       break;
-            case Sub:       code = Bytecode::Sub;       break;
-            case Mul:       code = Bytecode::Mul;       break;
-            case Div:       code = Bytecode::Div;       break;
-            case FDiv:      code = Bytecode::FDiv;      break;
-            case EQ:        code = Bytecode::EQ;        break;
-            case NE:        code = Bytecode::NE;        break;
-            case LT:        code = Bytecode::LT;        break;
-            case GT:        code = Bytecode::GT;        break;
-            case LE:        code = Bytecode::LE;        break;
-            case GE:        code = Bytecode::GE;        break;
-            case Neg:       code = Bytecode::Neg;       break;
-            case Pop:       code = Bytecode::Pop;       break;
-            case Dup:       code = Bytecode::Dup;       break;
-        }
-        write(stream,(data::u8)code);
-        write(stream,(data::u8)ILDataTypeToByteCode(type));
+        Bytecode code = opToBytecode(op);
+        write(stream,code);
+        write(stream,ILDataTypeToByteCode(type));
     }
+
+    InstWithData::InstWithData(Document *document,InstWithData::Op op, DataType type)
+        : Inst(document,opToBytecode(op)),type(type){}
+
+    Bytecode InstWithData::opToBytecode(InstWithData::Op op) {
+        switch(op){
+            case Ldelem:    return Bytecode::Ldelem;    
+            case Stelem:    return Bytecode::Stelem;    
+            case Stelema:   return Bytecode::Stelema;   
+            case Ldarg:     return Bytecode::Ldarg;     
+            case Starg:     return Bytecode::Starg;     
+            case Ldloc:     return Bytecode::Ldloc;     
+            case Stloc:     return Bytecode::Stloc;     
+            case Add:       return Bytecode::Add;       
+            case Sub:       return Bytecode::Sub;       
+            case Mul:       return Bytecode::Mul;       
+            case Div:       return Bytecode::Div;       
+            case FDiv:      return Bytecode::FDiv;      
+            case EQ:        return Bytecode::EQ;        
+            case NE:        return Bytecode::NE;        
+            case LT:        return Bytecode::LT;        
+            case GT:        return Bytecode::GT;        
+            case LE:        return Bytecode::LE;        
+            case GE:        return Bytecode::GE;        
+            case Neg:       return Bytecode::Neg;       
+            case Pop:       return Bytecode::Pop;       
+            case Dup:       return Bytecode::Dup;       
+        }
+    }
+
+
+    Bytecode InstWithDataToken::opToBytecode(InstWithDataToken::Op op) {
+        switch(op) {
+            case Ldfld:     return Bytecode::Ldfld;
+            case Ldsfld:    return Bytecode::Ldsfld;
+            case Stfld:     return Bytecode::Stfld;
+            case Stsfld:    return Bytecode::Stsfld;
+        }
+    }
+
+    InstWithDataToken::InstWithDataToken(Document *document, InstWithDataToken::Op op, DataType type, TokenRef *token)
+        : Inst(document,opToBytecode(op)),op(op),token(token){}
 
     void InstWithDataToken::toHex(std::ostream &stream) {
-        Bytecode code;
-        switch(op) {
-            case Ldfld:     code = Bytecode::Ldfld;     break;
-            case Ldsfld:    code = Bytecode::Ldsfld;    break;
-            case Stfld:     code = Bytecode::Stfld;     break;
-            case Stsfld:    code = Bytecode::Stsfld;    break;
-        }
-        write(stream,(data::u8)code);
-        write(stream,(data::u8)ILDataTypeToByteCode(type));
-        write(stream,token.getID());
+        Bytecode code = opToBytecode(op);
+        write(stream,code);
+        write(stream,ILDataTypeToByteCode(type));
+        token->toHex(stream);
     }
-    
+
     void InstCastcls::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::CastCls);
-        write(stream,src_class.getID());
-        write(stream,dst_class.getID());
+        write(stream,Bytecode::CastCls);
+        src_class->toHex(stream);
+        dst_class->toHex(stream);
     }
+
+    InstCastcls::InstCastcls(Document *document, TokenRef *src_class, TokenRef *dst_class)
+        : Inst(document,Bytecode::CastCls),src_class(src_class),dst_class(dst_class){}
+
 
     void InstConv::toHex(std::ostream &stream) {
-        write(stream,(data::u8)Bytecode::CastCls);
-        write(stream,(data::u8)ILDataTypeToByteCode(src));
-        write(stream,(data::u8)ILDataTypeToByteCode(dst));
+        write(stream,Bytecode::CastCls);
+        write(stream,ILDataTypeToByteCode(src));
+        write(stream,ILDataTypeToByteCode(dst));
     }
 
-
+    InstConv::InstConv(Document *document, DataType src, DataType dst)
+        : Inst(document,Bytecode::Conv),src(src),dst(dst){}
 
 
     Document *Node::getDocument(){
         return document;
     }
 
-    void Node::setDocument(Document *document) {
-        this->document = document;
+    Node::Node(Document *document,Bytecode begin_mark) : document(document),begin_mark(begin_mark){
+        if(document)document->addResource(this);
     }
 
+    Node::Node(Document *document,Bytecode begin_mark,istream &stream) : begin_mark(begin_mark){
+        read(stream,begin_mark);
+    }
 
-    std::string TextTokenDef::toString() {
-        return Format() << "(token "<< to_string(id) << ' ' << text << ")";
+    Node::Node(Document *document) : document(document){}
+
+    void Node::toHex(ostream &stream) {
+        write(stream,begin_mark);
     }
 
     std::string TextTokenDef::getName() {
@@ -1625,16 +1408,19 @@ namespace evoBasic::il{
     }
 
     void TextTokenDef::toHex(ostream &stream) {
-        write(stream,Bytecode::TokenDef);
+        write(stream,Bytecode::TextTokenDef);
         for(auto c : text){
             write(stream,c);
         }
         write(stream,Bytecode::EndMark);
     }
 
-    void TextTokenDef::fromHex(istream &stream) {
-        text.clear();
-        read(stream,Bytecode::TokenDef);
+    TextTokenDef::TextTokenDef(Document *document, ID id, std::string text)
+        : TokenDef(document,Bytecode::TextTokenDef,id),text(std::move(text)){}
+
+    TextTokenDef::TextTokenDef(Document *document, istream &stream)
+        : TokenDef(document,Bytecode::TextTokenDef,stream) {
+
         while(!predict(stream,Bytecode::EndMark)){
             char c;
             read(stream,c);
@@ -1643,27 +1429,21 @@ namespace evoBasic::il{
         read(stream,Bytecode::EndMark);
     }
 
-    std::string ConstructedTokenDef::toString() {
-        Format fmt;
-        fmt << "(Constructed " << to_string(id);
-        for(auto sub_id : sub_token_list){
-            fmt  << ' ' << to_string(sub_id);
-        }
-        fmt << ")";
-        return fmt;
+    string TextTokenDef::toString(){
+        return Format()<<'#'<<to_string(id)<<' '<<text;
     }
 
     std::string ConstructedTokenDef::getName() {
         stringstream fmt;
-        for(auto &sub_id : sub_token_list){
-            if(&sub_id != &sub_token_list.front()) fmt << '.';
-            fmt << getDocument()->getTokenRef(sub_id).toString();
+        for(auto &token : sub_token_list){
+            if(&token != &sub_token_list.front()) fmt << '.';
+            fmt << token->toString();
         }
         return fmt.str();
     }
 
     void ConstructedTokenDef::toHex(ostream &stream) {
-        write(stream,Bytecode::ConstructedDef);
+        TokenDef::toHex(stream);
         for(auto sub_id : sub_token_list){
             write(stream,Bytecode::TokenRef);
             write(stream,sub_id);
@@ -1671,14 +1451,47 @@ namespace evoBasic::il{
         write(stream,Bytecode::EndMark);
     }
 
-    void ConstructedTokenDef::fromHex(istream &stream) {
-        read(stream,Bytecode::ConstructedDef);
+    ConstructedTokenDef::ConstructedTokenDef(Document *document, TokenDef::ID id, std::list<TokenRef*> sub_tokens)
+        : TokenDef(document,Bytecode::ConstructedDef,id), sub_token_list(std::move(sub_tokens)){}
+
+    ConstructedTokenDef::ConstructedTokenDef(Document *document, istream &stream)
+        : TokenDef(document,Bytecode::ConstructedDef,stream) {
         while(predict(stream,Bytecode::TokenRef)){
-            data::u64 sub_id;
-            read(stream,Bytecode::TokenRef);
-            read(stream,sub_id);
-            sub_token_list.push_back(sub_id);
+            sub_token_list.push_back(new TokenRef(document,stream));
         }
         read(stream,Bytecode::EndMark);
     }
+
+    std::string ConstructedTokenDef::toString(){
+        return Format()<<'#'<<to_string(id)<<' '<<getName();
+    }
+
+    TokenDef::TokenDef(Document *document,Bytecode begin_mark,ID id) : Node(document,begin_mark),id(id) {}
+
+    TokenDef::TokenDef(Document *document,Bytecode begin_mark,std::istream &stream) : Node(document,begin_mark,stream) {
+        read(stream,id);
+    }
+
+    void TokenDef::toHex(ostream &stream) {
+        Node::toHex(stream);
+        write(stream,id);
+    }
+
+
+    Inst::Inst(Document *document,Bytecode begin_mark) : Node(document,begin_mark) {}
+
+    Inst::Inst(Document *document, Bytecode begin_mark, istream &stream) : Node(document, begin_mark, stream) {}
+
+
+    InterfaceFunction::InterfaceFunction(Document *document,TokenRef *name,std::list<Param *> params,Result *result)
+        : FunctionDeclare(document,Bytecode::ItfFtnDef,AccessFlag::Public,name,std::move(params),result){}
+
+    InterfaceFunction::InterfaceFunction(Document *document, istream &stream)
+        : FunctionDeclare(document,Bytecode::ItfFtnDef,stream){}
+
+    std::string InterfaceFunction::toString() {
+        return FunctionDeclare::toString();
+    }
+
+
 }

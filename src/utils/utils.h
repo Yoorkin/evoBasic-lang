@@ -21,7 +21,12 @@ namespace evoBasic{
     struct DebugInfo{
         std::string text;
         std::list<DebugInfo*> childs;
-
+        void add(DebugInfo *info){
+            childs.push_back(info);
+        }
+        void add(std::string text){
+            childs.push_back(new DebugInfo{text});
+        }
         ~DebugInfo(){
             for(auto child:childs)delete child;
         }

@@ -102,10 +102,9 @@ int main(int argc,char *argv[]) {
 
 
     for(const auto& package_path : depend_libs){
-        il::Document package;
         fstream package_file(package_path,ios::binary | ios::in);
-        package.fromHex(package_file);
-        Logger::dev(package.toString());
+        auto package = new il::Document(package_file);
+        Logger::dev(package->toString());
     }
 
 
