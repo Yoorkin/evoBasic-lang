@@ -8,7 +8,7 @@ using namespace std;
 
 namespace evoBasic {
 
-    CmdDistributor &CmdDistributor::on(const string &cmd, CmdHandler handler) {
+    CmdDistributor::Node *CmdDistributor::configure_cmd(const string &cmd){
         Node *current = root;
         for (auto x:cmd) {
             if (current->childs[x] == nullptr)
@@ -16,11 +16,21 @@ namespace evoBasic {
             current = current->childs[x];
         }
         current->isEnd = true;
-        current->handler = std::move(handler);
+        return current;
+    }
+
+    CmdDistributor &CmdDistributor::on(const string &cmd, CmdHandlerWithInput handler) {
+        configure_cmd(cmd)->handler = std::move(handler);
         return *this;
     }
 
-    CmdDistributor &CmdDistributor::others(CmdHandler handler) {
+    CmdDistributor &CmdDistributor::on(const string &cmd, CmdHandler handler) {
+        configure_cmd(cmd)->handler_void = std::move(handler);
+        return *this;
+    }
+
+
+    CmdDistributor &CmdDistributor::others(CmdHandlerWithInput handler) {
         other = std::move(handler);
         return *this;
     }
@@ -31,7 +41,12 @@ namespace evoBasic {
             auto x = raw[i];
             if (current->isEnd) {
                 auto arg = raw.substr(i, raw.size()-i);
-                current->handler(arg);
+                if(current->handler){
+                    current->handler(arg);
+                }
+                else if(current->handler_void){
+                    current->handler_void();
+                }
                 return;
             }
             else if (current->childs[x] != nullptr){
@@ -46,16 +61,30 @@ namespace evoBasic {
                 return;
             }
         }
-        current->handler("");
+
+        if(current->handler){
+            current->handler("");
+        }
+        else if(current->handler_void){
+            current->handler_void();
+        }
     }
 
     CmdDistributor::~CmdDistributor() {
         delete root;
     }
 
-    CmdDistributor &CmdDistributor::unmatched(CmdHandler handler) {
+    CmdDistributor &CmdDistributor::unmatched(CmdHandlerWithInput handler) {
         unmatch = move(handler);
         return *this;
+    }
+
+    CmdDistributor &CmdDistributor::on(const std::string &cmd, const std::string &alias, CmdHandlerWithInput handler) {
+        return on(cmd,handler).on(alias,handler);
+    }
+
+    CmdDistributor &CmdDistributor::on(const string &cmd, const string &alias, CmdHandler handler) {
+        return on(cmd,handler).on(alias,handler);
     }
 
 

@@ -68,8 +68,8 @@ namespace evoBasic{
         }while(token->getKind() != Token::EOF_);
 
         for(auto& token:tokens){
-            Logger::dev(token->toString());
-            Logger::dev("\n");
+            Logger::print(Channel::Tokens,token->toString());
+            Logger::print(Channel::Tokens,"\n");
         }
     }
 
@@ -84,7 +84,7 @@ namespace evoBasic{
 
     void Lexer::match(Token::Enum kind) {
         if(getNextToken()->getKind() == kind){
-            Logger::dev(Format() << "match: " << getNextToken()->toString() << '\n');
+            Logger::print(Channel::Tokens,Format() << "match: " << getNextToken()->toString() << '\n');
             next_token++;
         }
         else throw SyntaxException(*getNextToken(),kind);
@@ -92,7 +92,7 @@ namespace evoBasic{
 
     void Lexer::match(Token::Enum kind,std::set<Token::Enum> follows,std::string message){
         if(getNextToken()->getKind() == kind){
-            Logger::dev(Format() << "match: " << getNextToken()->toString() << '\n');
+            Logger::print(Channel::Tokens,Format() << "match: " << getNextToken()->toString() << '\n');
             next_token++;
         }
         else{
@@ -104,7 +104,7 @@ namespace evoBasic{
     void Lexer::skipUntil(std::set<Token::Enum> follows) {
         if(next_token == tokens.size())throw "error";
         while(!follows.contains(getNextToken()->getKind())){
-            Logger::dev(Format() << "skip : " << getNextToken()->toString() << '\n');
+            Logger::print(Channel::Tokens,Format() << "skip : " << getNextToken()->toString() << '\n');
             next_token++;
         }
     }

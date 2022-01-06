@@ -24,11 +24,8 @@ list<string> packages;
 
 string output_name = "out.bkg";
 
-void enableDevInfo(string str){
-    Logger::debugMode = true;
-}
 
-void addSources(string str_path){
+void addSourcesOrPackages(string str_path){
     if(fs::exists(str_path)){
         fs::path file_path(str_path);
         if(file_path.extension() == extensions::source){
@@ -51,7 +48,7 @@ void setOutputName(string name){
     output_name = name + ".bkg";
 }
 
-void printVersionInfo(string){
+void printVersionInfo(){
     cout<<"evoBasic Compiler"<<endl
         <<"Version 0.1.0"<<endl
         <<"Repo URL "<<endl;
@@ -64,7 +61,7 @@ void unmatched(string str){
 }
 
 
-void printHelpInfo(string){
+void printHelpInfo(){
     cout<<
         R"HELPTEXT(
 Usage:
@@ -82,15 +79,46 @@ Options:
     enable_compile = false;
 }
 
+void enableEmitAST(){
+    Logger::enable(Channel::AbstractTrees);
+}
+
+void enableEmitTokens(){
+    Logger::enable(Channel::Tokens);
+}
+
+void enableEmitParseTrees(){
+    Logger::enable(Channel::ParseTrees);
+}
+
+void enableEmitSymbolTable(){
+    Logger::enable(Channel::SymbolTable);
+}
+
+void enableEmitIL(){
+    Logger::enable(Channel::IL);
+}
+
+void enableDevInfo(){
+    enableEmitAST();
+    enableEmitTokens();
+    enableEmitParseTrees();
+    enableEmitSymbolTable();
+    enableEmitIL();
+}
+
 int main(int argc,char *argv[]) {
 
     CmdDistributor distributor;
-    distributor.on("--dev-info",enableDevInfo)
-            .on("--output=",setOutputName)
-            .on("-o=",setOutputName)
-            .on("--help",printHelpInfo)
-            .on("-h",printHelpInfo)
-            .others(addSources)
+    distributor.on("--dev-info",        enableDevInfo)
+            .on("--output=",    "-o=",  setOutputName)
+            .on("--help",       "-h",   printHelpInfo)
+            .on("--emit-tokens",       enableEmitTokens)
+            .on("--emit-parse-trees",  enableEmitParseTrees)
+            .on("--emit-ast",          enableEmitAST)
+            .on("--emit-symbol-table", enableEmitSymbolTable)
+            .on("--emit-il",           enableEmitIL)
+            .others(addSourcesOrPackages)
             .unmatched(unmatched);
 
     for(int i=1;i<argc;i++){
@@ -110,7 +138,7 @@ int main(int argc,char *argv[]) {
     for(const auto& package_path : packages){
         fstream package_file(package_path,ios::binary | ios::in);
         auto package = new il::Document(package_file);
-        Logger::dev(package->toString());
+        Logger::print(Channel::IL, package->toString());
     }
 
 
@@ -120,7 +148,7 @@ int main(int argc,char *argv[]) {
         auto ast = parser.parseGlobal();
         trees.push_back(ast);
 
-        Logger::dev(debugParseTree(ast));
+        Logger::print(Channel::ParseTrees,debugParseTree(ast));
 
         Semantic::collectSymbol(ast,context);
         Semantic::collectDetail(ast,context);
@@ -133,10 +161,10 @@ int main(int argc,char *argv[]) {
     for(auto tree : trees){
         auto ast = Semantic::typeCheck(tree,context);
         asts.push_back(ast);
-        Logger::dev(debugAST(ast));
+        Logger::print(Channel::AbstractTrees,debugAST(ast));
     }
 
-    Logger::dev(type::debugSymbolTable(context->getGlobal()->debug()));
+    Logger::print(Channel::SymbolTable,type::debugSymbolTable(context->getGlobal()->debug()));
 
     if(Logger::errorCount == 0){
         ILGen gen;
@@ -149,7 +177,7 @@ int main(int argc,char *argv[]) {
         for(auto &package : packages){
             document.addDependenceLibrary(package);
         }
-        Logger::dev(document.toString());
+        Logger::print(Channel::IL,document.toString());
         fstream file(output_name,ios::binary | ios::out);
         document.toHex(file);
     }

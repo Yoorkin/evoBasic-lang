@@ -9,7 +9,7 @@ namespace evoBasic{
 
     const string RED="\033[0;31m",YELLOW="\033[0;33m",PURPLE = "\033[0;35m",NC="\033[0m";
 
-    bool Logger::debugMode = false;
+    std::vector<bool> Logger::channels(50,false);
 
     int Logger::errorCount=0;
     int Logger::warningCount=0;
@@ -22,10 +22,6 @@ namespace evoBasic{
     void Logger::warning(string message){
         warningCount++;
         *out << YELLOW << "warning: " << message << NC << endl;
-    }
-
-    void Logger::dev(string message){
-        if(debugMode)*out<<message;
     }
 
     ostream* Logger::out = &std::cout;
@@ -108,6 +104,20 @@ namespace evoBasic{
         *out << RED << "error: " << message << NC << endl;
         for(auto pos:location)
             code(pos,true);
+    }
+
+    void Logger::enable(Channel channel) {
+        channels[(int)channel] = true;
+    }
+
+    void Logger::disable(Channel channel) {
+        channels[(int)channel] = false;
+    }
+
+    void Logger::print(Channel channel, std::string message) {
+        if(channels[(int)channel]){
+            *out << message;
+        }
     }
 
 }

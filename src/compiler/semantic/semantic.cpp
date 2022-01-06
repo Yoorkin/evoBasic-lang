@@ -50,12 +50,13 @@ namespace evoBasic{
 
     bool Semantic::solveByteLengthDependencies(Context *context) {
         if(context->byteLengthDependencies.solve()){
-            Logger::dev("update memory layout topo order: ");
+            Logger::print(Channel::ByteLengthTopologicalOrder,"update memory layout topological order: ");
             for(auto &domain : context->byteLengthDependencies.getTopologicalOrder()){
                 domain->updateMemoryLayout();
-                Logger::dev(Format() << " -> " << domain->mangling() << "{" << domain->getByteLength() << "}");
+                Logger::print(Channel::ByteLengthTopologicalOrder,
+                              Format() << " -> " << domain->mangling() << "{" << domain->getByteLength() << "}");
             }
-            Logger::dev("\n");
+            Logger::print(Channel::ByteLengthTopologicalOrder,"\n");
             return true;
         }
         else{
@@ -81,12 +82,12 @@ namespace evoBasic{
                 cls->generateClassInfo();
                 order.push_back(cls->mangling('.'));
             }
-            Logger::dev("inherit topo order: ");
+            Logger::print(Channel::InheritTopologicalOrder,"inherit topo order: ");
             for(auto name:order){
-                Logger::dev(" -> ");
-                Logger::dev(name);
+                Logger::print(Channel::InheritTopologicalOrder," -> ");
+                Logger::print(Channel::InheritTopologicalOrder,name);
             }
-            Logger::dev("\n");
+            Logger::print(Channel::InheritTopologicalOrder,"\n");
             return true;
         }
         else{
