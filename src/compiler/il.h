@@ -41,6 +41,15 @@ namespace evoBasic::il{
         Document *getDocument();
         virtual std::string toString()=0;
         virtual void toHex(std::ostream &stream);
+        virtual DebugInfo *toStructuredInfo();
+    };
+
+    class Inst : public Node{
+    public:
+        Inst(Document *document,Bytecode begin_mark);
+        Inst(Document *document,Bytecode begin_mark,std::istream &stream);
+        using ByteSize = data::u64;
+        virtual ByteSize getByteSize() = 0;
     };
 
 
@@ -92,12 +101,10 @@ namespace evoBasic::il{
     class Member : public Node{
         AccessFlag access = AccessFlag::Private;
         TokenRef *name = nullptr;
-        Bytecode mark;
     public:
         Member(Document *document,Bytecode begin_mark,AccessFlag access,TokenRef *name);
         Member(Document *document,Bytecode begin_mark,std::istream &stream);
         std::string toString()override;
-        virtual DebugInfo *toStructuredInfo();
         void toHex(std::ostream &stream)override;
     };
 
@@ -196,11 +203,15 @@ namespace evoBasic::il{
 
     class Opt : public Param{
         BasicBlock *initial = nullptr;
+        data::u8 *initial_memory = nullptr;
+        Inst::ByteSize initial_memory_size = 0;
     public:
         Opt(Document *document,TokenRef *name,TokenRef *type,bool ref,BasicBlock *initial);
         Opt(Document *document,std::istream &stream);
         std::string toString()override;
+        DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
+        ~Opt();
     };
 
     class Inf : public Param{
@@ -240,14 +251,6 @@ namespace evoBasic::il{
         FunctionDeclare(Document *document, Bytecode begin_mark, std::istream &stream);
         void toHex(std::ostream &stream)override;
         DebugInfo *toStructuredInfo()override;
-    };
-
-    class Inst : public Node{
-    public:
-        Inst(Document *document,Bytecode begin_mark);
-        Inst(Document *document,Bytecode begin_mark,std::istream &stream);
-        using ByteSize = data::u64;
-        virtual ByteSize getByteSize() = 0;
     };
 
     class FunctionDefine : public FunctionDeclare{
@@ -462,6 +465,7 @@ namespace evoBasic::il{
         void setAddress(Inst::ByteSize value);
 
         std::string toString()override;
+        DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
 
         BasicBlock(Document *document);
@@ -533,7 +537,6 @@ namespace evoBasic::il{
     void write(std::ostream &stream,Bytecode code){
         write(stream,(data::u8)code);
     }
-
 }
 
 #endif //EVOBASIC_IL_H

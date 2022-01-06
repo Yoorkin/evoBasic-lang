@@ -11,13 +11,19 @@ namespace evoBasic::il{
     void read(std::istream &stream,Bytecode code) {
         auto c = stream.get();
         if((data::u8)c!=(data::u8)code)
-            PANIC;
+            PANICMSG(to_string(stream.tellg()));
     }
 
     bool predict(std::istream &stream,Bytecode code){
         data::u8 byte;
         byte = stream.peek();
         return byte == (data::u8)code;
+    }
+
+    void read(istream &stream, data::u8 *memory, Inst::ByteSize size){
+        for(Inst::ByteSize i = 0;i<size;i++){
+            stream.read(reinterpret_cast<char*>(memory+i),1);
+        }
     }
 
     void read(istream &stream, std::vector<Member*> &members,Document *document){
@@ -105,15 +111,6 @@ namespace evoBasic::il{
     BasicBlock &BasicBlock::Ldarg(DataType data) {
         insts.push_back(new InstWithData(getDocument(),InstWithData::Ldarg,data));
         return *this;
-    }
-
-    std::string BasicBlock::toString() {
-        Format fmt;
-        fmt << '\n' << to_string(getAddress()) << ":";
-        for(auto i : insts){
-            fmt << "\n    " << i->toString();
-        }
-        return fmt;
     }
 
     BasicBlock &BasicBlock::Br(BasicBlock *block) {
@@ -543,8 +540,36 @@ namespace evoBasic::il{
         return Format() << "conv." << ty[(int)src] << " " << ty[(int)dst];
     }
 
+    void printILInfo(DebugInfo *info,string indent,ostream &stream){
+        stream << indent << info->text;
+        if(!info->childs.empty()){
+            stream << "{\n";
+            for(auto child : info->childs){
+                printILInfo(child,indent + "    ",stream);
+                stream << '\n';
+            }
+            stream << indent << '}';
+        }
+    }
+
     std::string Document::toString() {
-        return "Document";
+        Format fmt;
+        fmt << "\nToken:\n";
+        for(auto token : token_pool){
+            fmt << '\t' << token->toString() << '\n';
+        }
+        fmt << "\nimport:\n";
+        for(auto pkg : dependencies){
+            fmt << '\t' << pkg->toString() << '\n';
+        }
+        fmt << "\ncode:\n";
+        for(auto member : members){
+            auto tmp = member->toStructuredInfo();
+            printILInfo(tmp,"\t",fmt.stream);
+            fmt << '\n';
+            delete tmp;
+        }
+        return fmt;
     }
 
     void Document::add(Member *member) {
@@ -613,10 +638,19 @@ namespace evoBasic::il{
 
     BasicBlock::BasicBlock(Document *document) : Node(document){}
 
-    void TokenRef::toHex(std::ostream &stream) {
-        write(stream,Bytecode::TokenRef);
-        write(stream,id);
+    DebugInfo *BasicBlock::toStructuredInfo() {
+        auto ret = Node::toStructuredInfo();
+        for(auto inst : insts){
+            ret->add(inst->toString());
+        }
+        return ret;
     }
+
+    std::string BasicBlock::toString() {
+        return to_string(getAddress());
+    }
+
+
 
 
 
@@ -626,24 +660,31 @@ namespace evoBasic::il{
         read(stream,id);
     }
 
+    void TokenRef::toHex(std::ostream &stream) {
+        Node::toHex(stream);
+        write(stream,id);
+    }
+
 
     bool TokenRef::isEmpty() {
         return id == -1 || getDocument() == nullptr;
     }
 
     Member::Member(Document *document,Bytecode begin_mark,AccessFlag access,TokenRef *name)
-        : Node(document,begin_mark),mark(begin_mark),access(access),name(name){}
+        : Node(document,begin_mark),access(access),name(name){}
 
     Member::Member(Document *document,Bytecode begin_mark,std::istream &stream)
-        : Node(document,begin_mark,stream),mark(begin_mark){
-        read(stream, begin_mark);
+        : Node(document,begin_mark,stream){
         if(predict(stream,Bytecode::PubAcsDef)){
+            read(stream,Bytecode::PubAcsDef);
             access = AccessFlag::Public;
         }
         else if(predict(stream,Bytecode::PriAcsDef)){
+            read(stream,Bytecode::PriAcsDef);
             access = AccessFlag::Private;
         }
         else if(predict(stream,Bytecode::PtdAcsDef)){
+            read(stream,Bytecode::PtdAcsDef);
             access = AccessFlag::Protected;
         }
         else PANIC;
@@ -652,7 +693,7 @@ namespace evoBasic::il{
     }
 
     void Member::toHex(ostream &stream) {
-        write(stream,mark);
+        Node::toHex(stream);
         switch(access){
             case AccessFlag::Public:
                 write(stream,Bytecode::PubAcsDef);
@@ -682,10 +723,6 @@ namespace evoBasic::il{
                 break;
         }
         return fmt;
-    }
-
-    DebugInfo *Member::toStructuredInfo() {
-        return new DebugInfo{toString()};
     }
 
     Class::Class(Document *document, AccessFlag access, TokenRef *name, TokenRef *extend, std::list<TokenRef*> impl, std::list<Member*> members)
@@ -927,28 +964,43 @@ namespace evoBasic::il{
 
 
     void Opt::toHex(std::ostream &stream) {
-        write(stream,Bytecode::OptDef);
         Param::toHex(stream);
         write(stream,Bytecode::InstBeg);
+        write(stream,initial_memory_size);
         initial->toHex(stream);
         write(stream,Bytecode::EndMark);
     }
 
     Opt::Opt(Document *document, TokenRef *name, TokenRef *type, bool ref, BasicBlock *initial)
-        : Param(document,name,type,ref,Bytecode::OptDef),initial(initial){}
+        : Param(document,name,type,ref,Bytecode::OptDef),initial(initial){
+        initial->setAddress(0);
+        initial_memory_size = initial->getByteSize();
+    }
 
     Opt::Opt(Document *document, istream &stream)
         : Param(document,Bytecode::OptDef,stream){
         read(stream,Bytecode::InstBeg);
-        // todo: read initial BasicBlock
+        read(stream,initial_memory_size);
+        initial_memory = (data::u8*)malloc(initial_memory_size);
+        read(stream,initial_memory,initial_memory_size);
         read(stream,Bytecode::EndMark);
+    }
+
+    DebugInfo *Opt::toStructuredInfo() {
+        auto ret = Param::toStructuredInfo();
+        if(initial)ret->add(initial->toStructuredInfo());
+        return ret;
+    }
+
+    Opt::~Opt() {
+        delete initial_memory;
     }
 
     Local::Local(Document *document, TokenRef *name, TokenRef *type, Local::ID address)
         : Node(document,Bytecode::LocalDef),name(name),type(type),address(address){}
 
     Local::Local(Document *document, istream &stream, ID address)
-            : Node(document,Bytecode::LocalDef),address(address) {
+            : Node(document,Bytecode::LocalDef,stream),address(address) {
         name = new TokenRef(document,stream);
         type = new TokenRef(document,stream);
     }
@@ -960,7 +1012,7 @@ namespace evoBasic::il{
     }
 
     Result::Result(Document *document, TokenRef *type)
-        : Node(document,Bytecode::ResultDef){}
+        : Node(document,Bytecode::ResultDef),type(type){}
 
     Result::Result(Document *document, istream &stream)
         : Node(document,Bytecode::ResultDef,stream){
@@ -1007,7 +1059,7 @@ namespace evoBasic::il{
         auto ret = new DebugInfo{toString()};
         auto param_info = new DebugInfo{"Parameters"};
         for(auto param : params){
-            param_info->add(param->toString());
+            param_info->add(param->toStructuredInfo());
         }
         ret->add(param_info);
         if(result){
@@ -1016,11 +1068,10 @@ namespace evoBasic::il{
         return ret;
     }
 
-
     FunctionDefine::FunctionDefine(Document *document, Bytecode begin_mark, AccessFlag access, TokenRef *name,
                                    std::list<Param*> params, Result *result, std::list<Local*> locals, std::list<BasicBlock*> blocks)
         : FunctionDeclare(document, begin_mark, access, name, std::move(params), result), locals(locals), blocks(std::move(blocks)){
-        for(auto block : blocks){
+        for(auto block : this->blocks){
             block->setAddress(block_byte_length);
             block_byte_length += block->getByteSize();
         }
@@ -1036,7 +1087,7 @@ namespace evoBasic::il{
         read(stream,Bytecode::InstBeg);
         read(stream,block_byte_length);
         blocks_memory = (data::Byte*)malloc(block_byte_length);
-        stream.read((char*)blocks_memory,block_byte_length);
+        read(stream,blocks_memory,block_byte_length);
         read(stream,Bytecode::EndMark);
     }
 
@@ -1066,7 +1117,7 @@ namespace evoBasic::il{
         ret->add(local_info);
         auto block_info = new DebugInfo{"blocks"};
         for(auto block : blocks){
-            block_info->add(block->toString());
+            block_info->add(block->toStructuredInfo());
         }
         ret->add(block_info);
         return ret;
@@ -1101,22 +1152,6 @@ namespace evoBasic::il{
         alias->toHex(stream);
     }
 
-    void Document::toHex(ostream &stream) {
-        write(stream,Bytecode::DocumentDef);
-
-        for(auto token : token_pool){
-            token->toHex(stream);
-        }
-
-        for(auto library : dependencies){
-            write(stream,Bytecode::Depend);
-            library->toHex(stream);
-        }
-
-        for(auto member : members)member->toHex(stream);
-        write(stream,Bytecode::EndMark);
-    }
-
 
     TokenRef *Document::getTokenRef(data::u64 id) {
         ASSERT(id > token_pool.size(),"invalid token id");
@@ -1140,31 +1175,49 @@ namespace evoBasic::il{
 
     Document::Document() : Node(nullptr,Bytecode::DocumentDef){}
 
-    Document::Document(istream &stream) : Node(nullptr,Bytecode::DocumentDef){
+    Document::Document(istream &stream) : Node(nullptr,Bytecode::DocumentDef,stream){
         while(true){
             TokenDef *token;
             if(predict(stream,Bytecode::TextTokenDef)){
-                read(stream,Bytecode::TextTokenDef);
                 token = new TextTokenDef(this,stream);
                 token_pool.push_back(token);
             }
             else if(predict(stream,Bytecode::ConstructedDef)){
-                read(stream,Bytecode::ConstructedDef);
                 token = new ConstructedTokenDef(this,stream);
                 token_pool.push_back(token);
             }
             else{
                 break;
             }
-            token_pool_map.insert({token->getName(),token_pool.size()});
+        }
+
+        for(int i=0;i<token_pool.size();i++){
+            token_pool_map.insert({token_pool[i]->getName(),i});
         }
         
-        while(predict(stream,Bytecode::Depend)){
+        while(predict(stream,Bytecode::DependDef)){
+            read(stream,Bytecode::DependDef);
             dependencies.push_back(new TokenRef(this,stream));
         }
         
         read(stream,members,this);
         read(stream,Bytecode::EndMark);
+    }
+
+    void Document::toHex(ostream &stream) {
+        write(stream,Bytecode::DocumentDef);
+
+        for(auto token : token_pool){
+            token->toHex(stream);
+        }
+
+        for(auto library : dependencies){
+            write(stream,Bytecode::DependDef);
+            library->toHex(stream);
+        }
+
+        for(auto member : members)member->toHex(stream);
+        write(stream,Bytecode::EndMark);
     }
 
     void Document::addDependenceLibrary(std::string name) {
@@ -1317,7 +1370,7 @@ namespace evoBasic::il{
     }
 
     InstWithData::InstWithData(Document *document,InstWithData::Op op, DataType type)
-        : Inst(document,opToBytecode(op)),type(type){}
+        : Inst(document,opToBytecode(op)),type(type),op(op){}
 
     Bytecode InstWithData::opToBytecode(InstWithData::Op op) {
         switch(op){
@@ -1341,7 +1394,8 @@ namespace evoBasic::il{
             case GE:        return Bytecode::GE;        
             case Neg:       return Bytecode::Neg;       
             case Pop:       return Bytecode::Pop;       
-            case Dup:       return Bytecode::Dup;       
+            case Dup:       return Bytecode::Dup;
+            default: PANIC;
         }
     }
 
@@ -1356,7 +1410,7 @@ namespace evoBasic::il{
     }
 
     InstWithDataToken::InstWithDataToken(Document *document, InstWithDataToken::Op op, DataType type, TokenRef *token)
-        : Inst(document,opToBytecode(op)),op(op),token(token){}
+        : Inst(document,opToBytecode(op)),op(op),type(type),token(token){}
 
     void InstWithDataToken::toHex(std::ostream &stream) {
         Bytecode code = opToBytecode(op);
@@ -1393,7 +1447,7 @@ namespace evoBasic::il{
         if(document)document->addResource(this);
     }
 
-    Node::Node(Document *document,Bytecode begin_mark,istream &stream) : begin_mark(begin_mark){
+    Node::Node(Document *document,Bytecode begin_mark,istream &stream) : document(document),begin_mark(begin_mark){
         read(stream,begin_mark);
     }
 
@@ -1403,12 +1457,16 @@ namespace evoBasic::il{
         write(stream,begin_mark);
     }
 
+    DebugInfo *Node::toStructuredInfo() {
+        return new DebugInfo{toString()};
+    }
+
     std::string TextTokenDef::getName() {
         return text;
     }
 
     void TextTokenDef::toHex(ostream &stream) {
-        write(stream,Bytecode::TextTokenDef);
+        TokenDef::toHex(stream);
         for(auto c : text){
             write(stream,c);
         }
@@ -1442,15 +1500,6 @@ namespace evoBasic::il{
         return fmt.str();
     }
 
-    void ConstructedTokenDef::toHex(ostream &stream) {
-        TokenDef::toHex(stream);
-        for(auto sub_id : sub_token_list){
-            write(stream,Bytecode::TokenRef);
-            write(stream,sub_id);
-        }
-        write(stream,Bytecode::EndMark);
-    }
-
     ConstructedTokenDef::ConstructedTokenDef(Document *document, TokenDef::ID id, std::list<TokenRef*> sub_tokens)
         : TokenDef(document,Bytecode::ConstructedDef,id), sub_token_list(std::move(sub_tokens)){}
 
@@ -1460,6 +1509,15 @@ namespace evoBasic::il{
             sub_token_list.push_back(new TokenRef(document,stream));
         }
         read(stream,Bytecode::EndMark);
+    }
+
+    void ConstructedTokenDef::toHex(ostream &stream) {
+        TokenDef::toHex(stream);
+        for(auto sub_id : sub_token_list){
+            write(stream,Bytecode::TokenRef);
+            write(stream,sub_id->getID());
+        }
+        write(stream,Bytecode::EndMark);
     }
 
     std::string ConstructedTokenDef::toString(){

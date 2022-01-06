@@ -12,46 +12,43 @@
 namespace fs = std::filesystem;
 using namespace evoBasic;
 using namespace std;
-list<Source*> sources;
+
+namespace extensions{
+    const string package = ".bkg";
+    const string source = ".eb";
+}
+
 bool enable_compile = true;
+list<Source*> sources;
+list<string> packages;
+
 string output_name = "out.bkg";
 
 void enableDevInfo(string str){
     Logger::debugMode = true;
 }
 
-void addSources(string path){
-    if(fs::exists(path)){
-        sources.push_back(new FileSource(path));
+void addSources(string str_path){
+    if(fs::exists(str_path)){
+        fs::path file_path(str_path);
+        if(file_path.extension() == extensions::source){
+            sources.push_back(new FileSource(str_path));
+        }
+        else if(file_path.extension() == extensions::package){
+            packages.push_back(str_path);
+        }
+        else{
+            Logger::error(Format() << "Unrecognized file extension "<< file_path.extension());
+        }
     }
     else{
-        Logger::error(Format() << "cannot find file '" << path << "'");
+        Logger::error(Format() << "cannot find file '" << str_path << "'");
         enable_compile = false;
     }
 }
 
 void setOutputName(string name){
     output_name = name + ".bkg";
-}
-
-void printHelpInfo(string){
-    cout<<
-R"HELPTEXT(
-Usage:
-     ecc <Options> <Sources> -o=<Output File Name>
-
-Options:
-     --help-info
-     -h                          print help information
-     --output=<File Name>
-     --o=<File name>             set output package name
-     --backage
-     -b                          import .bkg dependencies
-     --dev-info                  print information about lexeme,abstract tree,symbol table and IR
-
-)HELPTEXT"
-    <<endl;
-    enable_compile = false;
 }
 
 void printVersionInfo(string){
@@ -61,15 +58,27 @@ void printVersionInfo(string){
     enable_compile = false;
 }
 
-std::list<string> depend_libs;
-
-void addDependLib(string lib){
-    Logger::dev(Format() << "Dependencies Pack:"<<lib);
-    depend_libs.push_back(lib);
-}
-
 void unmatched(string str){
     Logger::error(Format() << "unsupported option '" << str << "'");
+    enable_compile = false;
+}
+
+
+void printHelpInfo(string){
+    cout<<
+        R"HELPTEXT(
+Usage:
+     ecc <Options> <Sources> <Packages> -o=<Output File Name>
+
+Options:
+     --help-info
+     -h                          print help information
+     --output=<File Name>
+     --o=<File name>             set output package name
+     --dev-info                  print information about lexeme,abstract tree,symbol table and IR
+
+)HELPTEXT"
+        <<endl;
     enable_compile = false;
 }
 
@@ -81,8 +90,6 @@ int main(int argc,char *argv[]) {
             .on("-o=",setOutputName)
             .on("--help",printHelpInfo)
             .on("-h",printHelpInfo)
-            .on("--backage=",addDependLib)
-            .on("-b=",addDependLib)
             .others(addSources)
             .unmatched(unmatched);
 
@@ -97,11 +104,10 @@ int main(int argc,char *argv[]) {
 
     if(sources.empty()){
         Logger::error("no input files.");
-        printHelpInfo("");
     }
 
 
-    for(const auto& package_path : depend_libs){
+    for(const auto& package_path : packages){
         fstream package_file(package_path,ios::binary | ios::in);
         auto package = new il::Document(package_file);
         Logger::dev(package->toString());
@@ -140,8 +146,8 @@ int main(int argc,char *argv[]) {
             gen.visitGlobal(ast,&document);
         }
 
-        for(auto &lib : depend_libs){
-            document.addDependenceLibrary(lib);
+        for(auto &package : packages){
+            document.addDependenceLibrary(package);
         }
         Logger::dev(document.toString());
         fstream file(output_name,ios::binary | ios::out);
