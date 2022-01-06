@@ -120,5 +120,11 @@ namespace evoBasic{
         }
     }
 
+    void Logger::lazy_print(Channel channel, Logger::PrintAction action) {
+        if(channels[(int)channel]){
+            *out << action();
+        }
+    }
+
 }
 

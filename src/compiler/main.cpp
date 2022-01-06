@@ -125,33 +125,36 @@ int main(int argc,char *argv[]) {
         distributor.distribute(argv[i]);
     }
 
-    auto context = new Context;
-    list<parseTree::Global*> trees;
-
     if(!enable_compile)return 0;
-
     if(sources.empty()){
-        Logger::error("no input files.");
+        Logger::error("no input source files.");
     }
 
+    auto context = new Context;
 
     for(const auto& package_path : packages){
         fstream package_file(package_path,ios::binary | ios::in);
         auto package = new il::Document(package_file);
-        Logger::print(Channel::IL, package->toString());
+        Logger::lazy_print(Channel::IL, [&](){
+            return package->toString();
+        });
     }
 
+
+    list<parseTree::Global*> trees;
 
     for(auto source : sources){
         Lexer lexer(source);
         Parser parser(&lexer);
-        auto ast = parser.parseGlobal();
-        trees.push_back(ast);
+        auto parse_tree = parser.parseGlobal();
+        trees.push_back(parse_tree);
 
-        Logger::print(Channel::ParseTrees,debugParseTree(ast));
+        Logger::lazy_print(Channel::ParseTrees,[&](){
+            return debugParseTree(parse_tree);
+        });
 
-        Semantic::collectSymbol(ast,context);
-        Semantic::collectDetail(ast,context);
+        Semantic::collectSymbol(parse_tree, context);
+        Semantic::collectDetail(parse_tree, context);
     }
 
     Semantic::solveInheritDependencies(context);
@@ -161,10 +164,14 @@ int main(int argc,char *argv[]) {
     for(auto tree : trees){
         auto ast = Semantic::typeCheck(tree,context);
         asts.push_back(ast);
-        Logger::print(Channel::AbstractTrees,debugAST(ast));
+        Logger::lazy_print(Channel::AbstractTrees,[&](){
+            return debugAST(ast);
+        });
     }
 
-    Logger::print(Channel::SymbolTable,type::debugSymbolTable(context->getGlobal()->debug()));
+    Logger::lazy_print(Channel::SymbolTable,[&](){
+        return type::debugSymbolTable(context->getGlobal()->debug());
+    });
 
     if(Logger::errorCount == 0){
         ILGen gen;
@@ -177,7 +184,11 @@ int main(int argc,char *argv[]) {
         for(auto &package : packages){
             document.addDependenceLibrary(package);
         }
-        Logger::print(Channel::IL,document.toString());
+
+        Logger::lazy_print(Channel::IL,[&](){
+            return document.toString();
+        });
+
         fstream file(output_name,ios::binary | ios::out);
         document.toHex(file);
     }

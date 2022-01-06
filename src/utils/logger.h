@@ -14,6 +14,7 @@
 #include <list>
 #include <memory>
 #include <iostream>
+#include <functional>
 #include "token.h"
 
 namespace evoBasic{
@@ -26,15 +27,16 @@ namespace evoBasic{
         static std::ostream* out;
         static std::vector<bool> channels;
     public:
+        using PrintAction = std::function<std::string()>;
         Logger()=delete;
         static void redirect(std::ostream* stream);
         static int errorCount,warningCount;
-        static
 
         static void error(std::string message);
         static void warning(std::string message);
 
         static void print(Channel channel,std::string message);
+        static void lazy_print(Channel channel,PrintAction action);
         static void enable(Channel channel);
         static void disable(Channel channel);
 
