@@ -725,6 +725,18 @@ namespace evoBasic::il{
         return fmt;
     }
 
+    AccessFlag Member::getAccessFlag() {
+        return access;
+    }
+
+    TokenRef *Member::getNameToken() {
+        return name;
+    }
+
+    Member::~Member() {
+        delete name;
+    }
+
     Class::Class(Document *document, AccessFlag access, TokenRef *name, TokenRef *extend, std::list<TokenRef*> impl, std::list<Member*> members)
         : Member(document,Bytecode::ClassDef,access,name),extend_class(extend),impl_interface_list(std::move(impl)),members(std::move(members)){}
 
@@ -765,6 +777,12 @@ namespace evoBasic::il{
 
     std::string Class::toString() {
         return Member::toString() + " class";
+    }
+
+    Class::~Class() {
+        delete extend_class;
+        for(auto impl : impl_interface_list) delete impl;
+        for(auto member : members) delete member;
     }
 
     void Module::toHex(std::ostream &stream) {

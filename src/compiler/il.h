@@ -105,7 +105,11 @@ namespace evoBasic::il{
         Member(Document *document,Bytecode begin_mark,AccessFlag access,TokenRef *name);
         Member(Document *document,Bytecode begin_mark,std::istream &stream);
         std::string toString()override;
+        AccessFlag getAccessFlag();
+        TokenRef *getNameToken();
+        virtual type::Symbol *toSymbol()=0;
         void toHex(std::ostream &stream)override;
+        ~Member();
     };
 
     class Class : public Member{
@@ -118,6 +122,8 @@ namespace evoBasic::il{
         std::string toString()override;
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
+        type::Symbol *toSymbol()override;
+        ~Class();
     };
 
     class Module : public Member{
