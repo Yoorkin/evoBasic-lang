@@ -264,9 +264,8 @@ namespace evoBasic::type{
     };
 
     class Constructor : public Function{
-        parseTree::Constructor *constructor_node = nullptr;
     public:
-        explicit Constructor(parseTree::Constructor *node);
+        explicit Constructor();
         FunctionKind getFunctionKind()override;
         DebugInfo *debug()override;
     };
@@ -438,7 +437,6 @@ namespace evoBasic::type{
         DebugInfo *debug()override;
         data::ptr getByteLength()override;
         data::ptr getSize(){return size_;}
-        
     };
 
 

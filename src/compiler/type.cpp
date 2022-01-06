@@ -766,7 +766,9 @@ namespace evoBasic::type{
         return FunctionKind::Constructor;
     }
 
-    Constructor::Constructor(parseTree::Constructor *node) : constructor_node(node) {}
+    Constructor::Constructor() {
+        setAccessFlag(AccessFlag::Public);
+    }
 
 
     VirtualTable::VirtualTable(VirtualTable *base)

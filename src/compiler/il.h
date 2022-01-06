@@ -107,7 +107,8 @@ namespace evoBasic::il{
         std::string toString()override;
         AccessFlag getAccessFlag();
         TokenRef *getNameToken();
-        virtual type::Symbol *toSymbol()=0;
+        virtual type::Symbol *prepareSymbol()=0;
+        virtual void fillSymbolResources()=0;
         void toHex(std::ostream &stream)override;
         ~Member();
     };
@@ -116,34 +117,44 @@ namespace evoBasic::il{
         TokenRef *extend_class = nullptr;
         std::list<TokenRef*> impl_interface_list;
         std::list<Member*> members;
+        type::Class *symbol = nullptr;
     public:
         Class(Document *document,AccessFlag access,TokenRef *name,TokenRef *extend,std::list<TokenRef*> impl,std::list<Member*> members);
         Class(Document *document,std::istream &stream);
         std::string toString()override;
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
-        type::Symbol *toSymbol()override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
         ~Class();
     };
 
     class Module : public Member{
         std::list<Member*> members;
+        type::Module *symbol = nullptr;
     public:
         Module(Document *document,AccessFlag access,TokenRef *name,std::list<Member*> members);
         Module(Document *document,std::istream &stream);
         std::string toString()override;
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
+        ~Module();
     };
 
     class Interface : public Member{
         std::list<InterfaceFunction*> ftns;
+        type::Interface *symbol = nullptr;
     public:
         Interface(Document *document,AccessFlag access,TokenRef *name,std::list<InterfaceFunction*> functions);
         Interface(Document *document,std::istream &stream);
         std::string toString()override;
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
+        ~Interface();
     };
 
     class Enum : public Member{
@@ -152,49 +163,71 @@ namespace evoBasic::il{
         using Pair = std::pair<TokenRef*,Value>;
     private:
         std::list<Pair> enums;
+        type::Enumeration *symbol = nullptr;
     public:
         Enum(Document *document,AccessFlag access,TokenRef *name,std::list<Pair> enums);
         Enum(Document *document,std::istream &stream);
         std::string toString()override;
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
+        ~Enum();
     };
 
 
     class Fld : public Member{
         TokenRef *type = nullptr;
+        type::Variable *symbol = nullptr;
     public:
         Fld(Document *document,AccessFlag access,TokenRef *name,TokenRef *type);
         Fld(Document *document,std::istream &stream);
         std::string toString()override;
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
+        ~Fld();
     };
 
     class SFld : public Member{
         TokenRef *type = nullptr;
+        type::Variable *symbol = nullptr;
     public:
         SFld(Document *document,AccessFlag access,TokenRef *name,TokenRef *type);
         SFld(Document *document,std::istream &stream);
         std::string toString()override;
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
+        ~SFld();
     };
 
     class Record : public Member{
         std::list<Fld*> fields;
+        type::Record *symbol = nullptr;
     public:
         Record(Document *document,AccessFlag access,TokenRef *name,std::list<Fld*> fields);
         Record(Document *document,std::istream &stream);
         std::string toString()override;
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
+        ~Record();
     };
+
+    enum class ParamKind {Regular,Opt,Inf};
 
     class Param : public Node{
         bool is_ref = false;
         TokenRef *name = nullptr,*type = nullptr;
     public:
+        TokenRef *getNameToken();
+        TokenRef *getTypeToken();
+        virtual ParamKind getKind()=0;
+        bool isRef();
         Param(Document *document,TokenRef *name,TokenRef *type,bool ref,Bytecode begin_mark);
         Param(Document *document,Bytecode begin_mark,std::istream &stream);
         void toHex(std::ostream &stream)override;
@@ -203,6 +236,7 @@ namespace evoBasic::il{
 
     class Regular : public Param{
     public:
+        ParamKind getKind(){return ParamKind::Regular;}
         Regular(Document *document,TokenRef *name,TokenRef *type,bool ref);
         Regular(Document *document,std::istream &stream);
     };
@@ -212,6 +246,7 @@ namespace evoBasic::il{
         data::u8 *initial_memory = nullptr;
         Inst::ByteSize initial_memory_size = 0;
     public:
+        ParamKind getKind(){return ParamKind::Opt;}
         Opt(Document *document,TokenRef *name,TokenRef *type,bool ref,BasicBlock *initial);
         Opt(Document *document,std::istream &stream);
         std::string toString()override;
@@ -222,6 +257,7 @@ namespace evoBasic::il{
 
     class Inf : public Param{
     public:
+        ParamKind getKind(){return ParamKind::Inf;}
         Inf(Document *document,TokenRef *name,TokenRef *type,bool ref);
         Inf(Document *document,std::istream &stream);
         std::string toString()override;
@@ -246,12 +282,15 @@ namespace evoBasic::il{
         Result(Document *document,TokenRef *type);
         Result(Document *document,std::istream &stream);
         std::string toString()override;
+        TokenRef *getTypeToken();
         void toHex(std::ostream &stream)override;
     };
 
     class FunctionDeclare : public Member{
         std::list<Param*> params;
         Result *result = nullptr;
+    protected:
+        void fillParameterList(type::Function *symbol);
     public:
         FunctionDeclare(Document *document, Bytecode begin_mark, AccessFlag access, TokenRef *name, std::list<Param*> params, Result *result);
         FunctionDeclare(Document *document, Bytecode begin_mark, std::istream &stream);
@@ -276,53 +315,72 @@ namespace evoBasic::il{
     };
 
     class Ctor : public FunctionDefine{
+        type::Constructor *symbol = nullptr;
     public:
         Ctor(Document *document, std::list<Param*> params, std::list<Local*> locals, std::list<BasicBlock*> blocks);
         Ctor(Document *document, std::istream &stream);
         std::string toString()override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
     };
 
     class Ftn : public FunctionDefine{
+        type::UserFunction *symbol = nullptr;
     public:
         Ftn(Document *document, AccessFlag access, TokenRef *name,
             std::list<Param*> params, Result *result, std::list<Local*> locals, std::list<BasicBlock*> blocks);
         Ftn(Document *document, std::istream &stream);
         std::string toString()override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
     };
 
     class VFtn : public FunctionDefine{
+        type::UserFunction *symbol = nullptr;
     public:
         VFtn(Document *document, AccessFlag access, TokenRef *name,
              std::list<Param*> params, Result *result, std::list<Local*> locals, std::list<BasicBlock*> blocks);
         VFtn(Document *document, std::istream &stream);
         std::string toString()override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
     };
 
     class SFtn : public FunctionDefine{
+        type::UserFunction *symbol = nullptr;
     public:
         SFtn(Document *document, AccessFlag access, TokenRef *name,
              std::list<Param*> params, Result *result, std::list<Local*> locals, std::list<BasicBlock*> blocks);
         SFtn(Document *document, std::istream &stream);
         std::string toString()override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
     };
 
 
     class Ext : public FunctionDeclare{
         TokenRef *lib = nullptr;
         TokenRef *alias = nullptr;
+        type::ExternalFunction *symbol = nullptr;
     public:
         Ext(Document *document, AccessFlag access, TokenRef *name,TokenRef *library,TokenRef *alias,
             std::list<Param*> params, Result *result);
         Ext(Document *document, std::istream &stream);
         std::string toString()override;
         void toHex(std::ostream &stream)override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
+        ~Ext();
     };
 
     class InterfaceFunction : public FunctionDeclare{
+        type::UserFunction *symbol = nullptr;
     public:
         InterfaceFunction(Document *document, TokenRef *name,std::list<Param*> params, Result *result);
         InterfaceFunction(Document *document, std::istream &stream);
         std::string toString()override;
+        type::Symbol *prepareSymbol()override;
+        void fillSymbolResources()override;
     };
 
 
@@ -435,6 +493,8 @@ namespace evoBasic::il{
         std::map<std::string,int> token_pool_map;
         std::vector<TokenDef*> token_pool;
 
+        std::map<std::string,Member*> member_map;
+
         std::vector<Member*> members;
         std::list<TokenRef*> dependencies;
 
@@ -443,7 +503,7 @@ namespace evoBasic::il{
         explicit Document();
         explicit Document(std::istream &stream);
 
-
+        void addMemberIndex(Member *member);
         void addResource(Node* node);
         std::string toString()override;
         void toHex(std::ostream &stream)override;
@@ -454,6 +514,7 @@ namespace evoBasic::il{
 
         TokenDef *findTokenDef(data::u64 id);
         TokenDef *findTokenDef(std::string text);
+        Member *findMember(TokenRef *token);
 
         void addDependenceLibrary(std::string name);
 

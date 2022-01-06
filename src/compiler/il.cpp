@@ -427,6 +427,19 @@ namespace evoBasic::il{
 
     VFtn::VFtn(Document *document, istream &stream) : FunctionDefine(document,Bytecode::VFtnDef,stream){}
 
+    type::Symbol *VFtn::prepareSymbol() {
+        if(!symbol){
+            symbol = new type::UserFunction(FunctionFlag::Virtual);
+            symbol->setName(getNameToken()->toString());
+            symbol->setAccessFlag(getAccessFlag());
+        }
+        return symbol;
+    }
+
+    void VFtn::fillSymbolResources() {
+        fillParameterList(symbol);
+    }
+
     std::string SFtn::toString() {
         return FunctionDefine::toString() + " sftn";
     }
@@ -435,6 +448,19 @@ namespace evoBasic::il{
         : FunctionDefine(document,Bytecode::SFtnDef,access,name,std::move(params),result,std::move(locals),std::move(blocks)){}
 
     SFtn::SFtn(Document *document, istream &stream) : FunctionDefine(document,Bytecode::SFtnDef,stream){}
+
+    type::Symbol *SFtn::prepareSymbol() {
+        if(!symbol){
+            symbol = new type::UserFunction(FunctionFlag::Static);
+            symbol->setName(getNameToken()->toString());
+            symbol->setAccessFlag(getAccessFlag());
+        }
+        return symbol;
+    }
+
+    void SFtn::fillSymbolResources() {
+        fillParameterList(symbol);
+    }
 
     std::string Ext::toString() {
         return FunctionDeclare::toString() + " ext";
@@ -671,7 +697,9 @@ namespace evoBasic::il{
     }
 
     Member::Member(Document *document,Bytecode begin_mark,AccessFlag access,TokenRef *name)
-        : Node(document,begin_mark),access(access),name(name){}
+        : Node(document,begin_mark),access(access),name(name){
+        document->addMemberIndex(this);
+    }
 
     Member::Member(Document *document,Bytecode begin_mark,std::istream &stream)
         : Node(document,begin_mark,stream){
@@ -690,6 +718,8 @@ namespace evoBasic::il{
         else PANIC;
 
         name = new TokenRef(document,stream);
+
+        document->addMemberIndex(this);
     }
 
     void Member::toHex(ostream &stream) {
@@ -779,6 +809,29 @@ namespace evoBasic::il{
         return Member::toString() + " class";
     }
 
+    type::Symbol *Class::prepareSymbol() {
+        if(!symbol) {
+            symbol = new type::Class;
+            symbol->setName(getNameToken()->toString());
+            symbol->setAccessFlag(getAccessFlag());
+        }
+        return symbol;
+    }
+
+    void Class::fillSymbolResources() {
+        auto extend_symbol = getDocument()->findMember(extend_class)->prepareSymbol();
+        symbol->setExtend(extend_symbol->as<type::Class*>());
+        for(auto impl : impl_interface_list){
+            auto impl_symbol = getDocument()->findMember(impl)->prepareSymbol();
+            symbol->addImpl(impl_symbol->as<type::Interface*>());
+        }
+        for(auto member : members){
+            auto member_symbol = member->prepareSymbol();
+            member->fillSymbolResources();
+            symbol->add(member_symbol);
+        }
+    }
+
     Class::~Class() {
         delete extend_class;
         for(auto impl : impl_interface_list) delete impl;
@@ -809,6 +862,27 @@ namespace evoBasic::il{
         return Member::toString() + " module";
     }
 
+    Module::~Module() {
+        for(auto member : members) delete member;
+    }
+
+    type::Symbol *Module::prepareSymbol() {
+        if(!symbol){
+            symbol = new type::Module;
+            symbol->setName(getNameToken()->toString());
+            symbol->setAccessFlag(getAccessFlag());
+        }
+        return symbol;
+    }
+
+    void Module::fillSymbolResources() {
+        for(auto member : members){
+            auto member_symbol = member->prepareSymbol();
+            member->fillSymbolResources();
+            symbol->add(member_symbol);
+        }
+    }
+
     void Interface::toHex(std::ostream &stream) {
         write(stream,Bytecode::InterfaceDef);
         Member::toHex(stream);
@@ -833,6 +907,27 @@ namespace evoBasic::il{
 
     std::string Interface::toString() {
         return Member::toString() + " interface";
+    }
+
+    type::Symbol *Interface::prepareSymbol() {
+        if(!symbol){
+            symbol = new type::Interface;
+            symbol->setName(getNameToken()->toString());
+            symbol->setAccessFlag(getAccessFlag());
+        }
+        return symbol;
+    }
+
+    void Interface::fillSymbolResources() {
+        for(auto ftn : ftns){
+            auto ftn_symbol = ftn->prepareSymbol();
+            ftn->fillSymbolResources();
+            symbol->add(ftn_symbol);
+        }
+    }
+
+    Interface::~Interface() {
+        for(auto ftn : ftns) delete ftn;
     }
 
     void Enum::toHex(std::ostream &stream) {
@@ -872,6 +967,26 @@ namespace evoBasic::il{
         return Member::toString() + " enum";
     }
 
+    type::Symbol *Enum::prepareSymbol() {
+        if(!symbol){
+            symbol = new type::Enumeration;
+            symbol->setName(getNameToken()->toString());
+            symbol->setAccessFlag(getAccessFlag());
+        }
+    }
+
+    void Enum::fillSymbolResources() {
+        for(auto pair : enums){
+            auto enum_member = new type::EnumMember(pair.second);
+            enum_member->setName(pair.first->toString());
+            symbol->add(enum_member);
+        }
+    }
+
+    Enum::~Enum() {
+        for(auto pair : enums) delete pair.first;
+    }
+
     Fld::Fld(Document *document, AccessFlag access, TokenRef *name, TokenRef *type)
         : Member(document,Bytecode::FldDef,access,name),type(type){}
 
@@ -891,6 +1006,25 @@ namespace evoBasic::il{
 
     std::string Fld::toString() {
         return Member::toString() + " fld(" + type->toString() + ")";
+    }
+
+    type::Symbol *Fld::prepareSymbol() {
+        if(!symbol){
+            symbol = new type::Variable;
+            symbol->setName(getNameToken()->toString());
+            symbol->setAccessFlag(getAccessFlag());
+            symbol->setStatic(false);
+        }
+        return symbol;
+    }
+
+    void Fld::fillSymbolResources() {
+        auto type_symbol = getDocument()->findMember(type)->prepareSymbol();
+        symbol->setPrototype(type_symbol->as<type::Prototype*>());
+    }
+
+    Fld::~Fld() {
+        delete type;
     }
 
 
@@ -913,6 +1047,25 @@ namespace evoBasic::il{
 
     std::string SFld::toString() {
         return Member::toString() + " sfld(" + type->toString() + ")";
+    }
+
+    type::Symbol *SFld::prepareSymbol() {
+        if(!symbol){
+            symbol = new type::Variable;
+            symbol->setName(getNameToken()->toString());
+            symbol->setAccessFlag(getAccessFlag());
+            symbol->setStatic(true);
+        }
+        return symbol;
+    }
+
+    void SFld::fillSymbolResources() {
+        auto type_symbol = getDocument()->findMember(type)->prepareSymbol();
+        symbol->setPrototype(type_symbol->as<type::Prototype*>());
+    }
+
+    SFld::~SFld() {
+        delete type;
     }
 
     void Record::toHex(std::ostream &stream) {
@@ -945,6 +1098,27 @@ namespace evoBasic::il{
         return Member::toString() + " record";
     }
 
+    type::Symbol *Record::prepareSymbol() {
+        if(!symbol){
+            symbol = new type::Record;
+            symbol->setName(getNameToken()->toString());
+            symbol->setAccessFlag(getAccessFlag());
+        }
+        return symbol;
+    }
+
+    void Record::fillSymbolResources() {
+        for(auto field : fields){
+            auto field_symbol = field->prepareSymbol();
+            field->fillSymbolResources();
+            symbol->add(field_symbol);
+        }
+    }
+
+    Record::~Record() {
+        for(auto field : fields) delete field;
+    }
+
     Param::Param(Document *document, TokenRef *name, TokenRef *type, bool ref, Bytecode begin_mark)
         : Node(document,begin_mark),name(name),type(type),is_ref(ref){}
 
@@ -971,6 +1145,18 @@ namespace evoBasic::il{
 
     std::string Param::toString() {
         return name->toString() + ':' + type->toString();
+    }
+
+    TokenRef *Param::getTypeToken() {
+        return type;
+    }
+
+    bool Param::isRef() {
+        return is_ref;
+    }
+
+    TokenRef *Param::getNameToken() {
+        return name;
     }
 
     Regular::Regular(Document *document, TokenRef *name, TokenRef *type, bool ref)
@@ -1042,6 +1228,10 @@ namespace evoBasic::il{
         type->toHex(stream);
     }
 
+    TokenRef *Result::getTypeToken() {
+        return type;
+    }
+
 
     FunctionDeclare::FunctionDeclare(Document *document,Bytecode begin_mark,AccessFlag access,TokenRef *name,std::list<Param*> params,Result *result)
         : Member(document,begin_mark,access,name),params(std::move(params)),result(result){}
@@ -1084,6 +1274,29 @@ namespace evoBasic::il{
             ret->add(result->toString());
         }
         return ret;
+    }
+
+    void FunctionDeclare::fillParameterList(type::Function *symbol) {
+        for(auto param : params){
+            auto name = param->getNameToken()->toString();
+            auto type_symbol = getDocument()->findMember(param->getTypeToken())->prepareSymbol();
+            auto prototype = type_symbol->as<type::Prototype*>();
+            type::Parameter *parameter;
+            switch (param->getKind()) {
+                case ParamKind::Regular:
+                    parameter = new type::Parameter(name,prototype,!param->isRef(),false,false);
+                    break;
+                case ParamKind::Opt:
+                    parameter = new type::Parameter(name,prototype,!param->isRef(),true,false);
+                    break;
+                case ParamKind::Inf:
+                    parameter = new type::Parameter(name,prototype,!param->isRef(),false,true);
+                    break;
+            }
+            symbol->add(parameter);
+        }
+        auto ret_symbol = getDocument()->findMember(result->getTypeToken())->prepareSymbol();
+        symbol->setRetSignature(ret_symbol->as<type::Prototype*>());
     }
 
     FunctionDefine::FunctionDefine(Document *document, Bytecode begin_mark, AccessFlag access, TokenRef *name,
@@ -1141,6 +1354,7 @@ namespace evoBasic::il{
         return ret;
     }
 
+
     Ctor::Ctor(Document *document,std::list<Param*> params, std::list<Local*> locals,std::list<BasicBlock*> blocks)
             : FunctionDefine(document,Bytecode::CtorDef,AccessFlag::Public,document->getTokenRef("#ctor"),std::move(params),nullptr,std::move(locals),std::move(blocks)){}
 
@@ -1150,10 +1364,34 @@ namespace evoBasic::il{
         return Member::toString() + " ctor";
     }
 
+    type::Symbol *Ctor::prepareSymbol() {
+        if(!symbol){
+            symbol = new type::Constructor;
+        }
+        return symbol;
+    }
+
+    void Ctor::fillSymbolResources() {
+        fillParameterList(symbol);
+    }
+
     Ftn::Ftn(Document *document,AccessFlag access,TokenRef *name,std::list<Param*> params,Result *result,std::list<Local*> locals,std::list<BasicBlock*> blocks)
         : FunctionDefine(document,Bytecode::FtnDef,access,name,std::move(params),result,std::move(locals),std::move(blocks)){}
 
     Ftn::Ftn(Document *document, istream &stream) : FunctionDefine(document,Bytecode::FtnDef,stream) {}
+
+    type::Symbol *Ftn::prepareSymbol() {
+        if(!symbol){
+            symbol = new type::UserFunction(FunctionFlag::Method);
+            symbol->setName(getNameToken()->toString());
+            symbol->setAccessFlag(getAccessFlag());
+        }
+        return symbol;
+    }
+
+    void Ftn::fillSymbolResources() {
+        fillParameterList(symbol);
+    }
 
     Ext::Ext(Document *document,AccessFlag access,TokenRef *name,
              TokenRef *library,TokenRef *alias,std::list<Param *> params,Result *result)
@@ -1168,6 +1406,24 @@ namespace evoBasic::il{
         FunctionDeclare::toHex(stream);
         lib->toHex(stream);
         alias->toHex(stream);
+    }
+
+    type::Symbol *Ext::prepareSymbol() {
+        if(!symbol){
+            symbol = new type::ExternalFunction(lib->toString(),alias->toString());
+            symbol->setName(getNameToken()->toString());
+            symbol->setAccessFlag(getAccessFlag());
+        }
+        return symbol;
+    }
+
+    void Ext::fillSymbolResources() {
+        fillParameterList(symbol);
+    }
+
+    Ext::~Ext() {
+        delete lib;
+        delete alias;
     }
 
 
@@ -1241,6 +1497,18 @@ namespace evoBasic::il{
     void Document::addDependenceLibrary(std::string name) {
         dependencies.push_back(getTokenRef(name));
     }
+
+    Member *Document::findMember(TokenRef *token) {
+        auto target = member_map.find(findTokenDef(token->getID())->getName());
+        if(target == member_map.end())PANIC;
+        return target->second;
+    }
+
+    void Document::addMemberIndex(Member *member) {
+        auto full_name = findTokenDef(member->getNameToken()->getID())->getName();
+        member_map.insert({full_name,member});
+    }
+
 
     Bytecode InstWithOp::opToBytecode(InstWithOp::Op op) {
         switch(op){
@@ -1567,6 +1835,19 @@ namespace evoBasic::il{
 
     std::string InterfaceFunction::toString() {
         return FunctionDeclare::toString();
+    }
+
+    type::Symbol *InterfaceFunction::prepareSymbol() {
+        if(!symbol){
+            symbol = new type::UserFunction(FunctionFlag::Virtual);
+            symbol->setName(getNameToken()->toString());
+            symbol->setAccessFlag(AccessFlag::Public);
+        }
+        return symbol;
+    }
+
+    void InterfaceFunction::fillSymbolResources() {
+        fillParameterList(symbol);
     }
 
 

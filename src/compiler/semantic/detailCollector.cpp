@@ -271,7 +271,7 @@ namespace evoBasic{
                                   lang->fmtCtorRedefine(cls->mangling('.')));
                 }
                 else{
-                    auto constructor = new type::Constructor(ctor_node);
+                    auto constructor = new type::Constructor;
                     constructor->setLocation(ctor_node->location);
                     cls->setConstructor(constructor);
                     ctor_node->constructor_symbol = constructor;
