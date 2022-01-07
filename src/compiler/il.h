@@ -529,6 +529,8 @@ namespace evoBasic::il{
 
         void add(Member *member);
 
+        SFtn *getEntrance();
+
         std::string getPackageName();
     };
 

@@ -15,391 +15,264 @@
 #include "format.h"
 #include "stack.h"
 #include "bytecode.h"
+#include "config.h"
+#include "loader.h"
+#include "il.h"
+
 using namespace std;
 using namespace evoBasic;
 namespace fs = std::filesystem;
-using namespace evoBasic::vm;
 
-Stack operand(1024);
-Stack callstack(2048);
-char *codes = nullptr;
-data::ptr pc = 0;
-stack<data::ptr> prv_address;
-
-template<template <typename P> class Operation>
-void forEachType(data::u8 hex){
-    auto data = vm::Data::fromHex(hex);
-    switch (data.getValue()) {
-        case Data::boolean: Operation<data::boolean>();
-        case Data::i8:      Operation<data::i8>();
-        case Data::i16:     Operation<data::i16>();
-        case Data::i32:     Operation<data::i32>();
-        case Data::i64:     Operation<data::i64>();
-        case Data::f32:     Operation<data::f32>();
-        case Data::f64:     Operation<data::f64>();
-        case Data::u8:      Operation<data::u8>();
-        case Data::u16:     Operation<data::u16>();
-        case Data::u32:     Operation<data::u16>();
-        case Data::u64:     Operation<data::u16>();
-    }
+void printHelp(){
+    //todo: print help message
 }
 
-template<typename T>
-struct OpEQ{
-    void operator()(){
-        T rhs = operand.pop<T>();
-        T lhs = operand.pop<T>();
-        operand.push<data::boolean>(rhs==lhs);
-        pc += 1;
-    }
-};
-
-template<typename T>
-struct OpNE{
-    void operator()(){
-        T rhs = operand.pop<T>();
-        T lhs = operand.pop<T>();
-        operand.push<data::boolean>(rhs!=lhs);
-        pc += 1;
-    }
-};
-
-template<typename T>
-struct OpLT{
-    void operator()(){
-        T rhs = operand.pop<T>();
-        T lhs = operand.pop<T>();
-        operand.push<data::boolean>(rhs<lhs);
-        pc += 1;
-    }
-};
-
-template<typename T>
-struct OpGT{
-    void operator()(){
-        T rhs = operand.pop<T>();
-        T lhs = operand.pop<T>();
-        operand.push<data::boolean>(rhs>lhs);
-        pc += 1;
-    }
-};
-
-template<typename T>
-struct OpLE{
-    void operator()(){
-        T rhs = operand.pop<T>();
-        T lhs = operand.pop<T>();
-        operand.push<data::boolean>(rhs<=lhs);
-        pc += 1;
-    }
-};
-
-template<typename T>
-struct OpGE{
-    void operator()(){
-        T rhs = operand.pop<T>();
-        T lhs = operand.pop<T>();
-        operand.push<data::boolean>(rhs>=lhs);
-        pc += 1;
-    }
-};
-
-template<typename T>
-struct OpAdd{
-    void operator()(){
-        T rhs = operand.pop<T>();
-        T lhs = operand.pop<T>();
-        operand.push<T>(rhs+lhs);
-        pc += 2;
-    }
-};
-
-template<typename T>
-struct OpSub{
-    void operator()(){
-        T rhs = operand.pop<T>();
-        T lhs = operand.pop<T>();
-        operand.push<T>(lhs-rhs);
-        pc += 2;
-    }
-};
-
-template<typename T>
-struct OpMul{
-    void operator()(){
-        T rhs = operand.pop<T>();
-        T lhs = operand.pop<T>();
-        operand.push<T>(lhs*rhs);
-        pc += 2;
-    }
-};
-
-template<typename T>
-struct OpDiv{
-    void operator()(){
-        T rhs = operand.pop<T>();
-        T lhs = operand.pop<T>();
-        operand.push<T>(lhs/rhs);
-        pc += 2;
-    }
-};
+using PC = data::Byte*;
+using ExecutionInfo = std::pair<il::FunctionDefine*,PC>;
 
 
-template<typename T>
-struct OpFDiv{
-    void operator()(){
-        T rhs = operand.pop<T>();
-        T lhs = operand.pop<T>();
-        operand.push<T>(lhs/rhs);
-        pc += 2;
-    }
-};
+Loader *loader = nullptr;
 
-template<typename T>
-struct OpNeg{
-    void operator()(){
-        T rhs = operand.pop<T>();
-        operand.push<T>(-rhs);
-        pc += 2;
-    }
-};
-
-template<typename T>
-struct OpLoad{
-    void operator()(){
-        T *address = operand.pop<data::ptr>();
-        operand.push<T>(*address);
-        pc += 2;
-    }
-};
-
-template<typename T>
-struct OpStore{
-    void operator()(){
-        T value = operand.pop<T>();
-        T *address = operand.pop<data::ptr>();
-        *address = value;
-        pc += 2;
-    }
-};
-
-template<typename T>
-struct OpPush{
-    void operator()(){
-        T *address = (T*)(codes + pc + 2);
-        operand.push<T>(*address);
-        pc += 2 + sizeof(T);
-    }
-};
-
-template<typename T>
-struct OpPop{
-    void operator()(){
-        operand.pop<T>();
-        pc += 2;
-    }
-};
-
-template<typename Src>
-struct OpCast{
-    void operator()(){
-        Src value = operand.pop<data::ptr>();
-        switch(vm::Data::fromHex(*(codes + pc + 2)).getValue()){
-            case Data::boolean:
-                operand.push<data::boolean>((data::boolean)value);
-                break;
-            case Data::i8:
-                operand.push<data::boolean>((data::boolean)value);
-                break;
-            case Data::i16:
-                operand.push<data::boolean>((data::boolean)value);
-                break;
-            case Data::i32:
-                operand.push<data::boolean>((data::boolean)value);
-                break;
-            case Data::i64:
-                operand.push<data::boolean>((data::boolean)value);
-                break;
-            case Data::f32:
-                operand.push<data::boolean>((data::boolean)value);
-                break;
-            case Data::f64:
-                operand.push<data::boolean>((data::boolean)value);
-                break;
-            case Data::u8:
-                operand.push<data::boolean>((data::boolean)value);
-                break;
-            case Data::u16:
-                operand.push<data::boolean>((data::boolean)value);
-                break;
-            case Data::u32:
-                operand.push<data::boolean>((data::boolean)value);
-                break;
-            case Data::u64:
-                operand.push<data::boolean>((data::boolean)value);
-                break;
+void loadTarget(string path){
+    if(fs::exists(path)){
+        fs::path package_path(path);
+        if(package_path.extension() == evoBasic::extensions::package){
+            loader->addToWaitingDeque(path);
         }
-        pc += 3;
+        else Logger::error(Format() << "'" << path << "' is not a .bkg file");
     }
-};
+    else Logger::error(Format() << "cannot find file '" << path << "'");
+}
 
-template<typename T>
-struct OpDup{
-    void operator()(){
-        operand.dup<T>();
-        pc += 2;
-    }
-};
-
-void loadAndRun(fstream stream){
-
-    data::u8 hex = stream.get();
-    data::u64 pc = 0;
-    if(Bytecode::fromHex(hex).getValue() == Bytecode::Entrance){
-        stream.read((char*)&pc,sizeof(pc));
-    }
-
-    do hex = stream.get();
-    while(hex != Bytecode(Bytecode::ConstSegment).toHex());
-    stream.get();
-
-    codes = (char*)malloc(2048);
-    auto ptr = codes;
-    while(!stream.eof()){
-        *ptr = stream.get();
-        ptr++;
-    }
-
+void runProgram(il::SFtn *entrance){
+    std::stack<ExecutionInfo> execution_stack;
+    PC pc = entrance->getBlocksMemory();
     while(true){
-        switch (codes[pc]-0x0F) {
-            case Bytecode::Entrance:
-                break;
-            case Bytecode::MetaSegment:
-                break;
-            case Bytecode::ConstSegment:
-                break;
-            case Bytecode::CodeSegment:
-                break;
-            case Bytecode::Define:
-                break;
-            case Bytecode::Jmp:
-                pc = *((data::ptr*)(codes + pc + 1));
-                pc += 9;
-                break;
-            case Bytecode::Jif:
-                if(operand.top<data::boolean>()) {
-                    pc = *((data::ptr*)(codes + pc + 1));
-                }
-                operand.pop<data::boolean>();
-                pc += 9;
-                break;
-            case Bytecode::EQ:
-                forEachType<OpEQ>(*(codes + pc + 1));
-                break;
-            case Bytecode::NE:
-                forEachType<OpNE>(*(codes + pc + 1));
-                break;
-            case Bytecode::LT:
-                forEachType<OpLT>(*(codes + pc + 1));
-                break;
-            case Bytecode::GT:
-                forEachType<OpGT>(*(codes + pc + 1));
-                break;
-            case Bytecode::LE:
-                forEachType<OpLE>(*(codes + pc + 1));
-                break;
-            case Bytecode::GE:
-                forEachType<OpGE>(*(codes + pc + 1));
-                break;
-            case Bytecode::Add:
-                forEachType<OpAdd>(*(codes + pc + 1));
-                break;
-            case Bytecode::Sub:
-                forEachType<OpSub>(*(codes + pc + 1));
-                break;
-            case Bytecode::Mul:
-                forEachType<OpMul>(*(codes + pc + 1));
-                break;
-            case Bytecode::Div:
-                forEachType<OpDiv>(*(codes + pc + 1));
-                break;
-            case Bytecode::FDiv:
-                forEachType<OpFDiv>(*(codes + pc + 1));
-                break;
-            case Bytecode::Neg:
-                forEachType<OpNeg>(*(codes + pc + 1));
-                break;
-            case Bytecode::And:
-                operand.push<data::boolean>(operand.pop<data::boolean>() and operand.pop<data::boolean>());
-                break;
-            case Bytecode::Or:
-                operand.push<data::boolean>(operand.pop<data::boolean>() or operand.pop<data::boolean>());
-                break;
-            case Bytecode::Xor:
-                operand.push<data::boolean>(operand.pop<data::boolean>() xor operand.pop<data::boolean>());
-                break;
-            case Bytecode::Not:
-                operand.push<data::boolean>(!operand.pop<data::boolean>());
-                break;
-            case Bytecode::Load:
-                forEachType<OpLoad>(*(codes + pc + 1));
-                break;
-            case Bytecode::Store:
-                forEachType<OpStore>(*(codes + pc + 1));
-                break;
-            case Bytecode::Push:
-                forEachType<OpPush>(*(codes + pc + 1));
-                break;
-            case Bytecode::Pop:
-                forEachType<OpPop>(*(codes + pc + 1));
+        switch ((Bytecode)*pc) {
+            case Bytecode::Nop:
+                pc+=1;
                 break;
             case Bytecode::Ret:
-                pc = prv_address.top();
-                prv_address.pop();
-                if(pc == -1)return;
+                pc+=1;
+                break;
+            case Bytecode::CallVirt:
+                pc+=1;
+                break;
+            case Bytecode::Callstatic:
+                pc+=1;
+                break;
+            case Bytecode::Call:
+                pc+=1;
+                break;
+            case Bytecode::Ldnull:
+                pc+=1;
+                break;
+            case Bytecode::And:
+                pc+=1;
+                break;
+            case Bytecode::Or:
+                pc+=1;
+                break;
+            case Bytecode::Xor:
+                pc+=1;
+                break;
+            case Bytecode::Ldloca:
+                pc+=1;
+                break;
+            case Bytecode::Ldarga:
+                pc+=1;
+                break;
+            case Bytecode::Ldelema:
+                pc+=1;
+                break;
+            case Bytecode::Not:
+                pc+=1;
+                break;
+            case Bytecode::Ldftn:
+                pc+=1;
+                break;
+            case Bytecode::Ldsftn:
+                pc+=1;
+                break;
+            case Bytecode::Ldvftn:
+                pc+=1;
+                break;
+            case Bytecode::Ldc:
+                pc+=1;
+                break;
+            case Bytecode::Newobj:
                 break;
             case Bytecode::Invoke:
-                prv_address.push(pc);
-                pc = *((data::ptr*)(codes + pc + 1));
                 break;
-            case Bytecode::Cast:
-                forEachType<OpCast>(*(codes + pc + 1));
+            case Bytecode::Ldflda:
+                break;
+            case Bytecode::Ldsflda:
+                break;
+            case Bytecode::Ldelem:
+                break;
+            case Bytecode::Stelem:
+                break;
+            case Bytecode::Stelema:
+                break;
+            case Bytecode::Ldarg:
+                break;
+            case Bytecode::Starg:
+                break;
+            case Bytecode::Ldloc:
+                break;
+            case Bytecode::Stloc:
+                break;
+            case Bytecode::Add:
+                break;
+            case Bytecode::Sub:
+                break;
+            case Bytecode::Mul:
+                break;
+            case Bytecode::Div:
+                break;
+            case Bytecode::FDiv:
+                break;
+            case Bytecode::EQ:
+                break;
+            case Bytecode::NE:
+                break;
+            case Bytecode::LT:
+                break;
+            case Bytecode::GT:
+                break;
+            case Bytecode::LE:
+                break;
+            case Bytecode::GE:
+                break;
+            case Bytecode::Neg:
+                break;
+            case Bytecode::Pop:
                 break;
             case Bytecode::Dup:
-                forEachType<OpDup>(*(codes + pc + 1));
                 break;
-            case Bytecode::Stm:
+            case Bytecode::Ldfld:
                 break;
-            case Bytecode::Ldm:
+            case Bytecode::Ldsfld:
                 break;
-            case Bytecode::Psm:
+            case Bytecode::Stfld:
                 break;
-            case Bytecode::PushFrameBase:
-                operand.push<data::ptr>(prv_address.top());
-                pc += 1;
+            case Bytecode::Stsfld:
                 break;
-            case Bytecode::PushGlobalBase:
+            case Bytecode::Jif:
                 break;
-            case Bytecode::Nop:
-                pc += 1;
+            case Bytecode::Br:
                 break;
+            case Bytecode::Push:
+                break;
+            case Bytecode::CastCls:
+                break;
+            case Bytecode::Conv:
+                break;
+
+            case Bytecode::i8:
+                break;
+            case Bytecode::i16:
+                break;
+            case Bytecode::i32:
+                break;
+            case Bytecode::i64:
+                break;
+            case Bytecode::u8:
+                break;
+            case Bytecode::u16:
+                break;
+            case Bytecode::u32:
+                break;
+            case Bytecode::u64:
+                break;
+            case Bytecode::f32:
+                break;
+            case Bytecode::f64:
+                break;
+            case Bytecode::ref:
+                break;
+            case Bytecode::ftn:
+                break;
+            case Bytecode::vftn:
+                break;
+            case Bytecode::sftn:
+                break;
+            case Bytecode::record:
+                break;
+            case Bytecode::array:
+                break;
+            case Bytecode::boolean:
+                break;
+            case Bytecode::character:
+                break;
+            case Bytecode::delegate:
+                break;
+
+            case Bytecode::EndMark:
+            case Bytecode::DependDef:
+            case Bytecode::TextTokenDef:
+            case Bytecode::ConstructedDef:
+            case Bytecode::TokenRef:
+            case Bytecode::PtdAcsDef:
+            case Bytecode::PriAcsDef:
+            case Bytecode::PubAcsDef:
+            case Bytecode::ExtendDef:
+            case Bytecode::ImplDef:
+            case Bytecode::LibDef:
+            case Bytecode::ExtAliasDef:
+            case Bytecode::DocumentDef:
+            case Bytecode::ClassDef:
+            case Bytecode::ModuleDef:
+            case Bytecode::InterfaceDef:
+            case Bytecode::EnumDef:
+            case Bytecode::RecordDef:
+            case Bytecode::FtnDef:
+            case Bytecode::VFtnDef:
+            case Bytecode::SFtnDef:
+            case Bytecode::CtorDef:
+            case Bytecode::ExtDef:
+            case Bytecode::ItfFtnDef:
+            case Bytecode::FldDef:
+            case Bytecode::SFldDef:
+            case Bytecode::PairDef:
+            case Bytecode::RegDef:
+            case Bytecode::OptDef:
+            case Bytecode::InfDef:
+            case Bytecode::LocalDef:
+            case Bytecode::ResultDef:
+            case Bytecode::Byref:
+            case Bytecode::Byval:
+            case Bytecode::InstBeg:
+                PANIC;
         }
     }
 }
 
+
 int main(int argc,char *argv[]){
-    vector<fs::path> files;
+    loader = new Loader;
 
     CmdDistributor distributor;
-    distributor.others([&](const string &file){
-        if(fs::exists(file)) files.emplace_back(file);
-        else Logger::error(format() << "cannot find file '" << file << "'");
-    });
-
+    distributor.others(loadTarget);
     for(int i=1;i<argc;i++){
         distributor.distribute(argv[i]);
     }
 
-    loadAndRun(files[0]);
+    if(loader->getPackages().empty()){
+        Logger::error("nothing to run.");
+        printHelp();
+    }
+    else{
+        loader->loadPackages();
+        auto entrance = loader->getPackages().front()->getEntrance();
+        if(!entrance){
+            Logger::error("Sub Main not found.");
+        }
+        else{
+            runProgram(entrance);
+        }
+    }
+
+    delete loader;
 }
 

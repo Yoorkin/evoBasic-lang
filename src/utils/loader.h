@@ -22,6 +22,7 @@ namespace evoBasic{
         void addToWaitingDeque(std::string package_path);
         void loadPackages();
         void loadPackagesSymbols(Context *context);
+        std::list<il::Document*> &getPackages();
     };
 
 }

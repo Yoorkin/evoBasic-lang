@@ -3,8 +3,12 @@ project(evoVM)
 
 set(CMAKE_CXX_STANDARD 20)
 
-file(GLOB VM_SOURCE ${CMAKE_SOURCE_DIR}/src/vm/*.cpp)
-include_directories(${CMAKE_SOURCE_DIR}/src/vm/ src/utils)
+file(GLOB VM_SOURCE
+    interpreter.cpp
+    intrinsic.cpp
+    invoke.cpp
+    stack.cpp
+)
 
-add_executable(evm ${VM_SOURCE} ${UTILS_SOURCE} intrinsic.cpp)
-target_include_directories(evm PRIVATE ${VM_INCLUDE} ${UTILS_INCLUDE})
+add_executable(evm ${VM_SOURCE} ${UTILS_SOURCE} main.cpp)
+target_include_directories(evm PRIVATE ${VM_INCLUDE} ${UTILS_INCLUDE} ${COMPILER_INCLUDE})

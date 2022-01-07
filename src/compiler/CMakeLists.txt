@@ -21,5 +21,5 @@ file(GLOB COMPILER_SOURCE
         )
 
 
-add_executable(ecc main.cpp ${COMPILER_SOURCE} ${UTILS_SOURCE} ../utils/loader.cpp ../utils/loader.h)
+add_executable(ecc main.cpp ${COMPILER_SOURCE} ${UTILS_SOURCE} ../utils/loader.cpp ../utils/loader.h ../utils/config.h)
 target_include_directories(ecc PRIVATE ${COMPILER_INCLUDE} ${UTILS_INCLUDE})

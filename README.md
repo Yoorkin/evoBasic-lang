@@ -67,11 +67,12 @@ For a complete definition about syntax, see [grammar.bnf](/doc/grammar.bnf).
 - [x] lexer and parser: generate parse tree
 - [x] semantic check: type check,generate symbol table and translate parse tree to abstract tree
 - [x] IL generator: translate abstract tree to intermediate language
-- [ ] package file (.bkg) generator and loader
+- [x] package file (.bkg) generator and loader
+- [ ] package manager
 - [ ] evoBasic vm
 - [ ] runtime library
 
-EvoBasic cannot generate any executable file yet. But you can use option `--dev-info` to print information ( tokens,parse tree,abstract tree,symbol table and IL ) during compilation to check if the compiler works.
+EvoBasic cannot run any executable file yet. But you can use option `--dev-info` to print information ( tokens,parse tree,abstract tree,symbol table and IL ) during compilation to check if the compiler works.
 
 # How to build
 

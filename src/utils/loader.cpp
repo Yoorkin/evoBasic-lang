@@ -42,4 +42,8 @@ namespace evoBasic{
             package->fillSymbolsDetail(context);
         }
     }
+
+    std::list<il::Document*> &Loader::getPackages() {
+        return packages;
+    }
 }

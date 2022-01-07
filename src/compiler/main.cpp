@@ -9,14 +9,12 @@
 #include "context.h"
 #include "ilGen.h"
 #include "cmd.h"
+#include "config.h"
+
 namespace fs = std::filesystem;
 using namespace evoBasic;
 using namespace std;
 
-namespace extensions{
-    const string package = ".bkg";
-    const string source = ".eb";
-}
 
 bool enable_compile = true;
 list<Source*> sources;
