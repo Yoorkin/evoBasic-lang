@@ -15,6 +15,6 @@ file(GLOB VM_INCLUDE ${CMAKE_SOURCE_DIR}/src/vm)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/compiler ${CMAKE_BINARY_DIR}/ecc)
 add_subdirectory(${CMAKE_SOURCE_DIR}/src/vm ${CMAKE_BINARY_DIR}/evm)
-add_subdirectory(test ${CMAKE_BINARY_DIR}/test_dir)
+# add_subdirectory(test ${CMAKE_BINARY_DIR}/test_dir)
 
 

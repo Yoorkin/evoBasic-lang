@@ -4,12 +4,10 @@
 
 #ifndef EVOBASIC_COMPILEHELPER_H
 #define EVOBASIC_COMPILEHELPER_H
-#include "ir.h"
 #include "lexer.h"
 #include "parser.h"
 #include "token.h"
 #include "context.h"
-#include "codeGen.h"
 #include "logger.h"
 #include "strstream"
 //using namespace std;

@@ -18,6 +18,7 @@
 #include "config.h"
 #include "loader.h"
 #include "il.h"
+#include "operation.h"
 
 using namespace std;
 using namespace evoBasic;
@@ -27,11 +28,14 @@ void printHelp(){
     //todo: print help message
 }
 
-using PC = data::Byte*;
 using ExecutionInfo = std::pair<il::FunctionDefine*,PC>;
+
+using FtnRef = il::FunctionDefine*;
 
 
 Loader *loader = nullptr;
+vm::Stack *operand = nullptr;
+vm::Stack *frame = nullptr;
 
 void loadTarget(string path){
     if(fs::exists(path)){
@@ -123,6 +127,7 @@ void runProgram(il::SFtn *entrance){
             case Bytecode::Stloc:
                 break;
             case Bytecode::Add:
+                forEachType<OpAdd>(*(pc + 1), operand, pc);
                 break;
             case Bytecode::Sub:
                 break;
@@ -257,6 +262,9 @@ int main(int argc,char *argv[]){
     for(int i=1;i<argc;i++){
         distributor.distribute(argv[i]);
     }
+
+    operand = new vm::Stack(1024);
+    operand = new vm::Stack(2048);
 
     if(loader->getPackages().empty()){
         Logger::error("nothing to run.");
