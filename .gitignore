@@ -7,3 +7,5 @@ latex
 html
 build
 .cache
+.vs
+out

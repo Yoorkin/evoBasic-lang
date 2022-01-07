@@ -176,7 +176,7 @@ int main(int argc,char *argv[]) {
         }
 
         for(auto &package : direct_dependencies){
-            document.addDependenceLibrary(package.stem());
+            document.addDependenceLibrary(package.stem().string());
         }
 
         Logger::lazy_print(Channel::IL,[&](){

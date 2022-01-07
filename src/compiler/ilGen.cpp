@@ -325,6 +325,7 @@ namespace evoBasic{
 
     il::BasicBlock *ILGen::visitSelect(ast::Select *select_node, il::BasicBlock *current, il::BasicBlock *next) {
         //todo
+        return current;
     }
 
     il::BasicBlock *ILGen::visitLoop(ast::Loop *loop_node, il::BasicBlock *current, il::BasicBlock *next) {
@@ -573,6 +574,7 @@ namespace evoBasic{
 
     il::BasicBlock *ILGen::visitContinue(ast::Continue *continue_node, il::BasicBlock *current, il::BasicBlock *next) {
         current->Br(next);
+        return current;
     }
 
     void ILGen::visitReturn(ast::Return *return_node, il::BasicBlock *current, il::BasicBlock *next) {

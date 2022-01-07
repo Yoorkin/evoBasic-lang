@@ -4,7 +4,7 @@
 
 #ifndef EVOBASIC2_INVOKE_H
 #define EVOBASIC2_INVOKE_H
-#include<ffi.h>
+// #include<ffi.h>
 #include<string>
 #include<vector>
 #include"stack.h"

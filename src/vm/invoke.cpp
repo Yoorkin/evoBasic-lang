@@ -3,7 +3,7 @@
 //
 
 #include "invoke.h"
-#include<ffi.h>
+// #include<ffi.h>
 #include<map>
 #include"bytecode.h"
 using namespace std;
@@ -156,5 +156,6 @@ namespace evoBasic::vm {
 //#elif defined(_win32)
 //        return nullptr;
 //#endif
+        return nullptr;
     }
 }

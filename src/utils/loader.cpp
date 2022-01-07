@@ -22,7 +22,7 @@ namespace evoBasic{
 
             fstream package_file(path,ios::binary | ios::in);
             fs::path package_path(path);
-            auto package = new il::Document(package_path.stem(),package_file);
+            auto package = new il::Document(package_path.stem().string(), package_file);
             auto sub_dependencies = package->getDependenciesPath();
             waiting_package.insert(waiting_package.end(),sub_dependencies.begin(),sub_dependencies.end());
 

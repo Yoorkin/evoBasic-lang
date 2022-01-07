@@ -972,6 +972,7 @@ namespace evoBasic::il{
             symbol->setName(getNameToken()->toString());
             symbol->setAccessFlag(getAccessFlag());
         }
+        return symbol;
     }
 
     void Enum::fillSymbolDetail(Context *context) {
