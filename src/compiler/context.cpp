@@ -210,6 +210,8 @@ namespace evoBasic{
     }
 
     Context::Context() : conversion_rules(&builtin) {
+        loader = new Loader;
+
         global = new type::Module;
         global->setName("global");
         auto& in = getBuiltIn();
@@ -231,5 +233,23 @@ namespace evoBasic{
 
     ConversionRules &Context::getConversionRules() {
         return conversion_rules;
+    }
+
+    type::Symbol *Context::findSymbol(list<string> full_name) {
+        type::Symbol *current = getGlobal();
+        if(full_name.front() != current->getName())
+            PANICMSG(full_name.front());
+        full_name.pop_front();
+
+        for(auto &path : full_name){
+            auto domain = current->as<Domain*>();
+            current = domain->find(path);
+        }
+
+        return current;
+    }
+
+    Loader *Context::getLoader() {
+        return loader;
     }
 }

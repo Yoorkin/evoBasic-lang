@@ -15,6 +15,7 @@
 #include <type.h>
 #include <variant>
 #include "utils.h"
+#include "context.h"
 
 namespace evoBasic::il{
     class Class;
@@ -62,6 +63,7 @@ namespace evoBasic::il{
         TokenDef(Document *document,Bytecode begin_mark,ID id);
         TokenDef(Document *document,Bytecode begin_mark,std::istream &stream);
         virtual std::string getName()=0;
+        virtual std::list<std::string> getFullName()=0;
         void toHex(std::ostream &stream)override;
         ID getID();
     };
@@ -73,6 +75,7 @@ namespace evoBasic::il{
         TextTokenDef(Document *document,std::istream &stream);
         std::string toString()override;
         std::string getName()override;
+        std::list<std::string> getFullName()override;
         void toHex(std::ostream &stream)override;
     };
 
@@ -83,6 +86,7 @@ namespace evoBasic::il{
         ConstructedTokenDef(Document *document,std::istream &stream);
         std::string toString()override;
         std::string getName()override;
+        std::list<std::string> getFullName()override;
         void toHex(std::ostream &stream)override;
     };
 
@@ -95,6 +99,7 @@ namespace evoBasic::il{
         void toHex(std::ostream &stream)override;
         std::string toString()override;
         TokenDef::ID getID();
+        TokenDef *getDef();
         bool isEmpty();
     };
 
@@ -108,7 +113,7 @@ namespace evoBasic::il{
         AccessFlag getAccessFlag();
         TokenRef *getNameToken();
         virtual type::Symbol *prepareSymbol()=0;
-        virtual void fillSymbolResources()=0;
+        virtual void fillSymbolDetail(Context *context)=0;
         void toHex(std::ostream &stream)override;
         ~Member();
     };
@@ -125,7 +130,7 @@ namespace evoBasic::il{
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context)override;
         ~Class();
     };
 
@@ -139,7 +144,7 @@ namespace evoBasic::il{
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context) override;
         ~Module();
     };
 
@@ -153,7 +158,7 @@ namespace evoBasic::il{
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context) override;
         ~Interface();
     };
 
@@ -171,7 +176,7 @@ namespace evoBasic::il{
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context) override;
         ~Enum();
     };
 
@@ -186,7 +191,7 @@ namespace evoBasic::il{
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context) override;
         ~Fld();
     };
 
@@ -200,7 +205,7 @@ namespace evoBasic::il{
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context) override;
         ~SFld();
     };
 
@@ -214,7 +219,7 @@ namespace evoBasic::il{
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context) override;
         ~Record();
     };
 
@@ -290,7 +295,7 @@ namespace evoBasic::il{
         std::list<Param*> params;
         Result *result = nullptr;
     protected:
-        void fillParameterList(type::Function *symbol);
+        void fillParameterList(Context *context,type::Function *symbol);
     public:
         FunctionDeclare(Document *document, Bytecode begin_mark, AccessFlag access, TokenRef *name, std::list<Param*> params, Result *result);
         FunctionDeclare(Document *document, Bytecode begin_mark, std::istream &stream);
@@ -321,7 +326,7 @@ namespace evoBasic::il{
         Ctor(Document *document, std::istream &stream);
         std::string toString()override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context) override;
     };
 
     class Ftn : public FunctionDefine{
@@ -332,7 +337,7 @@ namespace evoBasic::il{
         Ftn(Document *document, std::istream &stream);
         std::string toString()override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context) override;
     };
 
     class VFtn : public FunctionDefine{
@@ -343,7 +348,7 @@ namespace evoBasic::il{
         VFtn(Document *document, std::istream &stream);
         std::string toString()override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context) override;
     };
 
     class SFtn : public FunctionDefine{
@@ -354,7 +359,7 @@ namespace evoBasic::il{
         SFtn(Document *document, std::istream &stream);
         std::string toString()override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context) override;
     };
 
 
@@ -369,7 +374,7 @@ namespace evoBasic::il{
         std::string toString()override;
         void toHex(std::ostream &stream)override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context) override;
         ~Ext();
     };
 
@@ -380,7 +385,7 @@ namespace evoBasic::il{
         InterfaceFunction(Document *document, std::istream &stream);
         std::string toString()override;
         type::Symbol *prepareSymbol()override;
-        void fillSymbolResources()override;
+        void fillSymbolDetail(Context *context) override;
     };
 
 
@@ -493,17 +498,17 @@ namespace evoBasic::il{
         std::map<std::string,int> token_pool_map;
         std::vector<TokenDef*> token_pool;
 
-        std::map<std::string,Member*> member_map;
-
         std::vector<Member*> members;
-        std::list<TokenRef*> dependencies;
+        std::list<TokenRef*> dependencies_token;
+        std::list<Document*> dependencies;
 
         std::list<Node*> resources;
-    public:
-        explicit Document();
-        explicit Document(std::istream &stream);
 
-        void addMemberIndex(Member *member);
+        std::string name;
+    public:
+        explicit Document(std::string package_name);
+        Document(std::string package_name,std::istream &stream);
+
         void addResource(Node* node);
         std::string toString()override;
         void toHex(std::ostream &stream)override;
@@ -514,11 +519,17 @@ namespace evoBasic::il{
 
         TokenDef *findTokenDef(data::u64 id);
         TokenDef *findTokenDef(std::string text);
-        Member *findMember(TokenRef *token);
+
+        void pushSymbolsInto(Context *context);
+        void fillSymbolsDetail(Context *context);
+
+        std::list<std::string> getDependenciesPath();
 
         void addDependenceLibrary(std::string name);
 
         void add(Member *member);
+
+        std::string getPackageName();
     };
 
 

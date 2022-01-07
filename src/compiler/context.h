@@ -11,6 +11,7 @@
 #include "type.h"
 #include "data.h"
 #include "dependencies.h"
+#include "loader.h"
 
 namespace evoBasic{
 
@@ -69,13 +70,16 @@ namespace evoBasic{
         type::Function *entrance = nullptr;
         BuiltIn builtin;
         ConversionRules conversion_rules;
+        Loader *loader = nullptr;
     public:
         Dependencies<type::Domain*> byteLengthDependencies;
         Dependencies<type::Class*> inheritDependencies;
 
         Context(const Context&)=delete;
         Context();
+        type::Symbol *findSymbol(std::list<std::string> full_name);
         type::Module *getGlobal();
+        Loader *getLoader();
         type::Function *getEntrance();
         void setEntrance(type::Function *function);
 

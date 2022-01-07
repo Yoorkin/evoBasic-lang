@@ -376,14 +376,6 @@ namespace evoBasic::il{
         return size;
     }
 
-    std::string TokenRef::toString() {
-        return getDocument()->findTokenDef(id)->getName();
-    }
-
-    data::u64 TokenRef::getID() {
-        return id;
-    }
-
     std::string Opt::toString() {
         return Format() << "optional " << Param::toString();
     }
@@ -436,8 +428,8 @@ namespace evoBasic::il{
         return symbol;
     }
 
-    void VFtn::fillSymbolResources() {
-        fillParameterList(symbol);
+    void VFtn::fillSymbolDetail(Context *context) {
+        fillParameterList(context,symbol);
     }
 
     std::string SFtn::toString() {
@@ -458,8 +450,8 @@ namespace evoBasic::il{
         return symbol;
     }
 
-    void SFtn::fillSymbolResources() {
-        fillParameterList(symbol);
+    void SFtn::fillSymbolDetail(Context *context) {
+        fillParameterList(context,symbol);
     }
 
     std::string Ext::toString() {
@@ -585,7 +577,7 @@ namespace evoBasic::il{
             fmt << '\t' << token->toString() << '\n';
         }
         fmt << "\nimport:\n";
-        for(auto pkg : dependencies){
+        for(auto pkg : dependencies_token){
             fmt << '\t' << pkg->toString() << '\n';
         }
         fmt << "\ncode:\n";
@@ -691,15 +683,24 @@ namespace evoBasic::il{
         write(stream,id);
     }
 
-
     bool TokenRef::isEmpty() {
         return id == -1 || getDocument() == nullptr;
     }
 
-    Member::Member(Document *document,Bytecode begin_mark,AccessFlag access,TokenRef *name)
-        : Node(document,begin_mark),access(access),name(name){
-        document->addMemberIndex(this);
+    std::string TokenRef::toString() {
+        return getDocument()->findTokenDef(id)->getName();
     }
+
+    data::u64 TokenRef::getID() {
+        return id;
+    }
+
+    TokenDef *TokenRef::getDef() {
+        return getDocument()->findTokenDef(id);
+    }
+
+    Member::Member(Document *document,Bytecode begin_mark,AccessFlag access,TokenRef *name)
+        : Node(document,begin_mark),access(access),name(name){}
 
     Member::Member(Document *document,Bytecode begin_mark,std::istream &stream)
         : Node(document,begin_mark,stream){
@@ -718,8 +719,6 @@ namespace evoBasic::il{
         else PANIC;
 
         name = new TokenRef(document,stream);
-
-        document->addMemberIndex(this);
     }
 
     void Member::toHex(ostream &stream) {
@@ -818,16 +817,16 @@ namespace evoBasic::il{
         return symbol;
     }
 
-    void Class::fillSymbolResources() {
-        auto extend_symbol = getDocument()->findMember(extend_class)->prepareSymbol();
+    void Class::fillSymbolDetail(Context *context) {
+        auto extend_symbol = context->findSymbol(extend_class->getDef()->getFullName());
         symbol->setExtend(extend_symbol->as<type::Class*>());
         for(auto impl : impl_interface_list){
-            auto impl_symbol = getDocument()->findMember(impl)->prepareSymbol();
+            auto impl_symbol = context->findSymbol(impl->getDef()->getFullName());
             symbol->addImpl(impl_symbol->as<type::Interface*>());
         }
         for(auto member : members){
             auto member_symbol = member->prepareSymbol();
-            member->fillSymbolResources();
+            member->fillSymbolDetail(nullptr);
             symbol->add(member_symbol);
         }
     }
@@ -875,10 +874,10 @@ namespace evoBasic::il{
         return symbol;
     }
 
-    void Module::fillSymbolResources() {
+    void Module::fillSymbolDetail(Context *context) {
         for(auto member : members){
             auto member_symbol = member->prepareSymbol();
-            member->fillSymbolResources();
+            member->fillSymbolDetail(nullptr);
             symbol->add(member_symbol);
         }
     }
@@ -918,10 +917,10 @@ namespace evoBasic::il{
         return symbol;
     }
 
-    void Interface::fillSymbolResources() {
+    void Interface::fillSymbolDetail(Context *context) {
         for(auto ftn : ftns){
             auto ftn_symbol = ftn->prepareSymbol();
-            ftn->fillSymbolResources();
+            ftn->fillSymbolDetail(nullptr);
             symbol->add(ftn_symbol);
         }
     }
@@ -975,7 +974,7 @@ namespace evoBasic::il{
         }
     }
 
-    void Enum::fillSymbolResources() {
+    void Enum::fillSymbolDetail(Context *context) {
         for(auto pair : enums){
             auto enum_member = new type::EnumMember(pair.second);
             enum_member->setName(pair.first->toString());
@@ -1018,8 +1017,8 @@ namespace evoBasic::il{
         return symbol;
     }
 
-    void Fld::fillSymbolResources() {
-        auto type_symbol = getDocument()->findMember(type)->prepareSymbol();
+    void Fld::fillSymbolDetail(Context *context) {
+        auto type_symbol = context->findSymbol(type->getDef()->getFullName());
         symbol->setPrototype(type_symbol->as<type::Prototype*>());
     }
 
@@ -1059,8 +1058,8 @@ namespace evoBasic::il{
         return symbol;
     }
 
-    void SFld::fillSymbolResources() {
-        auto type_symbol = getDocument()->findMember(type)->prepareSymbol();
+    void SFld::fillSymbolDetail(Context *context) {
+        auto type_symbol = context->findSymbol(type->getDef()->getFullName());
         symbol->setPrototype(type_symbol->as<type::Prototype*>());
     }
 
@@ -1107,10 +1106,10 @@ namespace evoBasic::il{
         return symbol;
     }
 
-    void Record::fillSymbolResources() {
+    void Record::fillSymbolDetail(Context *context) {
         for(auto field : fields){
             auto field_symbol = field->prepareSymbol();
-            field->fillSymbolResources();
+            field->fillSymbolDetail(nullptr);
             symbol->add(field_symbol);
         }
     }
@@ -1276,10 +1275,10 @@ namespace evoBasic::il{
         return ret;
     }
 
-    void FunctionDeclare::fillParameterList(type::Function *symbol) {
+    void FunctionDeclare::fillParameterList(Context *context,type::Function *symbol) {
         for(auto param : params){
             auto name = param->getNameToken()->toString();
-            auto type_symbol = getDocument()->findMember(param->getTypeToken())->prepareSymbol();
+            auto type_symbol = context->findSymbol(param->getTypeToken()->getDef()->getFullName());
             auto prototype = type_symbol->as<type::Prototype*>();
             type::Parameter *parameter;
             switch (param->getKind()) {
@@ -1295,8 +1294,11 @@ namespace evoBasic::il{
             }
             symbol->add(parameter);
         }
-        auto ret_symbol = getDocument()->findMember(result->getTypeToken())->prepareSymbol();
-        symbol->setRetSignature(ret_symbol->as<type::Prototype*>());
+
+        if(result){
+            auto ret_symbol = context->findSymbol(result->getTypeToken()->getDef()->getFullName());
+            symbol->setRetSignature(ret_symbol->as<type::Prototype*>());
+        }
     }
 
     FunctionDefine::FunctionDefine(Document *document, Bytecode begin_mark, AccessFlag access, TokenRef *name,
@@ -1371,8 +1373,8 @@ namespace evoBasic::il{
         return symbol;
     }
 
-    void Ctor::fillSymbolResources() {
-        fillParameterList(symbol);
+    void Ctor::fillSymbolDetail(Context *context) {
+        fillParameterList(context,symbol);
     }
 
     Ftn::Ftn(Document *document,AccessFlag access,TokenRef *name,std::list<Param*> params,Result *result,std::list<Local*> locals,std::list<BasicBlock*> blocks)
@@ -1389,8 +1391,8 @@ namespace evoBasic::il{
         return symbol;
     }
 
-    void Ftn::fillSymbolResources() {
-        fillParameterList(symbol);
+    void Ftn::fillSymbolDetail(Context *context) {
+        fillParameterList(context,symbol);
     }
 
     Ext::Ext(Document *document,AccessFlag access,TokenRef *name,
@@ -1417,8 +1419,8 @@ namespace evoBasic::il{
         return symbol;
     }
 
-    void Ext::fillSymbolResources() {
-        fillParameterList(symbol);
+    void Ext::fillSymbolDetail(Context *context) {
+        fillParameterList(context,symbol);
     }
 
     Ext::~Ext() {
@@ -1447,9 +1449,11 @@ namespace evoBasic::il{
         return token_pool[target->second];
     }
 
-    Document::Document() : Node(nullptr,Bytecode::DocumentDef){}
+    Document::Document(std::string package_name)
+        : Node(nullptr,Bytecode::DocumentDef),name(package_name){}
 
-    Document::Document(istream &stream) : Node(nullptr,Bytecode::DocumentDef,stream){
+    Document::Document(std::string package_name,istream &stream)
+        : Node(nullptr,Bytecode::DocumentDef,stream),name(package_name){
         while(true){
             TokenDef *token;
             if(predict(stream,Bytecode::TextTokenDef)){
@@ -1471,7 +1475,7 @@ namespace evoBasic::il{
         
         while(predict(stream,Bytecode::DependDef)){
             read(stream,Bytecode::DependDef);
-            dependencies.push_back(new TokenRef(this,stream));
+            dependencies_token.push_back(new TokenRef(this, stream));
         }
         
         read(stream,members,this);
@@ -1485,7 +1489,7 @@ namespace evoBasic::il{
             token->toHex(stream);
         }
 
-        for(auto library : dependencies){
+        for(auto library : dependencies_token){
             write(stream,Bytecode::DependDef);
             library->toHex(stream);
         }
@@ -1495,18 +1499,35 @@ namespace evoBasic::il{
     }
 
     void Document::addDependenceLibrary(std::string name) {
-        dependencies.push_back(getTokenRef(name));
+        dependencies_token.push_back(getTokenRef(name));
     }
 
-    Member *Document::findMember(TokenRef *token) {
-        auto target = member_map.find(findTokenDef(token->getID())->getName());
-        if(target == member_map.end())PANIC;
-        return target->second;
+    void Document::pushSymbolsInto(Context *context) {
+        for(auto member : members) {
+            member->prepareSymbol();
+        }
+
+        for(auto member : members){
+            context->getGlobal()->add(member->prepareSymbol());
+        }
     }
 
-    void Document::addMemberIndex(Member *member) {
-        auto full_name = findTokenDef(member->getNameToken()->getID())->getName();
-        member_map.insert({full_name,member});
+    void Document::fillSymbolsDetail(Context *context) {
+        for(auto member : members){
+            member->fillSymbolDetail(context);
+        }
+    }
+
+    std::list<std::string> Document::getDependenciesPath() {
+        list<string> ret;
+        for(auto token : dependencies_token){
+            ret.push_back(token->getDef()->getName());
+        }
+        return ret;
+    }
+
+    std::string Document::getPackageName() {
+        return name;
     }
 
 
@@ -1777,6 +1798,10 @@ namespace evoBasic::il{
         return Format()<<'#'<<to_string(id)<<' '<<text;
     }
 
+    std::list<std::string> TextTokenDef::getFullName() {
+        return {getName()};
+    }
+
     std::string ConstructedTokenDef::getName() {
         stringstream fmt;
         for(auto &token : sub_token_list){
@@ -1808,6 +1833,14 @@ namespace evoBasic::il{
 
     std::string ConstructedTokenDef::toString(){
         return Format()<<'#'<<to_string(id)<<' '<<getName();
+    }
+
+    std::list<std::string> ConstructedTokenDef::getFullName() {
+        list<string> ret;
+        for(auto token : sub_token_list){
+            ret.push_back(token->toString());
+        }
+        return ret;
     }
 
     TokenDef::TokenDef(Document *document,Bytecode begin_mark,ID id) : Node(document,begin_mark),id(id) {}
@@ -1846,8 +1879,8 @@ namespace evoBasic::il{
         return symbol;
     }
 
-    void InterfaceFunction::fillSymbolResources() {
-        fillParameterList(symbol);
+    void InterfaceFunction::fillSymbolDetail(Context *context) {
+        fillParameterList(context,symbol);
     }
 
 

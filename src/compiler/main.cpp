@@ -20,9 +20,11 @@ namespace extensions{
 
 bool enable_compile = true;
 list<Source*> sources;
-list<string> packages;
+list<fs::path> direct_dependencies;
 
-string output_name = "out.bkg";
+Context *context = nullptr;
+
+string output_name = "out";
 
 
 void addSourcesOrPackages(string str_path){
@@ -32,7 +34,8 @@ void addSourcesOrPackages(string str_path){
             sources.push_back(new FileSource(str_path));
         }
         else if(file_path.extension() == extensions::package){
-            packages.push_back(str_path);
+            context->getLoader()->addToWaitingDeque(str_path);
+            direct_dependencies.push_back(str_path);
         }
         else{
             Logger::error(Format() << "Unrecognized file extension "<< file_path.extension());
@@ -45,7 +48,7 @@ void addSourcesOrPackages(string str_path){
 }
 
 void setOutputName(string name){
-    output_name = name + ".bkg";
+    output_name = name;
 }
 
 void printVersionInfo(){
@@ -108,6 +111,7 @@ void enableDevInfo(){
 }
 
 int main(int argc,char *argv[]) {
+    context = new Context;
 
     CmdDistributor distributor;
     distributor.on("--dev-info",        enableDevInfo)
@@ -130,16 +134,8 @@ int main(int argc,char *argv[]) {
         Logger::error("no input source files.");
     }
 
-    auto context = new Context;
-
-    for(const auto& package_path : packages){
-        fstream package_file(package_path,ios::binary | ios::in);
-        auto package = new il::Document(package_file);
-        Logger::lazy_print(Channel::IL, [&](){
-            return package->toString();
-        });
-    }
-
+    context->getLoader()->loadPackages();
+    context->getLoader()->loadPackagesSymbols(context);
 
     list<parseTree::Global*> trees;
 
@@ -175,21 +171,21 @@ int main(int argc,char *argv[]) {
 
     if(Logger::errorCount == 0){
         ILGen gen;
-        il::Document document;
+        il::Document document(output_name);
         Semantic::solveByteLengthDependencies(context);
         for(auto ast : asts){
             gen.visitGlobal(ast,&document);
         }
 
-        for(auto &package : packages){
-            document.addDependenceLibrary(package);
+        for(auto &package : direct_dependencies){
+            document.addDependenceLibrary(package.stem());
         }
 
         Logger::lazy_print(Channel::IL,[&](){
             return document.toString();
         });
 
-        fstream file(output_name,ios::binary | ios::out);
+        fstream file(output_name + extensions::package,ios::binary | ios::out);
         document.toHex(file);
     }
 
@@ -197,5 +193,6 @@ int main(int argc,char *argv[]) {
     cout<<endl<<Logger::errorCount<<" error(s),"
         <<Logger::warningCount<<" warning(s)."<<endl;
 
+    delete context;
     return 0;
 }
