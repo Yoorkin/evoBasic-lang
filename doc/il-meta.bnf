@@ -27,7 +27,7 @@ static-field ::= '(' 'sfld' [access-flag] name type ')';
 
 external-function ::= '(' 'ext' [lib] [access-flag] name {param} [result] ')';
 
-lib ::= '(' 'lib' name ')';
+lib ::= '(' 'share' name ')';
 
 virtual-function ::= '(' 'vftn' [access-flag] name {param} [result] {local} {inst} ')';
 

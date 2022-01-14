@@ -9,3 +9,6 @@ build
 .cache
 .vs
 out
+Debug
+tags
+.ycm_extra_conf.py
