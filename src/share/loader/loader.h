@@ -22,6 +22,7 @@ namespace evoBasic{
         void loadPackages();
         void loadPackagesSymbols(CompileTimeContext *context);
         std::list<il::Document*> &getPackages();
+        ~Loader();
     };
 
 }

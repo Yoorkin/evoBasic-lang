@@ -20,7 +20,7 @@ namespace evoBasic{
         InstBeg,
         Nop,Ret,CallVirt,Callstatic,Call,Ldnull,And,Or,Xor,Ldloca,Ldarga,Ldelema,Not,
         Ldftn,Ldsftn,Ldvftn,Ldc,Newobj,Invoke,Ldflda,Ldsflda,
-        Ldelem,Stelem,Stelema,Ldarg,Starg,Ldloc,Stloc,
+        Ldelem,Stelem,Stelema,Ldarg,Ldargr,Starg,Stargr,Ldloc,Stloc,
         Add,Sub,Mul,Div,FDiv,EQ,NE,LT,GT,LE,GE,Neg,Pop,Dup,
         Ldfld,Ldsfld,Stfld,Stsfld,
         Jif,Br,Push,CastCls,Conv,
@@ -29,43 +29,6 @@ namespace evoBasic{
     };
 
     namespace vm{
-
-        class Bytecode{
-        public:
-            enum Value{
-                CompilerVersion,
-                MetaSegment,
-                Class,Module,Enum,Type,Interface,StructEnd,
-                Ext,EnumMember,Impl,
-                Field,Function,Constructor,Decl,Lib,
-                RegularParam,OptParam,ParamAry,Array,NonArray,
-                Byval,ByRef,PubAcs,PriAcs,ProAcs,Alias,
-                RefLocalTy,RefExtTy,RefPmtTy,Depend,
-                ConstSegment,CodeSegment,
-                PushFrameBase, /* push current stack frame address */
-                PushGlobalBase, /* push global address */
-                PushConstBase, /* push constant pool address */
-                Invoke,Intrinsic,External,
-                Jmp,Jif,EQ,NE,LT,GT,LE,GE,Add,Sub,Mul,Div,
-                FDiv,Neg,And,Or,Xor,Not,Load,Store,
-                Push,Pop,Ret,Cast,Dup,Stm,Ldm,Psm,
-                Nop,StoreR,StmR,RcInc,RcDec
-            };
-        private:
-            static std::vector<std::string> to_string;
-            static std::vector<data::u8> to_hex;
-            static std::map<std::string,Value> string_to_value;
-            Value value_;
-        public:
-            Bytecode(Value value){ value_ = value;}
-            Value getValue(){return value_;}
-            void setValue(Value value){value_ = value;}
-            std::string toString();
-            data::u8 toHex();
-            static Bytecode fromHex(data::u8 value);
-            static Bytecode fromString(const std::string& str);
-            bool operator==(const Bytecode &rhs);
-        };
 
         class Data{
         public:

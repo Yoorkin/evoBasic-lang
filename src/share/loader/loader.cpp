@@ -47,6 +47,11 @@ namespace evoBasic{
         return packages;
     }
 
+    Loader::~Loader() {
+        for(auto package : packages){
+            delete package;
+        }
+    }
 
 
 }

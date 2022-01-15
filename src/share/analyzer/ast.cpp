@@ -266,7 +266,11 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Arg::debug() {
-        return new DebugInfo{Format() << "<ArgUse> " << variable->mangling('.') << '@' << variable->getLayoutIndex()};
+        Format fmt;
+        fmt << "<ArgUse> ";
+        if(is_ref)fmt << "ref ";
+        fmt << variable->mangling('.') << '@' << variable->getLayoutIndex();
+        return new DebugInfo{fmt};
     }
 
     DebugInfo *Fld::debug() {

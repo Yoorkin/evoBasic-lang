@@ -209,6 +209,16 @@ namespace evoBasic::il{
         return *this;
     }
 
+    BasicBlock &BasicBlock::Stargr(DataType data) {
+        insts.push_back(new InstWithData(getDocument(), InstWithData::Op::Stargr, data));
+        return *this;
+    }
+
+    BasicBlock &BasicBlock::Ldargr(DataType data) {
+        insts.push_back(new InstWithData(getDocument(), InstWithData::Op::Ldargr, data));
+        return *this;
+    }
+
     BasicBlock &BasicBlock::Ldarga() {
         insts.push_back(new InstWithOp(getDocument(),InstWithOp::Op::Ldarga));
         return *this;
@@ -484,12 +494,13 @@ namespace evoBasic::il{
     }
 
     std::string InstWithData::toString() {
-        vector<string> inst = {"Ldelem","Stelem","Stelema","Ldarg","Starg","Ldloc","Stloc",
+        vector<string> inst = {"Ldelem","Stelem","Stelema","Ldarg","Ldargr","Starg","Stargr","Ldloc","Stloc",
                                "Add","Sub","Mul","Div","FDiv","EQ","NE","LT","GT","LE","GE","Neg","Pop","Dup"};
         vector<string> ty = {
                 "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
                 "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
         };
+
         return Format() << inst[(int)op] << '.' << ty[(int)type];
     }
 
@@ -555,7 +566,7 @@ namespace evoBasic::il{
     }
 
     Inst::ByteSize InstWithToken::getByteSize() {
-        return 1 + sizeof(TokenRef::ID);
+        return 1 + 1 + sizeof(TokenRef::ID);
     }
 
     Inst::ByteSize InstJif::getByteSize() {
@@ -589,11 +600,11 @@ namespace evoBasic::il{
     }
 
     Inst::ByteSize InstWithDataToken::getByteSize() {
-        return 2 + sizeof(ByteSize);
+        return 2 + (1 + sizeof(TokenRef::ID));
     }
 
     Inst::ByteSize InstCastcls::getByteSize() {
-        return 1 + 2 * sizeof(ByteSize);
+        return 1 + 2 * (1 + sizeof(TokenRef::ID));
     }
 
     Inst::ByteSize InstConv::getByteSize() {
@@ -623,10 +634,6 @@ namespace evoBasic::il{
     std::string BasicBlock::toString() {
         return to_string(getAddress());
     }
-
-
-
-
 
     TokenRef::TokenRef(Document *document, data::u64 id) : Node(document,Bytecode::TokenRef),id(id){}
 
@@ -1186,6 +1193,10 @@ namespace evoBasic::il{
         type->toHex(stream);
     }
 
+    TokenRef *Local::getTypeToken() {
+        return type;
+    }
+
     Result::Result(Document *document, TokenRef *type)
         : Node(document,Bytecode::ResultDef),type(type){}
 
@@ -1271,6 +1282,10 @@ namespace evoBasic::il{
             auto ret_symbol = context->findSymbol(result->getTypeToken()->getDef()->getFullName());
             symbol->setRetSignature(ret_symbol->as<type::Prototype*>());
         }
+    }
+
+    const std::list<Param *> &FunctionDeclare::getParams() {
+        return params;
     }
 
     FunctionDefine::FunctionDefine(Document *document, Bytecode begin_mark, AccessFlag access, TokenRef *name,
@@ -1609,8 +1624,8 @@ namespace evoBasic::il{
             case u64:    return Bytecode::u64;
             case f32:    return Bytecode::f32;
             case f64:    return Bytecode::f64;
+            case ref:    return Bytecode::u64;
             case empty:
-            case ref:
             case boolean:
             case character:
             case delegate:
@@ -1625,8 +1640,8 @@ namespace evoBasic::il{
 
     void InstPush::toHex(std::ostream &stream) {
         using enum DataType;
-        write(stream,(data::u8)Bytecode::Push);
-        write(stream,(data::u8)ILDataTypeToByteCode(type));
+        write(stream,Bytecode::Push);
+        write(stream,ILDataTypeToByteCode(type));
         switch(type){
             case i8:
                 write(stream,any_cast<data::i8>(value));
@@ -1681,8 +1696,10 @@ namespace evoBasic::il{
             case Ldelem:    return Bytecode::Ldelem;    
             case Stelem:    return Bytecode::Stelem;    
             case Stelema:   return Bytecode::Stelema;   
-            case Ldarg:     return Bytecode::Ldarg;     
-            case Starg:     return Bytecode::Starg;     
+            case Ldarg:     return Bytecode::Ldarg;
+            case Ldargr:    return Bytecode::Ldargr;
+            case Starg:     return Bytecode::Starg;
+            case Stargr:    return Bytecode::Stargr;
             case Ldloc:     return Bytecode::Ldloc;     
             case Stloc:     return Bytecode::Stloc;     
             case Add:       return Bytecode::Add;       
@@ -1734,7 +1751,7 @@ namespace evoBasic::il{
 
 
     void InstConv::toHex(std::ostream &stream) {
-        write(stream,Bytecode::CastCls);
+        write(stream,Bytecode::Conv);
         write(stream,ILDataTypeToByteCode(src));
         write(stream,ILDataTypeToByteCode(dst));
     }
@@ -1857,6 +1874,10 @@ namespace evoBasic::il{
 
     void TokenDef::setTarget(Member *member) {
         target = member;
+    }
+
+    TokenDef::ID TokenDef::getID() {
+        return id;
     }
 
 

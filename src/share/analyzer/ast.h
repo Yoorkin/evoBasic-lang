@@ -416,8 +416,10 @@ namespace evoBasic::ast{
         Arg(type::Variable *variable,ExpressionType *type){
             expression_kind = Expression::ArgUse;
             this->variable = variable;
+            this->is_ref = !variable->as<type::Parameter*>()->isByval();
             this->type = type;
         }
+        bool is_ref = false;
         type::Variable *variable = nullptr;
         DebugInfo *debug()override;
     };

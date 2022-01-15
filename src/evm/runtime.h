@@ -7,32 +7,48 @@
 #include <vector>
 #include <map>
 #include <string>
-#include "stack.h"
+#include "memory.h"
+#include "intrinsic.h"
 #include <loader/il.h>
-namespace evoBasic::runtime{
+namespace evoBasic::vm{
 
     class RuntimeContext;
     class TokenTable;
 
     enum class RuntimeKind{
-        Context,Class,Enum,Module,Record,Interface,ExecutableEnv,
+        Context,Class,Enum,Module,Record,Interface,Function,
         VirtualFtnSlot,FieldSlot,StaticFieldSlot,Intrinsic,
-        ForeignFunction
+        ForeignFunction,BuiltIn
     };
 
     class Runtime{
         friend RuntimeContext;
+    protected:
         TokenTable *table = nullptr;
     public:
         explicit Runtime(TokenTable *table);
         virtual RuntimeKind getKind()=0;
+        TokenTable *getTokenTable();
     };
 
     class Sizeable{
-        friend evoBasic::runtime::RuntimeContext;
+        friend evoBasic::vm::RuntimeContext;
         data::u64 size = 0;
     public:
         data::u64 getByteLength();
+    };
+
+
+    enum class BuiltInKind {
+        u8,u16,u32,u64,i8,i16,i32,i64
+    };
+
+    class BuiltIn : public Runtime{
+        BuiltInKind kind;
+    public:
+        explicit BuiltIn(BuiltInKind kind);
+        RuntimeKind getKind()override{ return RuntimeKind::BuiltIn; }
+        BuiltInKind getBuiltInKind();
     };
 
     class NameSpace : public Runtime{
@@ -41,16 +57,16 @@ namespace evoBasic::runtime{
         std::map<std::string,Runtime*> childs;
     public:
         explicit NameSpace(TokenTable *table);
-        virtual Runtime *find(std::string &name);
+        virtual Runtime *find(std::string name);
     };
 
     class TokenTable{
-        evoBasic::runtime::RuntimeContext *context = nullptr;
+        evoBasic::vm::RuntimeContext *context = nullptr;
         std::vector<il::TokenDef*> tokens;
         std::vector<Runtime*> cache;
         void loadCache(data::u64 idx);
     public:
-        TokenTable(evoBasic::runtime::RuntimeContext *context, std::vector<il::TokenDef*> tokens);
+        TokenTable(RuntimeContext *context, std::vector<il::TokenDef*> tokens);
         template<typename T>
         T *getRuntime(il::TokenDef::ID id){
             if(!cache[id]) loadCache(id);
@@ -58,17 +74,30 @@ namespace evoBasic::runtime{
         }
     };
 
-    class ExecutableEnv : public Runtime{
-        friend evoBasic::runtime::RuntimeContext;
+    class Function : public Runtime{
+        friend evoBasic::vm::RuntimeContext;
         il::FunctionDefine *il_info = nullptr;
-        data::Byte *block = nullptr;
+        std::vector<Runtime*> params;
+        std::vector<Runtime*> locals;
+        std::vector<data::u64> params_offset;
+        std::vector<data::u64> locals_offset;
+        data::u64 params_frame_size = -1;
+        data::u64 locals_frame_size = -1;
     public:
-        ExecutableEnv(TokenTable *table,il::FunctionDefine *info);
-        RuntimeKind getKind()override{ return RuntimeKind::ExecutableEnv; }
+        Function(TokenTable *table, il::FunctionDefine *info);
+        RuntimeKind getKind()override{ return RuntimeKind::Function; }
+        data::Byte *getBlock();
+        const std::vector<Runtime*> &getParams();
+        const std::vector<Runtime*> &getLocals();
+        data::u64 getParamOffset(data::u16 index);
+        data::u64 getLocalOffset(data::u16 index);
+        data::u64 getParamsStackFrameLength();
+        data::u64 getLocalsStackFrameLength();
+        data::u64 getStackFrameLength();
     };
 
     class ForeignFunction : public Runtime{
-        friend evoBasic::runtime::RuntimeContext;
+        friend evoBasic::vm::RuntimeContext;
         std::string library,name;
         il::Ext *il_info = nullptr;
     public:
@@ -77,28 +106,27 @@ namespace evoBasic::runtime{
     };
 
     class Intrinsic : public Runtime{
-    public:
-        using Handler = std::function<void(vm::Stack*)>;
     private:
         il::Ext *il_info = nullptr;
-        Handler handler;
+        IntrinsicHandler handler;
     public:
-        Intrinsic(Handler handler,il::Ext *info);
+        Intrinsic(IntrinsicHandler handler,il::Ext *info);
         RuntimeKind getKind()override{ return RuntimeKind::Intrinsic; }
         void invoke(vm::Stack *operand);
     };
 
     class VirtualFtnSlot : public Runtime{
-        friend evoBasic::runtime::RuntimeContext;
+        friend evoBasic::vm::RuntimeContext;
         il::VFtn *il_info = nullptr;
         data::u64 offset = -1;
     public:
         VirtualFtnSlot(data::u64 offset,il::VFtn *info);
         RuntimeKind getKind()override{ return RuntimeKind::VirtualFtnSlot; }
+        data::u64 getOffset();
     };
 
     class FieldSlot : public Runtime{
-        friend evoBasic::runtime::RuntimeContext;
+        friend evoBasic::vm::RuntimeContext;
         data::u64 offset = -1;
         il::Fld *il_info = nullptr;
     public:
@@ -107,7 +135,7 @@ namespace evoBasic::runtime{
     };
 
     class StaticFieldSlot : public Runtime{
-        friend evoBasic::runtime::RuntimeContext;
+        friend evoBasic::vm::RuntimeContext;
         data::u64 offset = -1;
         il::SFld *il_info = nullptr;
     public:
@@ -116,7 +144,7 @@ namespace evoBasic::runtime{
     };
 
     class Module : public NameSpace,public Sizeable{
-        friend evoBasic::runtime::RuntimeContext;
+        friend evoBasic::vm::RuntimeContext;
         il::Module *il_info = nullptr;
         char *static_field_memory = nullptr;
     public:
@@ -125,7 +153,7 @@ namespace evoBasic::runtime{
     };
 
     class Record : public NameSpace,public Sizeable{
-        friend evoBasic::runtime::RuntimeContext;
+        friend evoBasic::vm::RuntimeContext;
         il::Record *il_info = nullptr;
         data::u64 byte_length = 0;
     public:
@@ -134,24 +162,32 @@ namespace evoBasic::runtime{
     };
 
     class Class : public NameSpace,public Sizeable{
-        friend evoBasic::runtime::RuntimeContext;
+        friend evoBasic::vm::RuntimeContext;
         char *static_field_memory = nullptr;
         Class *base_class = nullptr;
-        std::vector<ExecutableEnv*> vtable;
+        std::vector<Function*> vtable;
         il::Class *il_info = nullptr;
     public:
         Class(TokenTable *table,il::Class *info);
         RuntimeKind getKind()override{ return RuntimeKind::Class; }
-        ExecutableEnv *virtualFunctionDispatch(VirtualFtnSlot slot);
+        Function *virtualFunctionDispatch(VirtualFtnSlot slot);
         template<typename T>
-        T *getStaticField(StaticFieldSlot slot){
+        T read(StaticFieldSlot *slot){
 
         }
-        Runtime *find(std::string &name)override;
+        template<typename T>
+        void write(StaticFieldSlot *slot, T value){
+
+        }
+        template<typename T>
+        T address(StaticFieldSlot *slot){
+
+        }
+        Runtime *find(std::string name)override;
     };
 
     class Enum : public NameSpace{
-        friend evoBasic::runtime::RuntimeContext;
+        friend evoBasic::vm::RuntimeContext;
         il::Enum *il_info = nullptr;
     public:
         Enum(TokenTable *table,il::Enum *info);
@@ -174,28 +210,36 @@ namespace evoBasic::runtime{
         char *field_memory = nullptr;
     public:
         template<typename T>
-        T *getField(FieldSlot slot){
+        T read(FieldSlot *slot){
 
         }
+        template<typename T>
+        void write(FieldSlot *slot,T value){
+
+        }
+        template<typename T>
+        T address(FieldSlot *slot){
+
+        }
+        Class *getClass();
     };
 
     class RuntimeContext : public NameSpace{
         std::list<TokenTable*> token_tables;
-        std::vector<Intrinsic::Handler> intrinsic_handler_table;
-    public:
+        std::vector<IntrinsicHandler> intrinsic_handler_table;
         using NameRuntimePair = std::pair<std::string,Runtime*>;
-        explicit RuntimeContext(std::list<il::Document*> &documents);
         std::optional<NameRuntimePair> collectSymbolRecursively(TokenTable *table,il::Member *member);
-        void collectDependencies(Runtime *parent, Runtime *current, Dependencies<Class*> &inherit,
-                                 Dependencies<Record*> &include);
-
+        void collectDependencies(Runtime *parent, Runtime *current, Dependencies<Class*> &inherit, Dependencies<Record*> &include);
         void recordFieldsResolution(Record *record);
-
         void classFieldsAndVTableResolution(Class *cls);
         RuntimeKind getKind()override{ return RuntimeKind::Context; }
-
         void collectDetailRecursively(Runtime *runtime);
+    public:
+        explicit RuntimeContext(std::list<il::Document*> &documents);
+
     };
+
+
 
 }
 

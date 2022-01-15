@@ -136,7 +136,7 @@ namespace evoBasic{
         {"true",Enum::true_},
         {"import",Enum::import_},
         {"declare",Enum::declare_},
-        {"share",Enum::lib_},
+        {"lib",Enum::lib_},
         {"alias",Enum::alias_},
         {"operator",Enum::operator_},
         {"impl",Enum::impl},

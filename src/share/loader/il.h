@@ -297,6 +297,7 @@ namespace evoBasic::il{
     public:
         Local(Document *document,TokenRef *name,TokenRef *type,ID address);
         Local(Document *document,std::istream &stream,ID address);
+        TokenRef *getTypeToken();
         std::string toString()override;
         void toHex(std::ostream &stream)override;
     };
@@ -319,6 +320,7 @@ namespace evoBasic::il{
     public:
         FunctionDeclare(Document *document, Bytecode begin_mark, AccessFlag access, TokenRef *name, std::list<Param*> params, Result *result);
         FunctionDeclare(Document *document, Bytecode begin_mark, std::istream &stream);
+        const std::list<Param*> &getParams();
         void toHex(std::ostream &stream)override;
         DebugInfo *toStructuredInfo()override;
     };
@@ -473,7 +475,7 @@ namespace evoBasic::il{
 
     class InstWithData : public Inst{
     public:
-        enum Op{Ldelem,Stelem,Stelema,Ldarg,Starg,Ldloc,Stloc,
+        enum Op{Ldelem,Stelem,Stelema,Ldarg,Ldargr,Starg,Stargr,Ldloc,Stloc,
                 Add,Sub,Mul,Div,FDiv,EQ,NE,LT,GT,LE,GE,Neg,Pop,Dup};
     private:
         Op op;
@@ -612,6 +614,8 @@ namespace evoBasic::il{
         BasicBlock &Ldvftn(TokenRef *vftn);
         BasicBlock &Ldarg(DataType data);
         BasicBlock &Starg(DataType data);
+        BasicBlock &Stargr(DataType data);
+        BasicBlock &Ldargr(DataType data);
         BasicBlock &Ldarga();
         BasicBlock &Ldloc(DataType data);
         BasicBlock &Ldloca();

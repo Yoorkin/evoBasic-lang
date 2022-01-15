@@ -4,8 +4,17 @@
 
 #ifndef EVOBASIC_INTRINSIC_H
 #define EVOBASIC_INTRINSIC_H
-#include "stack.h"
+#include "memory.h"
+#include <functional>
 namespace evoBasic::vm{
+
+    using IntrinsicHandler = std::function<void(Stack*)>;
+
+    std::vector<IntrinsicHandler> getIntrinsicHandlerList();
+
+    void intrinsic_putchar(Stack *operand);
+
+    void intrinsic_getchar(Stack *operand);
 
 }
 

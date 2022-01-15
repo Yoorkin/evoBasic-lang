@@ -130,13 +130,13 @@
 
 - jif
 
-    format: `jif`
+    format: `jif <u64 address>`
 
     transform: ..., boolean -> ...
 
 - br
 
-    format: `br`
+    format: `br <u64 address>`
 
     transform: ... -> ...
 
@@ -175,7 +175,7 @@
 
     format: `ldloc.<DataType>`
 
-    transform: ..., u16 -> ..., `data type`
+    transform: ..., u16 -> ..., `data type value`
 
 - ldloca
 
@@ -187,7 +187,13 @@
 
     format: `starg.<DataType>`
 
-    transform: ..., u16, `data type` -> ...
+    transform: ..., u16, `data type value` -> ...
+
+- starga
+
+    format: `starga.<DataType>`
+
+    transform: ..., u16, `data type value` -> ...
 
 - stloc
 

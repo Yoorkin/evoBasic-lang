@@ -13,6 +13,8 @@ add_executable(
 	${EVO_SHARE_SOURCE_DIR}/analyzer/context.cpp
 	${EVO_SHARE_SOURCE_DIR}/parser/token.cpp
 	${EVO_SHARE_SOURCE_DIR}/loader/bytecode.cpp
+	processor.cpp
+	intrinsic.cpp
 )
 
 

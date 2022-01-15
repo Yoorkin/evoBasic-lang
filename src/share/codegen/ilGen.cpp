@@ -731,7 +731,13 @@ namespace evoBasic{
                 auto arg = (ast::Arg*)expr;
                 current->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex());
                 visitExpression(assign_node->rhs,current);
-                current->Starg(mapILType(arg->variable->getPrototype()));
+                auto data_type = mapILType(arg->variable->getPrototype());
+                if(arg->is_ref){
+                    current->Stargr(data_type);
+                }
+                else{
+                    current->Starg(data_type);
+                }
                 break;
             }
             case ast::Expression::Local:{
@@ -800,8 +806,19 @@ namespace evoBasic{
                 }
                 case ast::Expression::ArgUse:{
                     auto arg = (ast::Arg*)expr;
-                    current->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex())
-                            .Ldarga();
+                    current->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex());
+                    if(arg->is_ref){
+                        current->Ldarg(DataType::ref);
+                    }
+                    else{
+                        current->Ldarga();
+                    }
+                    break;
+                }
+                case ast::Expression::Local:{
+                    auto local = (ast::Local*)expr;
+                    current->Push(DataType::u16,(data::u16)local->variable->getLayoutIndex())
+                            .Ldloca();
                     break;
                 }
                 default: PANIC;
@@ -823,9 +840,9 @@ namespace evoBasic{
     }
 
     void ILGen::visitSFtnCall(ast::SFtnCall *sftn_node, il::BasicBlock *current) {
+        current->Ldsftn(document->getTokenRef(sftn_node->function->getFullName()));
         loadCalleeArguments(sftn_node,current);
-        current->Ldsftn(document->getTokenRef(sftn_node->function->getFullName()))
-                .Callstatic();
+        current->Callstatic();
     }
 
     void ILGen::loadCalleeArguments(ast::Call *call,il::BasicBlock *current){
@@ -867,7 +884,13 @@ namespace evoBasic{
     void ILGen::visitArg(ast::Arg *arg_node, il::BasicBlock *current) {
         auto index = arg_node->variable->getLayoutIndex();
         current->Push(DataType::u16,(data::u16)index);
-        current->Ldarg(mapILType(arg_node->variable->getPrototype()));
+        auto data_type = mapILType(arg_node->variable->getPrototype());
+        if(arg_node->is_ref){
+            current->Ldargr(data_type);
+        }
+        else{
+            current->Ldarg(data_type);
+        }
     }
 
     void ILGen::visitDigit(ast::Digit *digit_node, il::BasicBlock *current) {

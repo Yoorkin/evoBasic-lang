@@ -70,7 +70,7 @@ For a complete definition about syntax, see [grammar.bnf](/doc/grammar.bnf).
 - [x] package file (.bkg) generator and loader
 - [ ] package manager
 - [ ] evoBasic vm
-- [ ] runtime library
+- [ ] vm library
 
 EvoBasic cannot run any executable file yet. But you can use option `--dev-info` to print information ( tokens,parse tree,abstract tree,symbol table and IL ) during compilation to check if the compiler works.
 
