@@ -26,29 +26,35 @@ namespace evoBasic{
 
     class ILGen{
         il::Document *document = nullptr;
-        il::BasicBlock *for_next = nullptr,*loop_next = nullptr;
         std::list<il::BasicBlock*> blocks;
     public:
+        struct JumpOption{
+            il::BasicBlock *looping_condition_block = nullptr;
+            il::BasicBlock *after_for_block = nullptr;
+            il::BasicBlock *after_loop_block = nullptr;
+        };
+
         void visitGlobal(ast::Global *global_node,il::Document *document);
-        il::Class *visitClass(ast::Class *class_node);
-        il::Module *visitModule(ast::Module *module_node);
-        il::Interface *visitInterface(ast::Interface *interface_node);
-        il::Record *visitType(ast::Type *type_node);
-        il::Enum *visitEnum(ast::Enum *enum_node);
-        il::FunctionDefine *visitFunction(ast::Function *function_node);
-        il::Ext *visitExternal(ast::External *external_node);
-        il::Ctor *visitConstructor(ast::Constructor *ctor_node);
-        void visitLet(ast::Let *let_node, il::BasicBlock *current, il::BasicBlock *next);
-        il::BasicBlock *visitSelect(ast::Select *select_node, il::BasicBlock *current, il::BasicBlock *next);
-        il::BasicBlock *visitLoop(ast::Loop *loop_node, il::BasicBlock *current, il::BasicBlock *next);
-        il::BasicBlock *visitIf(ast::If *if_node, il::BasicBlock *current, il::BasicBlock *next);
-        void visitCase(ast::Case *case_node, il::BasicBlock *current, il::BasicBlock *next);
-        il::BasicBlock *visitFor(ast::For *for_node, il::BasicBlock *current, il::BasicBlock *next);
-        il::BasicBlock *visitExprStmt(ast::ExprStmt *expr_stmt_node, il::BasicBlock *current, il::BasicBlock *next);
-        void visitReturn(ast::Return *return_node, il::BasicBlock *current, il::BasicBlock *next);
-        il::BasicBlock *visitExit(ast::Exit *exit_node, il::BasicBlock *current);
-        il::BasicBlock *visitContinue(ast::Continue *continue_node, il::BasicBlock *current, il::BasicBlock *next);
-        il::BasicBlock *visitStatement(ast::Statement *statement_node, il::BasicBlock *current, il::BasicBlock *next);
+        auto visitClass(ast::Class *class_node)->il::Class*;
+        auto visitModule(ast::Module *module_node)->il::Module*;
+        auto visitInterface(ast::Interface *interface_node)->il::Interface*;
+        auto visitType(ast::Type *type_node)->il::Record*;
+        auto visitEnum(ast::Enum *enum_node)->il::Enum*;
+        auto visitFunction(ast::Function *function_node)->il::FunctionDefine*;
+        auto visitExternal(ast::External *external_node)->il::Ext*;
+        auto visitConstructor(ast::Constructor *ctor_node)->il::Ctor*;
+
+        void visitLet       (ast::Let *let_node, il::BasicBlock *current);
+        auto visitSelect    (ast::Select *select_node, il::BasicBlock *current,     JumpOption jump_option)->il::BasicBlock*;
+        auto visitLoop      (ast::Loop *loop_node, il::BasicBlock *current,         JumpOption jump_option)->il::BasicBlock*;
+        auto visitIf        (ast::If *if_node, il::BasicBlock *current,             JumpOption jump_option)->il::BasicBlock*;
+        auto visitCase      (ast::Case *case_node, il::BasicBlock *current,         JumpOption jump_option)->il::BasicBlock*;
+        auto visitFor       (ast::For *for_node, il::BasicBlock *current,           JumpOption jump_option)->il::BasicBlock*;
+        void visitExprStmt  (ast::ExprStmt *expr_stmt_node, il::BasicBlock *current);
+        void visitReturn    (ast::Return *return_node, il::BasicBlock *current);
+        void visitExit      (ast::Exit *exit_node, il::BasicBlock *current,         JumpOption jump_option);
+        void visitContinue  (ast::Continue *continue_node, il::BasicBlock *current, JumpOption jump_option);
+        auto visitStatement (ast::Statement *statement_node, il::BasicBlock *current,JumpOption jump_option)->il::BasicBlock*;
 
         void visitExpression(ast::Expression *expression_node, il::BasicBlock *current);
         void visitUnary(ast::Unary *unary_node, il::BasicBlock *current);

@@ -205,7 +205,7 @@ namespace evoBasic{
         blocks.clear();
         blocks.push_back(entry);
         auto symbol = function_node->function_symbol->as<type::UserFunction*>();
-        auto tail_block = visitStatement(function_node->statement, entry, nullptr);
+        auto tail_block = visitStatement(function_node->statement,entry,{});
         tail_block->Ret();
 
         auto parameter = visitParameter(symbol);
@@ -263,7 +263,7 @@ namespace evoBasic{
         blocks.clear();
         blocks.push_back(entry);
         auto parameter = visitParameter(ctor_node->constructor_symbol);
-        auto tail_block = visitStatement(ctor_node->statement,entry,nullptr);
+        auto tail_block = visitStatement(ctor_node->statement,entry,{});
         tail_block->Ret();
 
         list<il::Local*> locals;
@@ -277,35 +277,35 @@ namespace evoBasic{
     }
 
 
-    il::BasicBlock *ILGen::visitStatement(ast::Statement *statement_node, il::BasicBlock *current, il::BasicBlock *next) {
+    il::BasicBlock *ILGen::visitStatement(ast::Statement *statement_node, il::BasicBlock *current, JumpOption jump_option) {
         FOR_EACH(iter,statement_node){
             switch(iter->stmt_flag){
                 case ast::Statement::let_:
-                    visitLet((ast::Let*)iter,current,next);
+                    visitLet((ast::Let*)iter,current);
                     break;
                 case ast::Statement::loop_:
-                    current = visitLoop((ast::Loop*)iter,current,next);
+                    current = visitLoop((ast::Loop*)iter,current,jump_option);
                     break;
                 case ast::Statement::if_:
-                    current = visitIf((ast::If*)iter,current,next);
+                    current = visitIf((ast::If*)iter,current,jump_option);
                     break;
                 case ast::Statement::for_:
-                    current = visitFor((ast::For*)iter,current,next);
+                    current = visitFor((ast::For*)iter,current,jump_option);
                     break;
                 case ast::Statement::select_:
-                    current = visitSelect((ast::Select*)iter,current,next);
+                    current = visitSelect((ast::Select*)iter,current,jump_option);
                     break;
                 case ast::Statement::return_:
-                    visitReturn((ast::Return*)iter,current,next);
+                    visitReturn((ast::Return*)iter,current);
                     break;
                 case ast::Statement::continue_:
-                    visitContinue((ast::Continue*)iter,current,next);
+                    visitContinue((ast::Continue*)iter,current,jump_option);
                     break;
                 case ast::Statement::exit_:
-                    visitExit((ast::Exit*)iter,current);
+                    visitExit((ast::Exit*)iter,current,jump_option);
                     break;
                 case ast::Statement::expr_:
-                    visitExprStmt((ast::ExprStmt*)iter,current,next);
+                    visitExprStmt((ast::ExprStmt*)iter,current);
                     break;
                 default:
                     PANIC;
@@ -315,7 +315,7 @@ namespace evoBasic{
         return current;
     }
 
-    void ILGen::visitLet(ast::Let *let_node, il::BasicBlock *current, il::BasicBlock *next) {
+    void ILGen::visitLet(ast::Let *let_node, il::BasicBlock *current) {
         FOR_EACH(iter,let_node->variable){
             current->Push(DataType::u16,(data::u16)iter->variable_symbol->getLayoutIndex());
             visitExpression(iter->initial,current);
@@ -323,12 +323,12 @@ namespace evoBasic{
         }
     }
 
-    il::BasicBlock *ILGen::visitSelect(ast::Select *select_node, il::BasicBlock *current, il::BasicBlock *next) {
+    il::BasicBlock *ILGen::visitSelect(ast::Select *select_node, il::BasicBlock *current, JumpOption jump_option) {
         //todo
         return current;
     }
 
-    il::BasicBlock *ILGen::visitLoop(ast::Loop *loop_node, il::BasicBlock *current, il::BasicBlock *next) {
+    il::BasicBlock *ILGen::visitLoop(ast::Loop *loop_node, il::BasicBlock *current, JumpOption jump_option) {
         auto cond_block = new il::BasicBlock(document),
              loop_block = new il::BasicBlock(document),
              after_block = new il::BasicBlock(document);
@@ -343,20 +343,20 @@ namespace evoBasic{
         cond_block->Jif(loop_block);
         cond_block->Br(after_block);
 
-        loop_block = visitStatement(loop_node->statement,loop_block,after_block);
-        loop_block->Br(cond_block);
+        auto loop_tail_block = visitStatement(loop_node->statement,loop_block,{cond_block,jump_option.after_for_block,after_block});
+        loop_tail_block->Br(cond_block);
 
         return after_block;
     }
 
-    il::BasicBlock *ILGen::visitIf(ast::If *if_node, il::BasicBlock *current, il::BasicBlock *next) {
+    il::BasicBlock *ILGen::visitIf(ast::If *if_node, il::BasicBlock *current, JumpOption jump_option) {
+        return visitCase(if_node->case_,current,jump_option);
+    }
+
+    il::BasicBlock *ILGen::visitCase(ast::Case *case_node, il::BasicBlock *current, JumpOption jump_option) {
         auto after_block = new il::BasicBlock(document);
         blocks.push_back(after_block);
-        visitCase(if_node->case_,current,after_block);
-        return after_block;
-    }
 
-    void ILGen::visitCase(ast::Case *case_node, il::BasicBlock *current, il::BasicBlock *next) {
         map<ast::Case*,il::BasicBlock*> case_blocks;
         bool has_else_case = false;
         FOR_EACH(iter,case_node){
@@ -375,21 +375,23 @@ namespace evoBasic{
             if(case_block != case_blocks.end()){
                 visitExpression(iter->condition,current);
                 current->Jif(case_block->second);
-                auto after_case_block = visitStatement(iter->statement,case_block->second,next);
-                after_case_block->Br(next);
+                auto case_tail_block = visitStatement(iter->statement,case_block->second,jump_option);
+                case_tail_block->Br(after_block);
             }
             else{
-                auto after_case_block = visitStatement(iter->statement,current,next);
-                after_case_block->Br(next);
+                auto case_tail_block = visitStatement(iter->statement,current,jump_option);
+                case_tail_block->Br(after_block);
             }
         }
 
         if(!has_else_case){
-            current->Br(next);
+            current->Br(after_block);
         }
+
+        return after_block;
     }
 
-    il::BasicBlock *ILGen::visitFor(ast::For *for_node, il::BasicBlock *current, il::BasicBlock *next) {
+    il::BasicBlock *ILGen::visitFor(ast::For *for_node, il::BasicBlock *current, JumpOption jump_option) {
 
         switch(for_node->iterator->expression_kind){
             case ast::Expression::SFld:{
@@ -461,9 +463,8 @@ namespace evoBasic{
 
         current->Br(stmt_block);
 
-        stmt_block = visitStatement(for_node->statement,current,cond_block);
-
-        stmt_block->Br(cond_block);
+        auto for_tail_block = visitStatement(for_node->statement,stmt_block,{cond_block,after_block,jump_option.after_loop_block});
+        for_tail_block->Br(cond_block);
 
         /*
          * iter = iter + step
@@ -557,35 +558,32 @@ namespace evoBasic{
         return after_block;
     }
 
-    il::BasicBlock *ILGen::visitExprStmt(ast::ExprStmt *expr_stmt_node, il::BasicBlock *current, il::BasicBlock *next) {
+    void ILGen::visitExprStmt(ast::ExprStmt *expr_stmt_node, il::BasicBlock *current) {
         visitExpression(expr_stmt_node->expr,current);
-        return current;
         // todo: clean operand stack
     }
 
-    il::BasicBlock *ILGen::visitExit(ast::Exit *exit_node, il::BasicBlock *current) {
+    void ILGen::visitExit(ast::Exit *exit_node, il::BasicBlock *current, JumpOption jump_option) {
         switch(exit_node->exit_flag){
             case ast::Exit::For:
-                NotNull(for_next);
-                current->Br(for_next);
+                NotNull(jump_option.after_for_block);
+                current->Br(jump_option.after_for_block);
                 break;
             case ast::Exit::While:
-                NotNull(loop_next);
-                current->Br(loop_next);
+                NotNull(jump_option.after_loop_block);
+                current->Br(jump_option.after_loop_block);
                 break;
             case ast::Exit::Sub:
                 current->Ret();
                 break;
         }
-        return current;
     }
 
-    il::BasicBlock *ILGen::visitContinue(ast::Continue *continue_node, il::BasicBlock *current, il::BasicBlock *next) {
-        current->Br();
-        return current;
+    void ILGen::visitContinue(ast::Continue *continue_node, il::BasicBlock *current, JumpOption jump_option) {
+        current->Br(jump_option.looping_condition_block);
     }
 
-    void ILGen::visitReturn(ast::Return *return_node, il::BasicBlock *current, il::BasicBlock *next) {
+    void ILGen::visitReturn(ast::Return *return_node, il::BasicBlock *current) {
         visitExpression(return_node->expr,current);
         current->Ret();
     }
@@ -853,7 +851,7 @@ namespace evoBasic{
         current->Callstatic();
     }
 
-    void ILGen::loadCalleeArguments(ast::Call *call,il::BasicBlock *current){
+    void ILGen::loadCalleeArguments(ast::Call *call, il::BasicBlock *current){
         // load regular argument by declaration order
         FOR_EACH(iter,call->argument){
             visitArgument(iter,current);
