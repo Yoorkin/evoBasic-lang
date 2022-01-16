@@ -474,7 +474,8 @@ namespace evoBasic{
                 auto sfld = (ast::SFld*)for_node->iterator;
                 auto il_type = mapILType(sfld->type->getPrototype());
                 visitExpression(for_node->iterator,cond_block);
-                visitExpression(for_node->step,cond_block);
+                cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
+                            .Ldloc(iter_il_type);
                 cond_block->Add(il_type);
                 cond_block->Stsfld(il_type, document->getTokenRef(sfld->variable->getFullName()));
                 break;
@@ -484,7 +485,8 @@ namespace evoBasic{
                 auto il_type = mapILType(fld->type->getPrototype());
                 visitExpression(fld->ref,cond_block);
                 visitExpression(for_node->iterator,cond_block);
-                visitExpression(for_node->step,cond_block);
+                cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
+                          .Ldloc(iter_il_type);
                 cond_block->Add(il_type);
                 cond_block->Stfld(il_type, document->getTokenRef(fld->variable->getFullName()));
                 break;
@@ -494,7 +496,8 @@ namespace evoBasic{
                 auto il_type = mapILType(arg->type->getPrototype());
                 cond_block->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex());
                 visitExpression(for_node->iterator,cond_block);
-                visitExpression(for_node->step,cond_block);
+                cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
+                           .Ldloc(iter_il_type);
                 cond_block->Add(il_type);
                 cond_block->Starg(il_type);
                 break;
@@ -504,7 +507,8 @@ namespace evoBasic{
                 auto il_type = mapILType(local->type->getPrototype());
                 cond_block->Push(DataType::u16,(data::u16)local->variable->getLayoutIndex());
                 visitExpression(for_node->iterator,cond_block);
-                visitExpression(for_node->step,cond_block);
+                cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
+                           .Ldloc(iter_il_type);
                 cond_block->Add(il_type);
                 cond_block->Stloc(il_type);
                 break;
@@ -515,7 +519,8 @@ namespace evoBasic{
                 visitExpression(element->array,cond_block);
                 visitExpression(element->offset,cond_block);
                 visitExpression(for_node->iterator,cond_block);
-                visitExpression(for_node->step,cond_block);
+                cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
+                           .Ldloc(iter_il_type);
                 cond_block->Add(il_type);
                 cond_block->Stelem(il_type);
                 break;
@@ -523,9 +528,10 @@ namespace evoBasic{
             default: PANIC;
         }
 
+
         /*
          *  beg < end && iter > end ||
-         *  beg > end && iter < beg ||
+         *  beg > end && iter < end ||
          *  beg == end
          */
         cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
@@ -536,7 +542,8 @@ namespace evoBasic{
         visitExpression(for_node->iterator,cond_block);
         cond_block->Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
                    .Ldloc(iter_il_type)
-                   .GT(iter_il_type);
+                   .GT(iter_il_type)
+                   .And();
 
         cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
                     .Ldloc(iter_il_type)
@@ -544,7 +551,13 @@ namespace evoBasic{
                     .Ldloc(iter_il_type)
                     .GT(iter_il_type);
         visitExpression(for_node->iterator,cond_block);
+        cond_block->Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+                    .Ldloc(iter_il_type)
+                    .LT(iter_il_type)
+                    .And();
+
         cond_block->Or();
+
         cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
                 .Ldloc(iter_il_type)
                 .Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())

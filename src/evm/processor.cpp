@@ -363,10 +363,10 @@ namespace evoBasic::vm{
                     PANIC;
                     break;
                 case Bytecode::And:
-                    operand.push<data::boolean>(operand.pop<data::boolean>() && operand.pop<data::boolean>());
+                    operand.push<data::boolean>(operand.pop<data::boolean>() & operand.pop<data::boolean>());
                     break;
                 case Bytecode::Or:
-                    operand.push<data::boolean>(operand.pop<data::boolean>() || operand.pop<data::boolean>());
+                    operand.push<data::boolean>(operand.pop<data::boolean>() | operand.pop<data::boolean>());
                     break;
                 case Bytecode::Xor:
                     operand.push<data::boolean>(operand.pop<data::boolean>() xor operand.pop<data::boolean>());
