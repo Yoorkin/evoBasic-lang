@@ -47,7 +47,7 @@ namespace evoBasic::vm{
         static void call(Stack &operand, ExecutionEnv &env) {
             T rhs = operand.pop<T>();
             T lhs = operand.pop<T>();
-            operand.push<data::boolean>(rhs < lhs);
+            operand.push<data::boolean>(lhs < rhs);
         }
     };
 
@@ -56,7 +56,7 @@ namespace evoBasic::vm{
         static void call(Stack &operand, ExecutionEnv &env) {
             T rhs = operand.pop<T>();
             T lhs = operand.pop<T>();
-            operand.push<data::boolean>(rhs > lhs);
+            operand.push<data::boolean>(lhs > rhs);
         }
     };
 
@@ -65,7 +65,7 @@ namespace evoBasic::vm{
         static void call(Stack &operand, ExecutionEnv &env) {
             T rhs = operand.pop<T>();
             T lhs = operand.pop<T>();
-            operand.push<data::boolean>(rhs <= lhs);
+            operand.push<data::boolean>(lhs <= rhs);
         }
     };
 
@@ -74,7 +74,7 @@ namespace evoBasic::vm{
         static void call(Stack &operand, ExecutionEnv &env) {
             T rhs = operand.pop<T>();
             T lhs = operand.pop<T>();
-            operand.push<data::boolean>(rhs >= lhs);
+            operand.push<data::boolean>(lhs >= rhs);
         }
     };
 
@@ -83,7 +83,7 @@ namespace evoBasic::vm{
         static void call(Stack &operand, ExecutionEnv &env) {
             T rhs = operand.pop<T>();
             T lhs = operand.pop<T>();
-            operand.push<T>(rhs + lhs);
+            operand.push<T>(lhs + rhs);
         }
     };
 

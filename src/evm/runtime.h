@@ -40,7 +40,7 @@ namespace evoBasic::vm{
 
 
     enum class BuiltInKind {
-        u8,u16,u32,u64,i8,i16,i32,i64
+        boolean,u8,u16,u32,u64,i8,i16,i32,i64,f32,f64
     };
 
     class BuiltIn : public Runtime{

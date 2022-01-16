@@ -217,6 +217,21 @@ namespace evoBasic::vm{
     RuntimeContext::RuntimeContext(std::list<il::Document*> &documents) : NameSpace(nullptr) {
         intrinsic_handler_table = getIntrinsicHandlerList();
 
+        std::vector<std::pair<std::string,vm::BuiltIn*>> builtin_list = {
+            {"boolean",new BuiltIn(BuiltInKind::boolean)},
+            {"byte",new BuiltIn(BuiltInKind::i8)},
+            {"short",new BuiltIn(BuiltInKind::i16)},
+            {"integer",new BuiltIn(BuiltInKind::i32)},
+            {"long",new BuiltIn(BuiltInKind::i64)},
+            {"single",new BuiltIn(BuiltInKind::f32)},
+            {"double",new BuiltIn(BuiltInKind::f64)},
+            {"u8",new BuiltIn(BuiltInKind::u8)},
+            {"u32",new BuiltIn(BuiltInKind::u32)},
+            {"u64",new BuiltIn(BuiltInKind::u64)}
+        };
+
+        for(auto builtin : builtin_list) childs.insert(builtin);
+
         std::list<std::pair<TokenTable*,il::Document*>> tmp;
         for(auto document : documents){
             auto t = new TokenTable(this,document->getTokens());
@@ -272,6 +287,7 @@ namespace evoBasic::vm{
             case RuntimeKind::Class:    return sizeof(ClassInstance*);
             case RuntimeKind::BuiltIn: {
                 switch(dynamic_cast<BuiltIn*>(runtime)->getBuiltInKind()){
+                    case BuiltInKind::boolean:  return sizeof(data::boolean);
                     case BuiltInKind::u8:       return sizeof(data::u8);
                     case BuiltInKind::u16:      return sizeof(data::u16);
                     case BuiltInKind::u32:      return sizeof(data::u32);
@@ -305,7 +321,7 @@ namespace evoBasic::vm{
             for(auto local : il_info->getLocals()){
                 auto local_rt = table->getRuntime<Runtime>(local->getTypeToken()->getDef()->getID());
                 locals_offset.push_back(locals_frame_size + base);
-                params_frame_size += getRuntimeLengthInOperandStack(local_rt);
+                locals_frame_size += getRuntimeLengthInOperandStack(local_rt);
                 locals.push_back(local_rt);
             }
         }

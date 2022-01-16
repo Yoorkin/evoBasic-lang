@@ -284,7 +284,7 @@ namespace evoBasic{
                     visitLet((ast::Let*)iter,current,next);
                     break;
                 case ast::Statement::loop_:
-                    visitLoop((ast::Loop*)iter,current,next);
+                    current = visitLoop((ast::Loop*)iter,current,next);
                     break;
                 case ast::Statement::if_:
                     current = visitIf((ast::If*)iter,current,next);
@@ -358,11 +358,15 @@ namespace evoBasic{
 
     void ILGen::visitCase(ast::Case *case_node, il::BasicBlock *current, il::BasicBlock *next) {
         map<ast::Case*,il::BasicBlock*> case_blocks;
+        bool has_else_case = false;
         FOR_EACH(iter,case_node){
             if(iter->condition){
                 auto bl = new il::BasicBlock(document);
                 blocks.push_back(bl);
                 case_blocks.insert({iter,bl});
+            }
+            else{
+                has_else_case = true;
             }
         }
 
@@ -378,6 +382,10 @@ namespace evoBasic{
                 auto after_case_block = visitStatement(iter->statement,current,next);
                 after_case_block->Br(next);
             }
+        }
+
+        if(!has_else_case){
+            current->Br(next);
         }
     }
 
@@ -573,7 +581,7 @@ namespace evoBasic{
     }
 
     il::BasicBlock *ILGen::visitContinue(ast::Continue *continue_node, il::BasicBlock *current, il::BasicBlock *next) {
-        current->Br(next);
+        current->Br();
         return current;
     }
 

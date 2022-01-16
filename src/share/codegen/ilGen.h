@@ -49,6 +49,7 @@ namespace evoBasic{
         il::BasicBlock *visitExit(ast::Exit *exit_node, il::BasicBlock *current);
         il::BasicBlock *visitContinue(ast::Continue *continue_node, il::BasicBlock *current, il::BasicBlock *next);
         il::BasicBlock *visitStatement(ast::Statement *statement_node, il::BasicBlock *current, il::BasicBlock *next);
+
         void visitExpression(ast::Expression *expression_node, il::BasicBlock *current);
         void visitUnary(ast::Unary *unary_node, il::BasicBlock *current);
         void visitBinary(ast::Binary *binary_node, il::BasicBlock *current);

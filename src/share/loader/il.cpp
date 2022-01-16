@@ -1625,8 +1625,8 @@ namespace evoBasic::il{
             case f32:    return Bytecode::f32;
             case f64:    return Bytecode::f64;
             case ref:    return Bytecode::u64;
+            case boolean:return Bytecode::boolean;
             case empty:
-            case boolean:
             case character:
             case delegate:
             case record:
@@ -1643,6 +1643,9 @@ namespace evoBasic::il{
         write(stream,Bytecode::Push);
         write(stream,ILDataTypeToByteCode(type));
         switch(type){
+            case boolean:
+                write(stream,any_cast<data::boolean>(value));
+                break;
             case i8:
                 write(stream,any_cast<data::i8>(value));
                 break;

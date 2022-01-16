@@ -47,6 +47,8 @@ void loadTarget(string path){
 
 
 int main(int argc,char *argv[]){
+    //Logger::enable(Channel::OperandStack);
+
     loader = new Loader;
 
     CmdDistributor distributor;

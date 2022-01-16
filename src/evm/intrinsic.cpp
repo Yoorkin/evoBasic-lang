@@ -19,7 +19,7 @@ namespace evoBasic::vm{
     }
 
     void intrinsic_getchar(Stack *operand) {
-        auto ret = getchar();
+        auto ret = (data::u8)getchar();
         operand->push<data::u8>(ret);
     }
 }

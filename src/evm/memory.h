@@ -6,6 +6,8 @@
 #define EVOBASIC2_STACK_H
 #include <stdlib.h>
 #include <utils/data.h>
+#include <utils/logger.h>
+#include <utils/format.h>
 namespace evoBasic::vm{
     class Stack {
         void *mem = nullptr;
@@ -17,6 +19,7 @@ namespace evoBasic::vm{
 
         template<typename T>
         void push(T t){
+            Logger::print(Channel::OperandStack,Format()<<"push size:"<<sizeof(T)<<" value:"<<(long long)t<<'\n');
             (*((T*)ptr))=t;
             ptr+=sizeof(T);
         }
@@ -30,6 +33,7 @@ namespace evoBasic::vm{
         T pop(){
             auto tmp = top<T>();
             ptr-=sizeof(T);
+            Logger::print(Channel::OperandStack,Format()<<"pop  size:"<<sizeof(T)<<" value:"<<(long long)tmp<<'\n');
             return tmp;
         }
 

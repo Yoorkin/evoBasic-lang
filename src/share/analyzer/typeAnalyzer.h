@@ -71,6 +71,7 @@ namespace evoBasic{
         std::any visitIf(parseTree::stmt::If *ifstmt_node, TypeAnalyzerArgs args) override;
         std::any visitFor(parseTree::stmt::For *forstmt_node, TypeAnalyzerArgs args) override;
         std::any visitReturn(parseTree::stmt::Return *ret_node, TypeAnalyzerArgs args) override;
+        std::any visitContinue(parseTree::stmt::Continue *cont_node, TypeAnalyzerArgs args) override;
 
         std::any visitParentheses(parseTree::expr::Parentheses *parentheses_node, TypeAnalyzerArgs args) override;
         std::any visitExprStmt(parseTree::stmt::ExprStmt *expr_stmt_node, TypeAnalyzerArgs args) override;

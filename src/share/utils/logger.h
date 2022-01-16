@@ -21,7 +21,10 @@ namespace evoBasic{
     class Token;
 	class Location;
 
-    enum class Channel{Tokens,ParseTrees,AbstractTrees,SymbolTable,IL,InheritTopologicalOrder,ByteLengthTopologicalOrder};
+    enum class Channel{
+        Tokens,ParseTrees,AbstractTrees,SymbolTable,
+        IL,InheritTopologicalOrder,ByteLengthTopologicalOrder,
+        OperandStack};
 
     class Logger {
         static std::ostream* out;

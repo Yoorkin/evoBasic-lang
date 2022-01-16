@@ -1137,5 +1137,9 @@ namespace evoBasic{
         PANIC;
     }
 
+    std::any TypeAnalyzer::visitContinue(parseTree::stmt::Continue *cont_node, TypeAnalyzerArgs args) {
+        return (ast::Statement*)new ast::Continue;
+    }
+
 
 }
