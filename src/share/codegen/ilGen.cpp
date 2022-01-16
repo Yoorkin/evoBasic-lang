@@ -528,44 +528,73 @@ namespace evoBasic{
             default: PANIC;
         }
 
-
         /*
-         *  beg < end && iter > end ||
-         *  beg > end && iter < end ||
-         *  beg == end
+         *  beg < end & (iter < beg | iter > end) ||
+         *  beg > end & (iter < end | iter > beg) ||
+         *  beg == end & step != 0
          */
+
+        // beg < end
         cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
                    .Ldloc(iter_il_type)
                    .Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
                    .Ldloc(iter_il_type)
                    .LT(iter_il_type);
+        // iter < beg
+        visitExpression(for_node->iterator,cond_block);
+        cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+                   .Ldloc(iter_il_type)
+                   .LT(iter_il_type);
+        // iter > end
         visitExpression(for_node->iterator,cond_block);
         cond_block->Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
-                   .Ldloc(iter_il_type)
-                   .GT(iter_il_type)
-                   .And();
+                .Ldloc(iter_il_type)
+                .GT(iter_il_type);
 
+        cond_block->Or()
+                   .And()
+                   .Jif(after_block);
+
+
+
+        // beg > end
         cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
                     .Ldloc(iter_il_type)
                     .Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
                     .Ldloc(iter_il_type)
                     .GT(iter_il_type);
+        // iter < end
         visitExpression(for_node->iterator,cond_block);
         cond_block->Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
                     .Ldloc(iter_il_type)
-                    .LT(iter_il_type)
-                    .And();
+                    .LT(iter_il_type);
+        // iter > beg
+        visitExpression(for_node->iterator,cond_block);
+        cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+                .Ldloc(iter_il_type)
+                .GT(iter_il_type);
 
-        cond_block->Or();
+        cond_block->Or()
+                   .And()
+                   .Jif(after_block);
 
+
+
+        // beg == end
         cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
                 .Ldloc(iter_il_type)
                 .Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
                 .Ldloc(iter_il_type)
-                .EQ(iter_il_type)
-                .Or();
+                .EQ(iter_il_type);
+        // step != 0
+        cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
+                .Ldloc(iter_il_type)
+                .Push(DataType::i32,(data::i32)0)
+                .NE(DataType::i32);
 
-        cond_block->Jif(after_block);
+        cond_block->And()
+                   .Jif(after_block);
+
         cond_block->Br(stmt_block);
 
         return after_block;
