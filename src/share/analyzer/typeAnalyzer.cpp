@@ -280,6 +280,7 @@ namespace evoBasic{
                 type::Prototype *result_prototype = nullptr;
                 if(iter->initial != nullptr && iter->annotation != nullptr){
                     auto ast_initial = any_cast<ast::Expression*>(visitExpression(iter->initial,args));
+                    ast_node_var->initial = ast_initial;
                     if(ast_initial->type->value_kind == ExpressionType::error)continue;
                     if(iter->annotation){
                         auto anno_prototype = any_cast<Prototype*>(visitAnnotation(iter->annotation,args));
@@ -287,7 +288,7 @@ namespace evoBasic{
                             if(args.context->getConversionRules().isImplicitCastRuleExist(ast_initial->type->getPrototype(),anno_prototype)){
                                 Logger::warning(iter->initial->location,
                                                 lang->fmtImplicitCvtFromAToB(ast_initial->type->getPrototype()->getName(),anno_prototype->getName()));
-                                //args.context->getConversionRules().insertCastAST(anno_prototype,&(iter->initial)); todo
+                                args.context->getConversionRules().insertCastAST(anno_prototype,&(ast_node_var->initial));
                             }
                             else {
                                 Logger::error(iter->initial->location,
@@ -300,7 +301,6 @@ namespace evoBasic{
                     else{
                         result_prototype = ast_initial->type->getPrototype();
                     }
-                    ast_node_var->initial = ast_initial;
                 }
                 else if(iter->initial != nullptr){
                     auto ast_initial = any_cast<ast::Expression*>(visitExpression(iter->initial,args));

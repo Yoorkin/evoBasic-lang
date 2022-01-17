@@ -39,19 +39,19 @@
 
 ## virtual function
 
-..., ref, vftn, `arg1 value`, `arg2 value` -> ..., `result1 value`, `result2 value`
+..., `arg2 value`, `arg1 value`, ref, vftn, -> ..., `result1 value`, `result2 value`
 
 ## method 
 
-..., ref, ftn, `arg1 value`, `arg2 value` -> ..., `result1 value`, `result2 value`
+..., `arg2 value`, `arg1 value`, ref, ftn, -> ..., `result1 value`, `result2 value`
 
 ## static function
 
-..., sftn, `arg1 value`, `arg2 value` -> ..., `result1 value`, `result2 value`
+..., `arg2 value`, `arg1 value`, sftn -> ..., `result1 value`, `result2 value`
 
 ## delegate
 
-..., delegate, `arg1 value`, `arg2 value` -> ..., `result1 value`, `result2 value`
+..., `arg2 value`, `arg1 value`, delegate -> ..., `result1 value`, `result2 value`
 
 
 # instructions

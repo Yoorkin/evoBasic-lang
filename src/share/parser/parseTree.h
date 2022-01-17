@@ -466,6 +466,9 @@ namespace evoBasic::parseTree{
             Digit(){
                 expression_kind = ExpressionKind::digit_;
             }
+            explicit Digit(data::i32 value) : Digit(){
+                this->value = value;
+            }
             data::i32 value = 0;
             DebugInfo *debug()override;
         };

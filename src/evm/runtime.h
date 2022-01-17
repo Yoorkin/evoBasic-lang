@@ -81,6 +81,7 @@ namespace evoBasic::vm{
         std::vector<Runtime*> locals;
         std::vector<data::u64> params_offset;
         std::vector<data::u64> locals_offset;
+        std::vector<data::u16> params_length;
         data::u64 params_frame_size = -1;
         data::u64 locals_frame_size = -1;
     public:
@@ -89,6 +90,7 @@ namespace evoBasic::vm{
         data::Byte *getBlock();
         const std::vector<Runtime*> &getParams();
         const std::vector<Runtime*> &getLocals();
+        const std::vector<data::u16> &getParamsLength();
         data::u64 getParamOffset(data::u16 index);
         data::u64 getLocalOffset(data::u16 index);
         data::u64 getParamsStackFrameLength();

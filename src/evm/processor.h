@@ -54,6 +54,8 @@ namespace evoBasic::vm{
     public:
         explicit Processor(RuntimeContext *context,Function *function,size_t operand_size,size_t frame_size);
         void run();
+
+        void copyArgs(Function *function);
     };
 
 }

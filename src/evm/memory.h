@@ -19,7 +19,7 @@ namespace evoBasic::vm{
 
         template<typename T>
         void push(T t){
-            Logger::print(Channel::OperandStack,Format()<<"push size:"<<sizeof(T)<<" value:"<<(long long)t<<'\n');
+            //Logger::print(Channel::OperandStack,Format()<<"push size:"<<sizeof(T)<<" value:"<<(long long)t<<'\n');
             (*((T*)ptr))=t;
             ptr+=sizeof(T);
         }
@@ -33,8 +33,15 @@ namespace evoBasic::vm{
         T pop(){
             auto tmp = top<T>();
             ptr-=sizeof(T);
-            Logger::print(Channel::OperandStack,Format()<<"pop  size:"<<sizeof(T)<<" value:"<<(long long)tmp<<'\n');
+            //Logger::print(Channel::OperandStack,Format()<<"pop  size:"<<sizeof(T)<<" value:"<<(long long)tmp<<'\n');
             return tmp;
+        }
+
+        void copy(data::u16 length,data::Byte *dst){
+            ptr-=length;
+            for(int i =0;i<length;i++){
+                dst[i]=ptr[i];
+            }
         }
 
         template<typename T>

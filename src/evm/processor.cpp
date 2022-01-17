@@ -327,6 +327,15 @@ namespace evoBasic::vm{
         frame_top += function->getStackFrameLength();
     }
 
+    void Processor::copyArgs(Function *function){
+        auto frame_address = getCurrentEnv().getFrame().address<data::Byte>(0);
+        for(auto length : function->getParamsLength()){
+            operand.copy(length,frame_address);
+            frame_address += length;
+        }
+    }
+
+
     void Processor::run() {
         bool running = true;
         while(running){
@@ -339,9 +348,10 @@ namespace evoBasic::vm{
                     if(execution_stack.empty())running = false;
                     break;
                 case Bytecode::Callstatic:{
-                    auto function = getCurrentEnv().consume<Function*>();
+                    auto function = operand.pop<Function*>();
                     execution_stack.push(ExecutionEnv(function,frame.borrow(frame_top)));
                     frame_top += function->getStackFrameLength();
+                    copyArgs(function);
                     break;
                 }
                 case Bytecode::Call:{
@@ -349,6 +359,7 @@ namespace evoBasic::vm{
                     auto ref = operand.top<ClassInstance*>();
                     execution_stack.push(ExecutionEnv(function,frame.borrow(frame_top)));
                     frame_top += function->getStackFrameLength();
+                    copyArgs(function);
                     break;
                 }
                 case Bytecode::CallVirt:{
@@ -357,6 +368,7 @@ namespace evoBasic::vm{
                     auto function = ref->getClass()->virtualFunctionDispatch(slot);
                     execution_stack.push(ExecutionEnv(function,frame.borrow(frame_top)));
                     frame_top += function->getStackFrameLength();
+                    copyArgs(function);
                     break;
                 }
                 case Bytecode::Ldnull:

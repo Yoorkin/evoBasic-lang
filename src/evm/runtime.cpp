@@ -307,7 +307,9 @@ namespace evoBasic::vm{
             for(auto param : il_info->getParams()){
                 auto param_rt = table->getRuntime<Runtime>(param->getTypeToken()->getDef()->getID());
                 params_offset.push_back(params_frame_size);
-                params_frame_size += getRuntimeLengthInOperandStack(param_rt);
+                auto param_length = getRuntimeLengthInOperandStack(param_rt);
+                params_frame_size += param_length;
+                params_length.push_back(param_length);
                 params.push_back(param_rt);
             }
         }
@@ -350,6 +352,11 @@ namespace evoBasic::vm{
 
     data::u64 Function::getStackFrameLength() {
         return getLocalsStackFrameLength() + getParamsStackFrameLength();
+    }
+
+    const std::vector<data::u16> &Function::getParamsLength() {
+        if(params_frame_size==-1)getParams();
+        return params_length;
     }
 
     ForeignFunction::ForeignFunction(std::string library, std::string name, il::Ext *info)

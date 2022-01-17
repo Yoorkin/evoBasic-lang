@@ -37,6 +37,7 @@ namespace evoBasic{
         }
     }
 
+
     void ILGen::visitGlobal(ast::Global *global_node,Document *document) {
         this->document = document;
         auto members = visitMember(global_node->member);
@@ -317,9 +318,32 @@ namespace evoBasic{
 
     void ILGen::visitLet(ast::Let *let_node, il::BasicBlock *current) {
         FOR_EACH(iter,let_node->variable){
+            auto data_type = mapILType(iter->variable_symbol->getPrototype());
             current->Push(DataType::u16,(data::u16)iter->variable_symbol->getLayoutIndex());
-            visitExpression(iter->initial,current);
-            current->Stloc(mapILType(iter->initial->type->getPrototype()));
+            if(iter->initial){
+                visitExpression(iter->initial,current);
+            }
+            else{
+                switch(data_type){
+                    case DataType::record:
+                    case DataType::delegate:
+                    case DataType::array:
+                        PANIC;
+                    case DataType::ref:     current->Push(DataType::ref,(data::address)0);  break;
+                    case DataType::i8:      current->Push(DataType::i8,(data::i8)0);        break;
+                    case DataType::i16:     current->Push(DataType::i16,(data::i16)0);      break;
+                    case DataType::i32:     current->Push(DataType::i32,(data::i32)0);      break;
+                    case DataType::i64:     current->Push(DataType::i64,(data::i64)0);      break;
+                    case DataType::u8:      current->Push(DataType::u8,(data::u8)0);        break;
+                    case DataType::u16:     current->Push(DataType::u16,(data::u16)0);      break;
+                    case DataType::u32:     current->Push(DataType::u32,(data::u32)0);      break;
+                    case DataType::u64:     current->Push(DataType::u64,(data::u64)0);      break;
+                    case DataType::f32:     current->Push(DataType::f32,(data::f32)0);      break;
+                    case DataType::f64:     current->Push(DataType::f64,(data::f64)0);      break;
+                    case DataType::boolean: current->Push(DataType::boolean,false);         break;
+                }
+            }
+            current->Stloc(data_type);
         }
     }
 
@@ -531,7 +555,7 @@ namespace evoBasic{
         /*
          *  beg < end & (iter < beg | iter > end) ||
          *  beg > end & (iter < end | iter > beg) ||
-         *  beg == end & step != 0
+         *  beg == end & iter != beg
          */
 
         // beg < end
@@ -586,10 +610,10 @@ namespace evoBasic{
                 .Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
                 .Ldloc(iter_il_type)
                 .EQ(iter_il_type);
-        // step != 0
-        cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
+        // iter != beg
+        visitExpression(for_node->iterator,cond_block);
+        cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
                 .Ldloc(iter_il_type)
-                .Push(DataType::i32,(data::i32)0)
                 .NE(DataType::i32);
 
         cond_block->And()
@@ -881,29 +905,34 @@ namespace evoBasic{
     }
 
     void ILGen::visitFtnCall(ast::FtnCall *ftn_node, il::BasicBlock *current) {
+        loadCalleeArguments(ftn_node,current);
         visitExpression(ftn_node->ref,current);
         current->Ldftn(document->getTokenRef(ftn_node->function->getFullName()));
-        loadCalleeArguments(ftn_node,current);
         current->Call();
     }
 
     void ILGen::visitSFtnCall(ast::SFtnCall *sftn_node, il::BasicBlock *current) {
-        current->Ldsftn(document->getTokenRef(sftn_node->function->getFullName()));
         loadCalleeArguments(sftn_node,current);
+        current->Ldsftn(document->getTokenRef(sftn_node->function->getFullName()));
         current->Callstatic();
     }
 
     void ILGen::loadCalleeArguments(ast::Call *call, il::BasicBlock *current){
-        // load regular argument by declaration order
+        stack<ast::Argument*> arguments;
         FOR_EACH(iter,call->argument){
-            visitArgument(iter,current);
+            arguments.push(iter);
+        }
+
+        while(!arguments.empty()){
+            visitArgument(arguments.top(),current);
+            arguments.pop();
         }
     }
 
     void ILGen::visitVFtnCall(ast::VFtnCall *vftn_node, il::BasicBlock *current) {
+        loadCalleeArguments(vftn_node,current);
         visitExpression(vftn_node->ref,current);
         current->Ldvftn(document->getTokenRef(vftn_node->function->getFullName()));
-        loadCalleeArguments(vftn_node,current);
         current->Callvirt();
     }
 
