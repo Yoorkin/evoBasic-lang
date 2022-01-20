@@ -7,8 +7,8 @@
 #include <vector>
 #include <map>
 #include <string>
-#include "memory.h"
-#include "intrinsic.h"
+#include <execution/memory.h>
+#include <execution/intrinsic.h>
 #include <loader/il.h>
 namespace evoBasic::vm{
 
@@ -17,8 +17,8 @@ namespace evoBasic::vm{
 
     enum class RuntimeKind{
         Context,Class,Enum,Module,Record,Interface,Function,
-        VirtualFtnSlot,FieldSlot,StaticFieldSlot,Intrinsic,
-        ForeignFunction,BuiltIn
+        VirtualFtnSlot,FieldSlot,StaticFieldSlot,
+        ForeignFunction,BuiltIn,Array
     };
 
     class Runtime{
@@ -32,6 +32,7 @@ namespace evoBasic::vm{
     };
 
     class Sizeable{
+    protected:
         friend evoBasic::vm::RuntimeContext;
         data::u64 size = 0;
     public:
@@ -43,7 +44,17 @@ namespace evoBasic::vm{
         boolean,u8,u16,u32,u64,i8,i16,i32,i64,f32,f64
     };
 
-    class BuiltIn : public Runtime{
+    class Array : public Runtime, public Sizeable{
+        Runtime *element_type = nullptr;
+        data::u64 count;
+    public:
+        Array(Runtime *element,data::u64 count);
+        Runtime *getElementRuntime();
+        data::u64 getElementCount();
+        RuntimeKind getKind()override{ return RuntimeKind::Array; }
+    };
+
+    class BuiltIn : public Runtime, public Sizeable{
         BuiltInKind kind;
     public:
         explicit BuiltIn(BuiltInKind kind);
@@ -58,6 +69,7 @@ namespace evoBasic::vm{
     public:
         explicit NameSpace(TokenTable *table);
         virtual Runtime *find(std::string name);
+        const std::map<std::string,Runtime*> &getChilds();
     };
 
     class TokenTable{
@@ -105,16 +117,6 @@ namespace evoBasic::vm{
     public:
         ForeignFunction(std::string library,std::string name,il::Ext *info);
         RuntimeKind getKind()override{ return RuntimeKind::ForeignFunction; }
-    };
-
-    class Intrinsic : public Runtime{
-    private:
-        il::Ext *il_info = nullptr;
-        IntrinsicHandler handler;
-    public:
-        Intrinsic(IntrinsicHandler handler,il::Ext *info);
-        RuntimeKind getKind()override{ return RuntimeKind::Intrinsic; }
-        void invoke(vm::Stack *operand);
     };
 
     class VirtualFtnSlot : public Runtime{
@@ -228,7 +230,6 @@ namespace evoBasic::vm{
 
     class RuntimeContext : public NameSpace{
         std::list<TokenTable*> token_tables;
-        std::vector<IntrinsicHandler> intrinsic_handler_table;
         using NameRuntimePair = std::pair<std::string,Runtime*>;
         std::optional<NameRuntimePair> collectSymbolRecursively(TokenTable *table,il::Member *member);
         void collectDependencies(Runtime *parent, Runtime *current, Dependencies<Class*> &inherit, Dependencies<Record*> &include);
@@ -238,7 +239,6 @@ namespace evoBasic::vm{
         void collectDetailRecursively(Runtime *runtime);
     public:
         explicit RuntimeContext(std::list<il::Document*> &documents);
-
     };
 
 

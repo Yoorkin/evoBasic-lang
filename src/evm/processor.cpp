@@ -182,28 +182,6 @@ namespace evoBasic::vm{
     };
 
     template<typename T>
-    struct OpLdargr{
-        static void call(Stack &operand, ExecutionEnv &env){
-            auto index = operand.pop<data::u16>();
-            auto offset = env.getFunction()->getParamOffset(index);
-            auto address = env.getFrame().read<data::address>(offset);
-            auto value = *reinterpret_cast<T*>(address);
-            operand.push(value);
-        }
-    };
-
-    template<typename T>
-    struct OpStargr{
-        static void call(Stack &operand, ExecutionEnv &env){
-            auto value = operand.pop<T>();
-            auto index = operand.pop<data::u16>();
-            auto offset = env.getFunction()->getParamOffset(index);
-            auto address = env.getFrame().read<data::address>(offset);
-            *reinterpret_cast<T*>(address) = value;
-        }
-    };
-
-    template<typename T>
     struct OpStarg{
         static void call(Stack &operand, ExecutionEnv &env){
             auto value = operand.pop<T>();
@@ -336,6 +314,62 @@ namespace evoBasic::vm{
     }
 
 
+    void Processor::initLocals(ExecutionEnv &env){
+        auto &local_frame = env.getLocalFrame();
+        std::function<void(Runtime*,data::u16)> fill = [&local_frame, &fill](Runtime *runtime,data::u16 offset){
+            switch(runtime->getKind()){
+                case RuntimeKind::BuiltIn:{
+                    auto builtin = static_cast<BuiltIn*>(runtime);
+                    switch(builtin->getBuiltInKind()){
+                        case BuiltInKind::u8:   local_frame.write<data::u8>(offset,0);  break;
+                        case BuiltInKind::u16:  local_frame.write<data::u16>(offset,0); break;
+                        case BuiltInKind::u32:  local_frame.write<data::u32>(offset,0); break;
+                        case BuiltInKind::u64:  local_frame.write<data::u64>(offset,0); break;
+                        case BuiltInKind::i8:   local_frame.write<data::i8>(offset,0);  break;
+                        case BuiltInKind::i16:  local_frame.write<data::i16>(offset,0); break;
+                        case BuiltInKind::i32:  local_frame.write<data::i32>(offset,0); break;
+                        case BuiltInKind::i64:  local_frame.write<data::i64>(offset,0); break;
+                        case BuiltInKind::f32:  local_frame.write<data::i64>(offset,0); break;
+                        case BuiltInKind::f64:  local_frame.write<data::f64>(offset,0); break;
+                    }
+                    break;
+                }
+                case RuntimeKind::Array:{
+                    auto array = static_cast<Array*>(runtime);
+                    auto element_length = dynamic_cast<Sizeable*>(array->getElementRuntime())->getByteLength();
+                    for(int i=0;i<array->getElementCount();i++){
+                        fill(array->getElementRuntime(),offset);
+                        offset += element_length;
+                    }
+                    break;
+                }
+                case RuntimeKind::Record:{
+                    auto record = static_cast<Record*>(runtime);
+                    for(auto [_,child] : record->getChilds()){
+                        fill(child,offset);
+                        offset += dynamic_cast<Sizeable*>(child)->getByteLength();
+                    }
+                    break;
+                }
+                case RuntimeKind::Class:{
+                    local_frame.write<data::address>(offset,0);
+                    break;
+                }
+                case RuntimeKind::Enum:{
+                    PANIC;
+                    break;
+                }
+            }
+        };
+
+        int i = 0;
+        for(auto local : env.getFunction()->getLocals()){
+            auto offset = env.getFunction()->getLocalOffset(i);
+            fill(local,offset);
+            i++;
+        }
+    }
+
     void Processor::run() {
         bool running = true;
         while(running){
@@ -352,6 +386,7 @@ namespace evoBasic::vm{
                     execution_stack.push(ExecutionEnv(function,frame.borrow(frame_top)));
                     frame_top += function->getStackFrameLength();
                     copyArgs(function);
+                    initLocals(getCurrentEnv());
                     break;
                 }
                 case Bytecode::Call:{
@@ -360,6 +395,7 @@ namespace evoBasic::vm{
                     execution_stack.push(ExecutionEnv(function,frame.borrow(frame_top)));
                     frame_top += function->getStackFrameLength();
                     copyArgs(function);
+                    initLocals(getCurrentEnv());
                     break;
                 }
                 case Bytecode::CallVirt:{
@@ -369,6 +405,7 @@ namespace evoBasic::vm{
                     execution_stack.push(ExecutionEnv(function,frame.borrow(frame_top)));
                     frame_top += function->getStackFrameLength();
                     copyArgs(function);
+                    initLocals(getCurrentEnv());
                     break;
                 }
                 case Bytecode::Ldnull:
@@ -400,23 +437,20 @@ namespace evoBasic::vm{
                 case Bytecode::Ldarg:
                     forEachType<OpLdarg>(operand,getCurrentEnv());
                     break;
-                case Bytecode::Ldargr:
-                    forEachType<OpLdargr>(operand,getCurrentEnv());
+                case Bytecode::Load:
+                    forEachType<OpLoad>(operand,getCurrentEnv());
                     break;
                 case Bytecode::Starg:
                     forEachType<OpLdarg>(operand,getCurrentEnv());
                     break;
-                case Bytecode::Stargr:
-                    forEachType<OpStargr>(operand,getCurrentEnv());
+                case Bytecode::Store:
+                    forEachType<OpStore>(operand,getCurrentEnv());
                     break;
                 case Bytecode::Ldloc:
                     forEachType<OpLdloc>(operand,getCurrentEnv());
                     break;
                 case Bytecode::Stloc:
                     forEachType<OpStloc>(operand,getCurrentEnv());
-                    break;
-                case Bytecode::Ldelema:
-                    PANIC;
                     break;
                 case Bytecode::Not:
                     operand.push<data::boolean>(!operand.pop<data::boolean>());
@@ -451,12 +485,12 @@ namespace evoBasic::vm{
                     getCurrentEnv().consume<data::Byte>();
                     auto token_id = getCurrentEnv().consume<il::TokenDef::ID>();
                     auto rt = getCurrentEnv().getFunction()->getTokenTable()->getRuntime<Runtime>(token_id);
-                    if(rt->getKind() == RuntimeKind::ForeignFunction){
-                        //todo
-                    }
-                    else{
-                        static_cast<Intrinsic*>(rt)->invoke(&operand);
-                    }
+                    //todo
+                    break;
+                }
+                case Bytecode::Intrinsic:{
+                    auto index = getCurrentEnv().consume<data::Byte>();
+                    intrinsic::getHandler((IntrinsicEnum)index)(&operand);
                     break;
                 }
                 case Bytecode::Ldflda:{
@@ -488,7 +522,10 @@ namespace evoBasic::vm{
                     forEachType<OpStsfld>(operand, getCurrentEnv());
                     break;
                 case Bytecode::Ldelem:
-                    PANIC;
+
+                    break;
+                case Bytecode::Ldelema:{
+
                     break;
                 case Bytecode::Stelem:
                     PANIC;
@@ -568,5 +605,5 @@ namespace evoBasic::vm{
 
 
     ExecutionEnv::ExecutionEnv(Function *function, Memory frame)
-        : function(function),pc(function->getBlock()),frame(frame) {}
+        : function(function),pc(function->getBlock()),frame(frame),locals_frame(frame.borrow(function->getParamsStackFrameLength())){}
 }

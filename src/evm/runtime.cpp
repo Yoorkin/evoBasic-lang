@@ -3,7 +3,7 @@
 //
 
 #include "runtime.h"
-#include "intrinsic.h"
+#include <execution/intrinsic.h>
 
 namespace evoBasic::vm{
     Runtime *NameSpace::find(std::string name) {
@@ -14,14 +14,31 @@ namespace evoBasic::vm{
 
     NameSpace::NameSpace(TokenTable *table) : Runtime(table) {}
 
+    const std::map<std::string, Runtime *> &NameSpace::getChilds() {
+        return childs;
+    }
+
     void TokenTable::loadCache(data::u64 idx) {
         Runtime *target = context;
         auto fullname = tokens[idx]->getFullName();
-        fullname.pop_front();//pop useless name "global"
-        for(auto name : fullname){
-            target = ((NameSpace*)target)->find(name);
+        auto first = fullname.front();
+        fullname.pop_front();
+
+        if(first == "global"){
+            for(auto name : fullname){
+                target = ((NameSpace*)target)->find(name);
+            }
+            cache[idx] = target;
         }
-        cache[idx] = target;
+        else if(first == "array"){
+            auto size = stoi(fullname.front());
+            fullname.pop_front();
+            fullname.pop_front(); // pop "global"
+            for(auto name : fullname){
+                target = ((NameSpace*)target)->find(name);
+            }
+            cache[idx] = new Array(target,size);
+        }
     }
 
     TokenTable::TokenTable(evoBasic::vm::RuntimeContext *context, std::vector<il::TokenDef*> ls)
@@ -70,14 +87,13 @@ namespace evoBasic::vm{
                 auto library = ext->getLibraryToken()->getDef()->getName();
                 auto alias = ext->getAliasToken()->getDef()->getName();
                 Runtime *ret = nullptr;
-                if(library == "intrinsic"){
-                    int id = stoi(alias.substr(1,alias.size()-1));
-                    ret = new Intrinsic(intrinsic_handler_table[id],ext);
+                if(library != "intrinsic"){
+                    ret = new ForeignFunction(library,alias,ext);
+                    return {{name,ret}};
                 }
                 else{
-                    ret = new ForeignFunction(library,alias,ext);
+                    return {};
                 }
-                return {{name,ret}};
             }
             case il::MemberKind::Interface:
             case il::MemberKind::InterfaceFunction:
@@ -195,8 +211,6 @@ namespace evoBasic::vm{
             }
             case RuntimeKind::VirtualFtnSlot:
                 break;
-            case RuntimeKind::Intrinsic:
-                break;
             case RuntimeKind::ForeignFunction:
                 break;
 
@@ -215,7 +229,6 @@ namespace evoBasic::vm{
     }
 
     RuntimeContext::RuntimeContext(std::list<il::Document*> &documents) : NameSpace(nullptr) {
-        intrinsic_handler_table = getIntrinsicHandlerList();
 
         std::vector<std::pair<std::string,vm::BuiltIn*>> builtin_list = {
             {"boolean",new BuiltIn(BuiltInKind::boolean)},
@@ -241,7 +254,10 @@ namespace evoBasic::vm{
 
         for(auto [token_table,document] : tmp){
             for(auto member : document->getMembers()){
-                this->childs.insert(collectSymbolRecursively(token_table,member).value());
+                auto child = collectSymbolRecursively(token_table,member);
+                if(child.has_value()){
+                    this->childs.insert(child.value());
+                }
             }
         }
 
@@ -265,6 +281,7 @@ namespace evoBasic::vm{
         collectDetailRecursively(this);
     }
 
+
     Runtime::Runtime(TokenTable *table) : table(table) {}
 
     TokenTable *Runtime::getTokenTable() {
@@ -282,24 +299,6 @@ namespace evoBasic::vm{
         return il_info->getBlocksMemory();
     }
 
-    int getRuntimeLengthInOperandStack(Runtime *runtime) {
-        switch(runtime->getKind()){
-            case RuntimeKind::Class:    return sizeof(ClassInstance*);
-            case RuntimeKind::BuiltIn: {
-                switch(dynamic_cast<BuiltIn*>(runtime)->getBuiltInKind()){
-                    case BuiltInKind::boolean:  return sizeof(data::boolean);
-                    case BuiltInKind::u8:       return sizeof(data::u8);
-                    case BuiltInKind::u16:      return sizeof(data::u16);
-                    case BuiltInKind::u32:      return sizeof(data::u32);
-                    case BuiltInKind::u64:      return sizeof(data::u64);
-                    case BuiltInKind::i8:       return sizeof(data::i8);
-                    case BuiltInKind::i16:      return sizeof(data::i16);
-                    case BuiltInKind::i32:      return sizeof(data::i32);
-                    case BuiltInKind::i64:      return sizeof(data::i64);
-                }
-            }
-        }
-    }
 
     const std::vector<Runtime*> &Function::getParams() {
         if(params_frame_size==-1){
@@ -307,7 +306,7 @@ namespace evoBasic::vm{
             for(auto param : il_info->getParams()){
                 auto param_rt = table->getRuntime<Runtime>(param->getTypeToken()->getDef()->getID());
                 params_offset.push_back(params_frame_size);
-                auto param_length = getRuntimeLengthInOperandStack(param_rt);
+                auto param_length = dynamic_cast<Sizeable*>(param_rt)->getByteLength();
                 params_frame_size += param_length;
                 params_length.push_back(param_length);
                 params.push_back(param_rt);
@@ -323,7 +322,7 @@ namespace evoBasic::vm{
             for(auto local : il_info->getLocals()){
                 auto local_rt = table->getRuntime<Runtime>(local->getTypeToken()->getDef()->getID());
                 locals_offset.push_back(locals_frame_size + base);
-                locals_frame_size += getRuntimeLengthInOperandStack(local_rt);
+                locals_frame_size += dynamic_cast<Sizeable*>(local_rt)->getByteLength();
                 locals.push_back(local_rt);
             }
         }
@@ -361,13 +360,6 @@ namespace evoBasic::vm{
 
     ForeignFunction::ForeignFunction(std::string library, std::string name, il::Ext *info)
         : Runtime(nullptr),name(name),il_info(info){}
-
-    Intrinsic::Intrinsic(IntrinsicHandler handler, il::Ext *info)
-        : Runtime(nullptr),handler(handler),il_info(info){}
-
-    void Intrinsic::invoke(vm::Stack *operand) {
-        handler(operand);
-    }
 
     VirtualFtnSlot::VirtualFtnSlot(data::u64 offset, il::VFtn *info)
         : Runtime(nullptr),offset(offset),il_info(info){}
@@ -414,8 +406,38 @@ namespace evoBasic::vm{
         return kind;
     }
 
-    BuiltIn::BuiltIn(BuiltInKind kind)
-        : Runtime(nullptr),kind(kind){}
+    data::u64 getBuiltInSize(BuiltInKind kind){
+        switch(kind){
+            case BuiltInKind::boolean: return sizeof(data::boolean);
+            case BuiltInKind::u8:      return sizeof(data::u8);
+            case BuiltInKind::u16:     return sizeof(data::u16);
+            case BuiltInKind::u32:     return sizeof(data::u32);
+            case BuiltInKind::u64:     return sizeof(data::u64);
+            case BuiltInKind::i8:      return sizeof(data::i8);
+            case BuiltInKind::i16:     return sizeof(data::i16);
+            case BuiltInKind::i32:     return sizeof(data::i32);
+            case BuiltInKind::i64:     return sizeof(data::i64);
+            case BuiltInKind::f32:     return sizeof(data::f32);
+            case BuiltInKind::f64:     return sizeof(data::f64);
+        }
+    }
 
+    BuiltIn::BuiltIn(BuiltInKind kind)
+        : Runtime(nullptr),kind(kind){
+        size = getBuiltInSize(kind);
+    }
+
+    Array::Array(Runtime *element, data::u64 count)
+            : Runtime(nullptr),element_type(element),count(count){
+        size = count * dynamic_cast<Sizeable*>(element)->getByteLength();
+    }
+
+    Runtime *Array::getElementRuntime() {
+        return element_type;
+    }
+
+    data::u64 Array::getElementCount() {
+        return count;
+    }
 }
 

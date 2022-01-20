@@ -18,8 +18,8 @@ namespace evoBasic{
     enum class FunctionEnum{User,External,Intrinsic};
     enum class FunctionKind{InterfaceFunction,UserFunction,Operator,External,Constructor};
     enum class DataType{
-        empty,i8,i16,i32,i64,u8,u16,u32,u64,f32,f64,
-        ref,ftn,vftn,sftn,record,array,boolean,character,delegate
+        empty,i8,i16,i32,i64,u8,u16,u32,u64,f32,f64,array,record,
+        ref,ftn,vftn,sftn,boolean,character,delegate
     };
 
 }

@@ -7,7 +7,7 @@
 // #include<ffi.h>
 #include<string>
 #include<vector>
-#include"memory.h"
+#include"execution/memory.h"
 #include"utils/data.h"
 #include"loader/bytecode.h"
 

@@ -14,6 +14,7 @@ namespace evoBasic::vm{
         Function *function;
         PC pc;
         Memory frame;
+        Memory locals_frame;
     public:
         Function *getFunction(){
             return function;
@@ -21,6 +22,10 @@ namespace evoBasic::vm{
 
         Memory &getFrame(){
             return frame;
+        }
+
+        Memory &getLocalFrame(){
+            return locals_frame;
         }
 
         explicit ExecutionEnv(Function *function,Memory frame);
@@ -56,6 +61,8 @@ namespace evoBasic::vm{
         void run();
 
         void copyArgs(Function *function);
+
+        void initLocals(ExecutionEnv &env);
     };
 
 }

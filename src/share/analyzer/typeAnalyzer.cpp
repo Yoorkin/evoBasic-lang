@@ -934,31 +934,37 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitAnnotation(parseTree::Annotation *annotation_node, TypeAnalyzerArgs args) {
-        auto iter = (*annotation_node).unit;
-        args.need_lookup = true;
-        args.dot_prefix = new ExpressionType(args.domain,ExpressionType::rvalue,false);
-        auto symbol = visitAnnotationUnit(iter,args);
-        iter = iter->next_sibling;
-        args.dot_prefix->symbol = any_cast<Symbol*>(symbol);
-
-        args.need_lookup = false;
-        while(iter!=nullptr){
-            symbol = visitAnnotationUnit(iter,args);
+        try{
+            auto iter = (*annotation_node).unit;
+            args.need_lookup = true;
+            args.dot_prefix = new ExpressionType(args.domain,ExpressionType::rvalue,false);
+            auto symbol = visitAnnotationUnit(iter,args);
+            iter = iter->next_sibling;
             args.dot_prefix->symbol = any_cast<Symbol*>(symbol);
-            iter=iter->next_sibling;
+
+            args.need_lookup = false;
+            while(iter!=nullptr){
+                symbol = visitAnnotationUnit(iter,args);
+                args.dot_prefix->symbol = any_cast<Symbol*>(symbol);
+                iter=iter->next_sibling;
+            }
+
+            auto element = args.dot_prefix->getPrototype()->as<Prototype*>();
+            auto ret_prototype = element;
+
+            if((*annotation_node).array_size){
+                ret_prototype = new type::Array(ret_prototype, getDigit((*annotation_node).array_size));
+
+                if(element->getKind() == SymbolKind::Record)
+                    args.context->byteLengthDependencies.addDependent(ret_prototype->as<Domain*>(),element->as<Domain*>());
+            }
+
+            return ret_prototype;
         }
-
-        auto element = args.dot_prefix->getPrototype()->as<Prototype*>();
-        auto ret_prototype = element;
-
-        if((*annotation_node).array_size){
-            ret_prototype = new type::Array(ret_prototype, getDigit((*annotation_node).array_size));
-
-            if(element->getKind() == SymbolKind::Record)
-                args.context->byteLengthDependencies.addDependent(ret_prototype->as<Domain*>(),element->as<Domain*>());
+        catch (SymbolNotFound& e){
+            Logger::error(e.location, i18n::lang->fmtObjectNotFound(e.search_name));
+            return args.context->getBuiltIn().getErrorPrototype()->as<type::Prototype*>();
         }
-
-        return ret_prototype;
     }
 
     std::any TypeAnalyzer::visitAnnotationUnit(parseTree::AnnotationUnit *unit_node, TypeAnalyzerArgs args) {

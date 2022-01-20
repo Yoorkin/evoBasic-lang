@@ -100,7 +100,7 @@ namespace evoBasic::type{
         }
 
         std::string mangling(char separator = '$');
-        std::list<std::string> getFullName();
+        virtual std::list<std::string> getFullName();
 
         virtual DebugInfo *debug()=0;
 
@@ -439,6 +439,8 @@ namespace evoBasic::type{
         DebugInfo *debug()override;
         data::ptr getByteLength()override;
         data::ptr getSize(){return size_;}
+        std::list<std::string> getFullName()override;
+        std::string getName()override;
     };
 
 

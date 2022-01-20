@@ -15,6 +15,7 @@
 #include <utils/data.h>
 #include <utils/utils.h>
 #include <analyzer/context.h>
+#include <execution/intrinsic.h>
 
 namespace evoBasic::il{
     class Class;
@@ -445,6 +446,15 @@ namespace evoBasic::il{
         void toHex(std::ostream &stream)override;
     };
 
+    class InstIntrinsic : public Inst{
+        data::u8 index;
+    public:
+        InstIntrinsic(Document *document, vm::IntrinsicEnum id);
+        std::string toString()override;
+        ByteSize getByteSize()override;
+        void toHex(std::ostream &stream)override;
+    };
+
     class InstJif : public Inst{
         BasicBlock *target = nullptr;
     public:
@@ -475,7 +485,7 @@ namespace evoBasic::il{
 
     class InstWithData : public Inst{
     public:
-        enum Op{Ldelem,Stelem,Stelema,Ldarg,Ldargr,Starg,Stargr,Ldloc,Stloc,
+        enum Op{Ldelem,Stelem,Stelema,Ldarg,Starg,Load,Store,Ldloc,Stloc,
                 Add,Sub,Mul,Div,FDiv,EQ,NE,LT,GT,LE,GE,Neg,Pop,Dup};
     private:
         Op op;
@@ -614,8 +624,8 @@ namespace evoBasic::il{
         BasicBlock &Ldvftn(TokenRef *vftn);
         BasicBlock &Ldarg(DataType data);
         BasicBlock &Starg(DataType data);
-        BasicBlock &Stargr(DataType data);
-        BasicBlock &Ldargr(DataType data);
+        BasicBlock &Store(DataType data);
+        BasicBlock &Load(DataType data);
         BasicBlock &Ldarga();
         BasicBlock &Ldloc(DataType data);
         BasicBlock &Ldloca();
@@ -635,6 +645,7 @@ namespace evoBasic::il{
         BasicBlock &Conv(DataType src, DataType dst);
         BasicBlock &Callvirt();
         BasicBlock &Invoke(TokenRef *external);
+        BasicBlock &Intrinsic(vm::IntrinsicEnum index);
         BasicBlock &Callstatic();
         BasicBlock &Call();
     };

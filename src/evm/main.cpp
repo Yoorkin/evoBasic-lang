@@ -13,12 +13,12 @@
 #include <utils/cmd.h>
 #include <utils/logger.h>
 #include <utils/format.h>
-#include "memory.h"
+#include <execution/memory.h>
 #include <loader/bytecode.h>
 #include <utils/config.h>
 #include <loader/loader.h>
 #include <loader/il.h>
-#include "utils/data.h"
+#include <utils/data.h>
 #include "runtime.h"
 #include "processor.h"
 

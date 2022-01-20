@@ -909,6 +909,17 @@ namespace evoBasic::type{
         return new DebugInfo{getName()};
     }
 
+    std::list<std::string> Array::getFullName() {
+        auto ret = element_type->getFullName();
+        ret.push_front(to_string(size_));
+        ret.push_front("array");
+        return ret;
+    }
+
+    std::string Array::getName() {
+        return Format()<<element_type->getName()<<'['<<to_string(size_)<<']';
+    }
+
     DebugInfo *TemporaryDomain::debug() {
         return makeDebugInfo("",this);
     }

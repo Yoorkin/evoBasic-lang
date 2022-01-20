@@ -5,9 +5,9 @@
 #ifndef EVOBASIC2_STACK_H
 #define EVOBASIC2_STACK_H
 #include <stdlib.h>
-#include <utils/data.h>
-#include <utils/logger.h>
-#include <utils/format.h>
+#include "utils/data.h"
+#include "utils/logger.h"
+#include "utils/format.h"
 namespace evoBasic::vm{
     class Stack {
         void *mem = nullptr;

@@ -12,7 +12,7 @@
 - f64
 - ref
 
-    reference to class object/array/field/record
+    reference to class-object/array/field/record
 
 - delegate
 
@@ -26,13 +26,9 @@
 
     reference to static function
 
-- record
-
-    memory of whole record
-
 - array
 
-    memory of whole array
+- record
 
 
 # calling convention
@@ -91,6 +87,12 @@
     format: `invoke <ExtFtnDecl>`
 
     transform: ... -> ..., `function return`
+
+- intrinsic
+
+    format: `intrinsic <u8>`
+
+    transform: ... -> ...
 
 - ldftn
 
@@ -183,6 +185,18 @@
 
     transform: ..., u16 -> ..., ref
 
+- store
+
+    format : `store.<DataType>`
+
+    transform: ..., address, `data type value` -> ...
+
+- load 
+
+    format : `load.<DataType>`
+
+    transform : ..., address -> ..., `data type value`
+
 - starg
 
     format: `starg.<DataType>`
@@ -251,7 +265,7 @@
 
 - ldelema
 
-    format: `ldelema`
+    format: `ldelema <ElementTypeDecl>`
 
     transform: ..., ref, u16 -> ..., ref
 
@@ -274,7 +288,7 @@
 
     transform: ..., ref -> ..., ref
 
-- InstConv
+- Conv
 
     format: `conv <SrcDataType> <DstDataType>`
 
