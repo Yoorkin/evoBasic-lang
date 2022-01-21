@@ -21,6 +21,10 @@ namespace evoBasic::vm{
             case Bytecode::u16:     Operation<data::u16>::call(operand, env);     break;
             case Bytecode::u32:     Operation<data::u16>::call(operand, env);     break;
             case Bytecode::u64:     Operation<data::u16>::call(operand, env);     break;
+            case Bytecode::ref:     Operation<data::address>::call(operand,env);  break;
+            case Bytecode::array:
+            case Bytecode::record:
+                PANIC;
         }
     }
 
@@ -144,7 +148,7 @@ namespace evoBasic::vm{
     struct OpStore {
         static void call(Stack &operand, ExecutionEnv &env) {
             T value = operand.pop<T>();
-            T* address = operand.pop<data::ptr>();
+            T* address = reinterpret_cast<T*>(operand.pop<data::address>());
             *address = value;
         }
     };
@@ -521,18 +525,31 @@ namespace evoBasic::vm{
                 case Bytecode::Stsfld:
                     forEachType<OpStsfld>(operand, getCurrentEnv());
                     break;
-                case Bytecode::Ldelem:
+                case Bytecode::Ldelem: {
+                    auto index = operand.pop<data::u16>();
+                    auto ref = operand.pop<data::address>();
+                    getCurrentEnv().consume<data::Byte>();
+                    auto token_id = getCurrentEnv().consume<il::TokenDef::ID>();
+                    auto element = getCurrentEnv().getFunction()->getTokenTable()->getRuntime<FieldSlot>(token_id);
+                    auto element_length = dynamic_cast<Sizeable*>(element)->getByteLength();
+                    ref += index * element_length;
+                    operand.push(element_length,reinterpret_cast<char*>(ref));
+                    break;
+                }
+                case Bytecode::Ldelema: {
+                    auto index = operand.pop<data::u16>();
+                    auto ref = operand.pop<data::address>();
+                    getCurrentEnv().consume<data::Byte>();
+                    auto token_id = getCurrentEnv().consume<il::TokenDef::ID>();
+                    auto element = getCurrentEnv().getFunction()->getTokenTable()->getRuntime<FieldSlot>(token_id);
+                    ref += index * dynamic_cast<Sizeable*>(element)->getByteLength();
+                    operand.push(ref);
+                    break;
+                }
+                case Bytecode::Stelem:{
 
                     break;
-                case Bytecode::Ldelema:{
-
-                    break;
-                case Bytecode::Stelem:
-                    PANIC;
-                    break;
-                case Bytecode::Stelema:
-                    PANIC;
-                    break;
+                }
                 case Bytecode::Add:
                     forEachType<OpAdd>(operand, getCurrentEnv());
                     break;

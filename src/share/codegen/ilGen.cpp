@@ -435,7 +435,7 @@ namespace evoBasic{
                 visitExpression(element->array,current);
                 visitExpression(element->offset,current);
                 visitExpression(for_node->begin,current);
-                current->Stelem(il_type);
+                current->Stelem(il_type, getArrayElementTokenRef(element));
                 break;
             }
             default: PANIC;
@@ -526,7 +526,7 @@ namespace evoBasic{
                 cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
                            .Ldloc(iter_il_type);
                 cond_block->Add(il_type);
-                cond_block->Stelem(il_type);
+                cond_block->Stelem(il_type,getArrayElementTokenRef(element));
                 break;
             }
             default: PANIC;
@@ -771,11 +771,11 @@ namespace evoBasic{
                 break;
             }
             case ast::Expression::Element:{
-                auto element = (ast::ArrayElement*)expr;
-                visitExpression(element->array,current);
-                visitExpression(element->offset,current);
+                auto array_element = (ast::ArrayElement*)expr;
+                loadArrayRef(array_element,current);
+                visitExpression(array_element->offset,current);
                 visitExpression(assign_node->rhs,current);
-                current->Stelem(mapILType(element->type->getPrototype()));
+                current->Stelem(mapILType(array_element->type->getPrototype()),getArrayElementTokenRef(array_element));
                 break;
             }
             case ast::Expression::ArgUse:{
@@ -814,45 +814,76 @@ namespace evoBasic{
     }
 
     void ILGen::visitArrayElement(ast::ArrayElement *element_node, il::BasicBlock *current) {
-        switch(element_node->array->expression_kind){
-            case ast::Expression::ExpressionKind::Local:{
-                auto local = (ast::Local*)element_node->array;
-                current->Push(DataType::u16,(data::u16)local->variable->getLayoutIndex());
-                current->Ldloca();
-                break;
-            }
-            case ast::Expression::ExpressionKind::ArgUse:{
-                auto arg = (ast::Arg*)element_node->array;
-                current->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex());
-                if(arg->is_ref){
-                    current->Ldarg(DataType::ref);
-                }
-                else{
-                    current->Ldarga();
-                }
-                break;
-            }
-            case ast::Expression::ExpressionKind::SFld:{
-                auto sfld = (ast::SFld*)element_node->array;
-                auto token = document->getTokenRef(sfld->variable->getFullName());
-                current->Ldsflda(token);
-                break;
-            }
-            case ast::Expression::ExpressionKind::Fld:{
-                auto fld = (ast::Fld*)element_node->array;
-                auto token = document->getTokenRef(fld->variable->getFullName());
-                current->Ldflda(token);
-                break;
-            }
-        }
+        loadArrayRef(element_node,current);
         visitExpression(element_node->offset,current);
-        current->Ldelem(mapILType(element_node->type->getPrototype()));
+        current->Ldelem(mapILType(element_node->type->getPrototype()),getArrayElementTokenRef(element_node));
     }
 
     void ILGen::visitDelegate(ast::Delegate *delegate_node, il::BasicBlock *current) {
         //todo
     }
 
+    TokenRef *ILGen::getArrayElementTokenRef(ast::ArrayElement *array_element){
+        switch(array_element->array->expression_kind){
+            case ast::Expression::Fld:{
+                auto fld = static_cast<ast::Fld*>(array_element->array);
+                auto array_prototype = dynamic_cast<type::Array*>(fld->variable->getPrototype());
+                return document->getTokenRef(array_prototype->getElementPrototype()->getFullName());
+            }
+            case ast::Expression::SFld:{
+                auto sfld = static_cast<ast::SFld*>(array_element->array);
+                auto array_prototype = dynamic_cast<type::Array*>(sfld->variable->getPrototype());
+                return document->getTokenRef(array_prototype->getElementPrototype()->getFullName());
+            }
+            case ast::Expression::Local:{
+                auto local = static_cast<ast::Local*>(array_element->array);
+                auto array_prototype = dynamic_cast<type::Array*>(local->variable->getPrototype());
+                return document->getTokenRef(array_prototype->getElementPrototype()->getFullName());
+            }
+            case ast::Expression::ArgUse:{
+                auto arg_use = static_cast<ast::Arg*>(array_element->array);
+                auto array_prototype = dynamic_cast<type::Array*>(arg_use->variable->getPrototype());
+                return document->getTokenRef(array_prototype->getElementPrototype()->getFullName());
+            }
+        }
+    }
+
+    void ILGen::loadArrayRef(ast::ArrayElement *array_element, il::BasicBlock *current){
+        switch(array_element->array->expression_kind){
+            case ast::Expression::Fld:{
+                auto fld = static_cast<ast::Fld*>(array_element->array);
+                visitExpression(fld->ref,current);
+                current->Ldflda(document->getTokenRef(fld->variable->getFullName()));
+                auto array_prototype = dynamic_cast<type::Array*>(fld->variable->getPrototype());
+                break;
+            }
+            case ast::Expression::SFld:{
+                auto sfld = static_cast<ast::SFld*>(array_element->array);
+                current->Ldsflda(document->getTokenRef(sfld->variable->getFullName()));
+                auto array_prototype = dynamic_cast<type::Array*>(sfld->variable->getPrototype());
+                break;
+            }
+            case ast::Expression::Local:{
+                auto local = static_cast<ast::Local*>(array_element->array);
+                current->Push(DataType::u16,(data::u16)local->variable->getLayoutIndex());
+                current->Ldloca();
+                auto array_prototype = dynamic_cast<type::Array*>(local->variable->getPrototype());
+                break;
+            }
+            case ast::Expression::ArgUse:{
+                auto arg_use = static_cast<ast::Arg*>(array_element->array);
+                current->Push(DataType::u16,(data::u16)arg_use->variable->getLayoutIndex());
+                if(arg_use->is_ref){
+                    current->Ldarg(DataType::ref);
+                }
+                else{
+                    current->Ldarga();
+                }
+                auto array_prototype = dynamic_cast<type::Array*>(arg_use->variable->getPrototype());
+                break;
+            }
+        }
+    }
 
     void ILGen::visitArgument(ast::Argument *argument_node, il::BasicBlock *current) {
         auto expr = argument_node->expr;
@@ -882,9 +913,9 @@ namespace evoBasic{
                 }
                 case ast::Expression::Element:{
                     auto element = (ast::ArrayElement*)expr;
-                    visitExpression(element->array,current);
+                    loadArrayRef(element,current);
                     visitExpression(element->offset,current);
-                    current->Ldelema();
+                    current->Ldelema(getArrayElementTokenRef(element));
                     break;
                 }
                 case ast::Expression::ArgUse:{
@@ -961,41 +992,19 @@ namespace evoBasic{
 
     void ILGen::visitSFld(ast::SFld *sfld_node, il::BasicBlock *current) {
         auto token = document->getTokenRef(sfld_node->variable->getFullName());
-        switch(sfld_node->variable->getPrototype()->getKind()){
-            case type::SymbolKind::Record:
-            case type::SymbolKind::Array:
-                current->Ldsflda(token);
-                break;
-            default:
-                current->Ldsfld(mapILType(sfld_node->variable->getPrototype()),token);
-        }
-
+        current->Ldsfld(mapILType(sfld_node->variable->getPrototype()),token);
     }
 
     void ILGen::visitFld(ast::Fld *fld_node, il::BasicBlock *current) {
         auto token = document->getTokenRef(fld_node->variable->getFullName());
         visitExpression(fld_node->ref,current);
-        switch(fld_node->variable->getPrototype()->getKind()){
-            case type::SymbolKind::Record:
-            case type::SymbolKind::Array:
-                current->Ldflda(token);
-                break;
-            default:
-                current->Ldfld(mapILType(fld_node->variable->getPrototype()),token);
-        }
+        current->Ldfld(mapILType(fld_node->variable->getPrototype()),token);
     }
 
     void ILGen::visitLocal(ast::Local *local_node, il::BasicBlock *current) {
         auto index = local_node->variable->getLayoutIndex();
         current->Push(DataType::u16,(data::u16)index);
-        switch(local_node->variable->getPrototype()->getKind()){
-            case type::SymbolKind::Record:
-            case type::SymbolKind::Array:
-                current->Ldloca();
-                break;
-            default:
-                current->Ldloc(mapILType(local_node->variable->getPrototype()));
-        }
+        current->Ldloc(mapILType(local_node->variable->getPrototype()));
     }
 
     void ILGen::visitArg(ast::Arg *arg_node, il::BasicBlock *current) {

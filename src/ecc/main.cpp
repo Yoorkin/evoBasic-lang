@@ -167,7 +167,7 @@ int main(int argc,char *argv[]) {
         return type::debugSymbolTable(context->getGlobal()->debug());
     });
 
-    if(Logger::errorCount == 0){
+    //if(Logger::errorCount == 0){
         ILGen gen;
         il::Document document(output_name);
         Semantic::solveByteLengthDependencies(context);
@@ -185,7 +185,7 @@ int main(int argc,char *argv[]) {
 
         fstream file(output_name + extensions::package,ios::binary | ios::out);
         document.toHex(file);
-    }
+    //}
 
 
     cout<<endl<<Logger::errorCount<<" error(s),"

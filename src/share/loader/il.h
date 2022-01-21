@@ -423,7 +423,7 @@ namespace evoBasic::il{
 
     class InstWithOp : public Inst{
     public:
-        enum Op{Nop,Ret,CallVirt,CallExt,Callstatic,Call,Ldnull,And,Or,Xor,Ldloca,Ldarga,Ldelema,Not}op;
+        enum Op{Nop,Ret,CallVirt,CallExt,Callstatic,Call,Ldnull,And,Or,Xor,Ldloca,Ldarga,Not}op;
     private:
         Bytecode opToBytecode(Op op);
     public:
@@ -435,7 +435,7 @@ namespace evoBasic::il{
 
     class InstWithToken : public Inst{
     public:
-        enum Op{Ldftn,Ldsftn,Ldvftn,Ldc,Newobj,Invoke,Ldflda,Ldsflda}op;
+        enum Op{Ldftn,Ldsftn,Ldvftn,Ldc,Newobj,Invoke,Ldflda,Ldsflda,Ldelema}op;
     private:
         TokenRef *token = nullptr;
         Bytecode opToBytecode(Op op);
@@ -485,7 +485,7 @@ namespace evoBasic::il{
 
     class InstWithData : public Inst{
     public:
-        enum Op{Ldelem,Stelem,Stelema,Ldarg,Starg,Load,Store,Ldloc,Stloc,
+        enum Op{Ldarg,Starg,Load,Store,Ldloc,Stloc,
                 Add,Sub,Mul,Div,FDiv,EQ,NE,LT,GT,LE,GE,Neg,Pop,Dup};
     private:
         Op op;
@@ -500,7 +500,7 @@ namespace evoBasic::il{
 
     class InstWithDataToken : public Inst{
     public:
-        enum Op{Ldfld,Ldsfld,Stfld,Stsfld};
+        enum Op{Ldfld,Ldsfld,Stfld,Stsfld,Ldelem,Stelem};
     private:
         Op op;
         DataType type;
@@ -636,9 +636,9 @@ namespace evoBasic::il{
         BasicBlock &Ldsflda(TokenRef *sfld);
         BasicBlock &Stfld(DataType data, TokenRef *fld);
         BasicBlock &Stsfld(DataType data, TokenRef *sfld);
-        BasicBlock &Ldelem(DataType data);
-        BasicBlock &Ldelema();
-        BasicBlock &Stelem(DataType data);
+        BasicBlock &Ldelem(DataType data,TokenRef *element);
+        BasicBlock &Ldelema(TokenRef *element);
+        BasicBlock &Stelem(DataType data,TokenRef *element);
         BasicBlock &Ldnull();
         BasicBlock &Newobj(TokenRef *cls);
         BasicBlock &Castcls(TokenRef *src, TokenRef *dst);

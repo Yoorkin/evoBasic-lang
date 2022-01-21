@@ -86,6 +86,10 @@ namespace evoBasic{
         std::list<il::Param*> visitParameter(type::Function *function);
 
         void visitEnumMember(ast::EnumMember *enum_member_node, il::BasicBlock *current);
+
+        void loadArrayRef(ast::ArrayElement *array_element, il::BasicBlock *current);
+
+        il::TokenRef *getArrayElementTokenRef(ast::ArrayElement *array_element);
     };
 
 }

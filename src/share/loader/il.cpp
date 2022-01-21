@@ -269,18 +269,18 @@ namespace evoBasic::il{
         return *this;
     }
 
-    BasicBlock &BasicBlock::Ldelem(DataType data) {
-        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Ldelem,data));
+    BasicBlock &BasicBlock::Ldelem(DataType data, TokenRef *element) {
+        insts.push_back(new InstWithDataToken(getDocument(),InstWithDataToken::Op::Ldelem,data,element));
         return *this;
     }
 
-    BasicBlock &BasicBlock::Ldelema() {
-        insts.push_back(new InstWithOp(getDocument(),InstWithOp::Op::Ldelema));
+    BasicBlock &BasicBlock::Ldelema(TokenRef *element) {
+        insts.push_back(new InstWithToken(getDocument(),InstWithToken::Op::Ldelema,element));
         return *this;
     }
 
-    BasicBlock &BasicBlock::Stelem(DataType data) {
-        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Stelem,data));
+    BasicBlock &BasicBlock::Stelem(DataType data, TokenRef *element) {
+        insts.push_back(new InstWithDataToken(getDocument(),InstWithDataToken::Op::Stelem,data,element));
         return *this;
     }
 
@@ -431,14 +431,14 @@ namespace evoBasic::il{
 
     std::string InstWithOp::toString() {
         vector<string> str = {"Nop","Ret","CallVirt","CallExt","Callstatic","Call",
-                              "Ldnull","And","Or","Xor","Ldloca","Ldarga","Ldelema","Not"};
+                              "Ldnull","And","Or","Xor","Ldloca","Ldarga","Not"};
         Format fmt;
         fmt << str[(int)op];
         return fmt;
     }
 
     std::string InstWithToken::toString() {
-        vector<string> str = {"Ldftn","Ldsftn","Ldvftn","Ldc","Newobj","Callext"};
+        vector<string> str = {"Ldftn","Ldsftn","Ldvftn","Ldc","Newobj","Invoke","Ldflda","Ldsflda","Ldelema"};
         Format fmt;
         fmt << str[(int)op] << ' ' << token->toString();
         return fmt;
@@ -499,10 +499,10 @@ namespace evoBasic::il{
     }
 
     std::string InstWithData::toString() {
-        vector<string> inst = {"Ldelem","Stelem","Stelema","Ldarg","Starg","Load","Store","Ldloc","Stloc",
+        vector<string> inst = {"Ldarg","Starg","Load","Store","Ldloc","Stloc",
                                "Add","Sub","Mul","Div","FDiv","EQ","NE","LT","GT","LE","GE","Neg","Pop","Dup"};
         vector<string> ty = {
-                "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
+                "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64","array","record",
                 "ref","ftn","vftn","sftn","boolean","character","delegate"
         };
 
@@ -510,7 +510,7 @@ namespace evoBasic::il{
     }
 
     std::string InstWithDataToken::toString() {
-        vector<string> inst = {"Ldfld","Ldsfld","Stfld","Stsfld"};
+        vector<string> inst = {"Ldfld","Ldsfld","Stfld","Stsfld","Ldelem","Stelem"};
         vector<string> ty = {
                 "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
                 "ref","ftn","vftn","sftn","boolean","character","delegate"
@@ -1562,7 +1562,6 @@ namespace evoBasic::il{
             case Xor:           return Bytecode::Xor;
             case Ldloca:        return Bytecode::Ldloca;
             case Ldarga:        return Bytecode::Ldarga;
-            case Ldelema:       return Bytecode::Ldelema;
             case Not:           return Bytecode::Not;
         }
     }
@@ -1585,6 +1584,7 @@ namespace evoBasic::il{
             case Invoke:  return Bytecode::Invoke;
             case Ldflda:  return Bytecode::Ldflda;
             case Ldsflda: return Bytecode::Ldsflda;
+            case Ldelema: return Bytecode::Ldelema;
         }
     }
 
@@ -1631,6 +1631,8 @@ namespace evoBasic::il{
             case f64:     return Bytecode::f64;
             case ref:     return Bytecode::u64;
             case boolean: return Bytecode::boolean;
+            case array:   return Bytecode::array;
+            case record:  return Bytecode::record;
             case empty:
             case character:
             case delegate:
@@ -1699,9 +1701,6 @@ namespace evoBasic::il{
 
     Bytecode InstWithData::opToBytecode(InstWithData::Op op) {
         switch(op){
-            case Ldelem:    return Bytecode::Ldelem;    
-            case Stelem:    return Bytecode::Stelem;    
-            case Stelema:   return Bytecode::Stelema;   
             case Ldarg:     return Bytecode::Ldarg;
             case Load:      return Bytecode::Load;
             case Starg:     return Bytecode::Starg;
@@ -1729,6 +1728,8 @@ namespace evoBasic::il{
 
     Bytecode InstWithDataToken::opToBytecode(InstWithDataToken::Op op) {
         switch(op) {
+            case Ldelem:    return Bytecode::Ldelem;
+            case Stelem:    return Bytecode::Stelem;
             case Ldfld:     return Bytecode::Ldfld;
             case Ldsfld:    return Bytecode::Ldsfld;
             case Stfld:     return Bytecode::Stfld;

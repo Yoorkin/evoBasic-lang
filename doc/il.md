@@ -217,7 +217,7 @@
 
 - stelem
 
-    format: `stelem.<DataType>`
+    format: `stelem.<DataType> <ElementTypeDecl>`
 
     transform: ..., ref, u16, `data type value` -> ...
 
@@ -259,7 +259,7 @@
 
 - ldelem
 
-    format: `ldelem.<DataType>`
+    format: `ldelem.<DataType> <ElementTypeDecl>`
 
     transform: ..., ref, u16 -> ..., `data type` 
 
