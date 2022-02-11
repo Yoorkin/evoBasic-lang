@@ -210,12 +210,12 @@ namespace evoBasic::il{
     }
 
     BasicBlock &BasicBlock::Store(DataType data) {
-        insts.push_back(new InstWithData(getDocument(), InstWithData::Op::Store, data));
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Store,data));
         return *this;
     }
 
     BasicBlock &BasicBlock::Load(DataType data) {
-        insts.push_back(new InstWithData(getDocument(), InstWithData::Op::Load, data));
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Load,data));
         return *this;
     }
 
@@ -269,18 +269,18 @@ namespace evoBasic::il{
         return *this;
     }
 
-    BasicBlock &BasicBlock::Ldelem(DataType data, TokenRef *element) {
-        insts.push_back(new InstWithDataToken(getDocument(),InstWithDataToken::Op::Ldelem,data,element));
+    BasicBlock &BasicBlock::Ldelem(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Ldelem,data));
         return *this;
     }
 
-    BasicBlock &BasicBlock::Ldelema(TokenRef *element) {
-        insts.push_back(new InstWithToken(getDocument(),InstWithToken::Op::Ldelema,element));
+    BasicBlock &BasicBlock::Ldelema(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Ldelema,data));
         return *this;
     }
 
-    BasicBlock &BasicBlock::Stelem(DataType data, TokenRef *element) {
-        insts.push_back(new InstWithDataToken(getDocument(),InstWithDataToken::Op::Stelem,data,element));
+    BasicBlock &BasicBlock::Stelem(DataType data) {
+        insts.push_back(new InstWithData(getDocument(),InstWithData::Op::Stelem,data));
         return *this;
     }
 
@@ -438,7 +438,7 @@ namespace evoBasic::il{
     }
 
     std::string InstWithToken::toString() {
-        vector<string> str = {"Ldftn","Ldsftn","Ldvftn","Ldc","Newobj","Invoke","Ldflda","Ldsflda","Ldelema"};
+        vector<string> str = {"Ldftn","Ldsftn","Ldvftn","Ldc","Newobj","Invoke","Ldflda","Ldsflda"};
         Format fmt;
         fmt << str[(int)op] << ' ' << token->toString();
         return fmt;
@@ -452,45 +452,47 @@ namespace evoBasic::il{
         return Format() << "Br " << target->getAddress();
     }
 
+
+    vector<string> ty = {
+            "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64","array","record",
+            "ref","ftn","vftn","sftn","boolean","character","delegate"
+    };
+
     std::string InstPush::toString() {
-        vector<string> str = {
-                "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
-                "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
-        };
         Format fmt;
-        fmt << "Push." << str[(int)type] << ' ';
-        switch(type){
-            case DataType::i8:
+        fmt << "Push." << ty[(int)type.getKind()] << ' ';
+        switch(type.getKind()){
+            case DataTypeEnum::i8:
                 fmt << to_string(any_cast<data::i8>(value));
                 break;
-            case DataType::i16:
+            case DataTypeEnum::i16:
                 fmt << to_string(any_cast<data::i16>(value));
                 break;
-            case DataType::i32:
+            case DataTypeEnum::i32:
                 fmt << to_string(any_cast<data::i32>(value));
                 break;
-            case DataType::i64:
+            case DataTypeEnum::i64:
                 fmt << to_string(any_cast<data::i64>(value));
                 break;
-            case DataType::u8:
+            case DataTypeEnum::u8:
                 fmt << to_string(any_cast<data::u8>(value));
                 break;
-            case DataType::u16:
+            case DataTypeEnum::u16:
                 fmt << to_string(any_cast<data::u16>(value));
                 break;
-            case DataType::u32:
+            case DataTypeEnum::u32:
                 fmt << to_string(any_cast<data::u32>(value));
                 break;
-            case DataType::u64:
+            case DataTypeEnum::u64:
                 fmt << to_string(any_cast<data::u64>(value));
                 break;
-            case DataType::f32:
+            case DataTypeEnum::f32:
                 fmt << to_string(any_cast<data::f32>(value));
                 break;
-            case DataType::f64:
+            case DataTypeEnum::f64:
                 fmt << to_string(any_cast<data::f64>(value));
                 break;
-            case DataType::boolean:
+            case DataTypeEnum::boolean:
                 fmt << to_string(any_cast<data::boolean>(value));
                 break;
             default: PANIC;
@@ -500,22 +502,30 @@ namespace evoBasic::il{
 
     std::string InstWithData::toString() {
         vector<string> inst = {"Ldarg","Starg","Load","Store","Ldloc","Stloc",
-                               "Add","Sub","Mul","Div","FDiv","EQ","NE","LT","GT","LE","GE","Neg","Pop","Dup"};
-        vector<string> ty = {
-                "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64","array","record",
-                "ref","ftn","vftn","sftn","boolean","character","delegate"
-        };
-
-        return Format() << inst[(int)op] << '.' << ty[(int)type];
+                               "Add","Sub","Mul","Div","FDiv","EQ","NE","LT","GT","LE","GE","Neg","Pop","Dup",
+                               "Ldelem","Stelem","Ldelema"};
+        Format fmt;
+        fmt << inst[(int)op] << '.' << ty[(int)type.getKind()];
+        switch (type.getKind()) {
+            case DataTypeEnum::record:
+            case DataTypeEnum::array:
+                fmt << ' ' << type.getToken()->toString();
+                break;
+        }
+        return fmt;
     }
 
     std::string InstWithDataToken::toString() {
-        vector<string> inst = {"Ldfld","Ldsfld","Stfld","Stsfld","Ldelem","Stelem"};
-        vector<string> ty = {
-                "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
-                "ref","ftn","vftn","sftn","boolean","character","delegate"
-        };
-        return Format() << inst[(int)op] << '.' << ty[(int)type] << ' ' << token->toString();
+        vector<string> inst = {"Ldfld","Ldsfld","Stfld","Stsfld"};
+        Format fmt;
+        fmt << inst[(int)op] << '.' << ty[(int)type.getKind()] << ' ' << token->toString();
+        switch (type.getKind()) {
+            case DataTypeEnum::record:
+            case DataTypeEnum::array:
+                fmt << ' ' << type.getToken()->toString();
+                break;
+        }
+        return fmt;
     }
 
     std::string InstCastcls::toString() {
@@ -523,11 +533,7 @@ namespace evoBasic::il{
     }
 
     std::string InstConv::toString() {
-        vector<string> ty = {
-                "empty","i8","i16","i32","i64","u8","u16","u32","u64","f32","f64",
-                "ref","ftn","vftn","sftn","record","array","boolean","character","delegate"
-        };
-        return Format() << "conv." << ty[(int)src] << " " << ty[(int)dst];
+        return Format() << "conv." << ty[(int)src.getKind()] << " " << ty[(int)dst.getKind()];
     }
 
     void printILInfo(DebugInfo *info,string indent,ostream &stream){
@@ -583,8 +589,8 @@ namespace evoBasic::il{
     }
 
     Inst::ByteSize InstPush::getByteSize() {
-        using enum DataType;
-        switch(type){
+        using enum DataTypeEnum;
+        switch(type.getKind()){
             case i8:  return 2 + sizeof(data::i8);
             case i16: return 2 + sizeof(data::i16);
             case i32: return 2 + sizeof(data::i32);
@@ -601,7 +607,13 @@ namespace evoBasic::il{
     }
 
     Inst::ByteSize InstWithData::getByteSize() {
-        return 2;
+        switch (type.getKind()) {
+            case DataTypeEnum::record:
+            case DataTypeEnum::array:
+                return sizeof(TokenRef*) + 2;
+            default:
+                return 2;
+        }
     }
 
     Inst::ByteSize InstWithDataToken::getByteSize() {
@@ -1584,7 +1596,6 @@ namespace evoBasic::il{
             case Invoke:  return Bytecode::Invoke;
             case Ldflda:  return Bytecode::Ldflda;
             case Ldsflda: return Bytecode::Ldsflda;
-            case Ldelema: return Bytecode::Ldelema;
         }
     }
 
@@ -1616,8 +1627,8 @@ namespace evoBasic::il{
         : Inst(document,Bytecode::Br),target(target){}
 
 
-    Bytecode ILDataTypeToByteCode(DataType type){
-        using enum DataType;
+    Bytecode ILDataTypeToByteCode(DataTypeEnum type){
+        using enum DataTypeEnum;
         switch(type){
             case i8:      return Bytecode::i8;
             case i16:     return Bytecode::i16;
@@ -1644,10 +1655,18 @@ namespace evoBasic::il{
     }
 
     void InstPush::toHex(std::ostream &stream) {
-        using enum DataType;
+        using enum DataTypeEnum;
         write(stream,Bytecode::Push);
-        write(stream,ILDataTypeToByteCode(type));
-        switch(type){
+        write(stream,ILDataTypeToByteCode(type.getKind()));
+
+        switch (type.getKind()) {
+            case DataTypeEnum::array:
+            case DataTypeEnum::record:
+                PANIC;
+                break;
+        }
+
+        switch(type.getKind()){
             case boolean:
                 write(stream,any_cast<data::boolean>(value));
                 break;
@@ -1693,10 +1712,16 @@ namespace evoBasic::il{
     void InstWithData::toHex(std::ostream &stream) {
         Bytecode code = opToBytecode(op);
         write(stream,code);
-        write(stream,ILDataTypeToByteCode(type));
+        write(stream,ILDataTypeToByteCode(type.getKind()));
+        switch (type.getKind()) {
+            case DataTypeEnum::array:
+            case DataTypeEnum::record:
+                type.getToken()->toHex(stream);
+                break;
+        }
     }
 
-    InstWithData::InstWithData(Document *document,InstWithData::Op op, DataType type)
+    InstWithData::InstWithData(Document *document, InstWithData::Op op, DataType type)
         : Inst(document,opToBytecode(op)),type(type),op(op){}
 
     Bytecode InstWithData::opToBytecode(InstWithData::Op op) {
@@ -1721,6 +1746,9 @@ namespace evoBasic::il{
             case Neg:       return Bytecode::Neg;       
             case Pop:       return Bytecode::Pop;       
             case Dup:       return Bytecode::Dup;
+            case Ldelema:   return Bytecode::Ldelema;
+            case Ldelem:    return Bytecode::Ldelem;
+            case Stelem:    return Bytecode::Stelem;
             default: PANIC;
         }
     }
@@ -1728,8 +1756,6 @@ namespace evoBasic::il{
 
     Bytecode InstWithDataToken::opToBytecode(InstWithDataToken::Op op) {
         switch(op) {
-            case Ldelem:    return Bytecode::Ldelem;
-            case Stelem:    return Bytecode::Stelem;
             case Ldfld:     return Bytecode::Ldfld;
             case Ldsfld:    return Bytecode::Ldsfld;
             case Stfld:     return Bytecode::Stfld;
@@ -1743,7 +1769,13 @@ namespace evoBasic::il{
     void InstWithDataToken::toHex(std::ostream &stream) {
         Bytecode code = opToBytecode(op);
         write(stream,code);
-        write(stream,ILDataTypeToByteCode(type));
+        write(stream,ILDataTypeToByteCode(type.getKind()));
+        switch (type.getKind()) {
+            case DataTypeEnum::array:
+            case DataTypeEnum::record:
+                type.getToken()->toHex(stream);
+                break;
+        }
         token->toHex(stream);
     }
 
@@ -1759,8 +1791,8 @@ namespace evoBasic::il{
 
     void InstConv::toHex(std::ostream &stream) {
         write(stream,Bytecode::Conv);
-        write(stream,ILDataTypeToByteCode(src));
-        write(stream,ILDataTypeToByteCode(dst));
+        write(stream,ILDataTypeToByteCode(src.getKind()));
+        write(stream,ILDataTypeToByteCode(dst.getKind()));
     }
 
     InstConv::InstConv(Document *document, DataType src, DataType dst)

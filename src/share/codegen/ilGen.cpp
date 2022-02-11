@@ -9,32 +9,36 @@ namespace evoBasic{
     using namespace il;
     using namespace std;
 
-    DataType mapILType(type::Prototype *type){
+    DataType ILGen::mapILType(type::Prototype *type){
         switch(type->getKind()){
-            case type::SymbolKind::Record:      return DataType::record;
-            case type::SymbolKind::Array:       return DataType::array;
-            case type::SymbolKind::Class:       return DataType::ref;
-            case type::SymbolKind::Enum:        return DataType::u32;
-            case type::SymbolKind::Function:    return DataType::delegate;
+            case type::SymbolKind::Record:      return {DataTypeEnum::record,document->getTokenRef(type->getFullName())};
+            case type::SymbolKind::Array:       return {DataTypeEnum::array,document->getTokenRef(type->getFullName())};
+            case type::SymbolKind::Class:       return {DataTypeEnum::ref};
+            case type::SymbolKind::Enum:        return {DataTypeEnum::u32};
+            case type::SymbolKind::Function:    return {DataTypeEnum::delegate};
             case type::SymbolKind::Primitive:{
                 auto primitive = type->as<type::Primitive*>();
                 switch(primitive->getDataKind().getValue()){
-                    case vm::Data::i8:      return DataType::i8;
-                    case vm::Data::i16:     return DataType::i16;
-                    case vm::Data::i32:     return DataType::i32;
-                    case vm::Data::i64:     return DataType::i64;
-                    case vm::Data::u8:      return DataType::u8;
-                    case vm::Data::u16:     return DataType::u16;
-                    case vm::Data::u32:     return DataType::u32;
-                    case vm::Data::u64:     return DataType::u64;
-                    case vm::Data::f32:     return DataType::f32;
-                    case vm::Data::f64:     return DataType::f64;
-                    case vm::Data::boolean: return DataType::boolean;
+                    case vm::Data::i8:      return {DataTypeEnum::i8};
+                    case vm::Data::i16:     return {DataTypeEnum::i16};
+                    case vm::Data::i32:     return {DataTypeEnum::i32};
+                    case vm::Data::i64:     return {DataTypeEnum::i64};
+                    case vm::Data::u8:      return {DataTypeEnum::u8};
+                    case vm::Data::u16:     return {DataTypeEnum::u16};
+                    case vm::Data::u32:     return {DataTypeEnum::u32};
+                    case vm::Data::u64:     return {DataTypeEnum::u64};
+                    case vm::Data::f32:     return {DataTypeEnum::f32};
+                    case vm::Data::f64:     return {DataTypeEnum::f64};
+                    case vm::Data::boolean: return {DataTypeEnum::boolean};
                     default: PANIC;
                 }
             }
             default: PANIC;
         }
+    }
+
+    DataType ILGen::mapILType(ExpressionType *type) {
+        return mapILType(type->getPrototype());
     }
 
 
@@ -70,6 +74,7 @@ namespace evoBasic{
         auto type = document->getTokenRef(variable->getPrototype()->getFullName());
         return new Fld(document,variable->getAccessFlag(),name,type);
     }
+
 
     list<Member*> ILGen::visitMember(ast::Member *member){
         list<Member*> members;
@@ -320,7 +325,7 @@ namespace evoBasic{
         FOR_EACH(iter,let_node->variable){
             if(iter->initial){
                 auto data_type = mapILType(iter->variable_symbol->getPrototype());
-                current->Push(DataType::u16,(data::u16)iter->variable_symbol->getLayoutIndex());
+                current->Push(DataTypeEnum::u16, (data::u16)iter->variable_symbol->getLayoutIndex());
                 visitExpression(iter->initial,current);
                 current->Stloc(data_type);
             }
@@ -397,62 +402,54 @@ namespace evoBasic{
 
     il::BasicBlock *ILGen::visitFor(ast::For *for_node, il::BasicBlock *current, JumpOption jump_option) {
 
+        loadExpressionValue(for_node->begin,current);
         switch(for_node->iterator->expression_kind){
             case ast::Expression::SFld:{
                 auto sfld = (ast::SFld*)for_node->iterator;
-                auto il_type = mapILType(sfld->type->getPrototype());
-                visitExpression(for_node->begin,current);
-                current->Stsfld(il_type, document->getTokenRef(sfld->variable->getFullName()));
+                visitSFld(sfld,current);
+                current->Stsfld(mapILType(sfld->type),getTokenRef(sfld));
                 break;
             }
             case ast::Expression::Fld:{
                 auto fld = (ast::Fld*)for_node->iterator;
-                auto il_type = mapILType(fld->type->getPrototype());
-                visitExpression(fld->ref,current);
-                visitExpression(for_node->begin,current);
-                current->Stfld(il_type, document->getTokenRef(fld->variable->getFullName()));
+                visitFld(fld,current);
+                current->Stfld(mapILType(fld->type), getTokenRef(fld));
                 break;
             }
             case ast::Expression::ArgUse:{
                 auto arg = (ast::Arg*)for_node->iterator;
-                auto il_type = mapILType(arg->type->getPrototype());
-                current->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex());
-                visitExpression(for_node->begin,current);
-                current->Starg(il_type);
+                visitArg(arg,current);
+                current->Starg(mapILType(arg->type));
                 break;
             }
             case ast::Expression::Local:{
                 auto local = (ast::Local*)for_node->iterator;
-                auto il_type = mapILType(local->type->getPrototype());
-                current->Push(DataType::u16,(data::u16)local->variable->getLayoutIndex());
-                visitExpression(for_node->begin,current);
-                current->Stloc(il_type);
+                visitLocal(local,current);
+                current->Stloc(mapILType(local->type));
                 break;
             }
             case ast::Expression::Element:{
                 auto element = (ast::ArrayElement*)for_node->iterator;
-                auto il_type = mapILType(element->type->getPrototype());
-                visitExpression(element->array,current);
-                visitExpression(element->offset,current);
-                visitExpression(for_node->begin,current);
-                current->Stelem(il_type, getArrayElementTokenRef(element));
+                visitArrayElement(element,current);
+                current->Stelem(mapILType(element->type));
                 break;
             }
             default: PANIC;
         }
 
-        auto iter_il_type = mapILType(for_node->begin->type->getPrototype());
+        auto iter_il_type = mapILType(for_node->begin->type);
 
-        current->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex());
-        visitExpression(for_node->begin,current);
+        // store value of begin/end/step expression into begin/end/step variable
+        current->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex());
+        loadExpressionValue(for_node->begin,current);
         current->Stloc(iter_il_type);
 
-        current->Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex());
-        visitExpression(for_node->end,current);
+        current->Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex());
+        loadExpressionValue(for_node->end,current);
         current->Stloc(iter_il_type);
 
         if(for_node->step){
-            current->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex());
+            current->Push(DataTypeEnum::u16, (data::u16)for_node->step_variable->getLayoutIndex());
             visitExpression(for_node->step,current);
             current->Stloc(iter_il_type);
         }
@@ -473,60 +470,40 @@ namespace evoBasic{
         /*
          * iter = iter + step
          */
+        loadExpressionValue(for_node->iterator,cond_block);
+        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->step_variable->getLayoutIndex())
+                        .Ldloc(iter_il_type)
+                        .Add(iter_il_type);
+
         switch(for_node->iterator->expression_kind){
             case ast::Expression::SFld:{
                 auto sfld = (ast::SFld*)for_node->iterator;
-                auto il_type = mapILType(sfld->type->getPrototype());
-                visitExpression(for_node->iterator,cond_block);
-                cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
-                            .Ldloc(iter_il_type);
-                cond_block->Add(il_type);
-                cond_block->Stsfld(il_type, document->getTokenRef(sfld->variable->getFullName()));
+                visitSFld(sfld,cond_block);
+                cond_block->Stsfld(iter_il_type, getTokenRef(sfld));
                 break;
             }
             case ast::Expression::Fld:{
                 auto fld = (ast::Fld*)for_node->iterator;
-                auto il_type = mapILType(fld->type->getPrototype());
-                visitExpression(fld->ref,cond_block);
-                visitExpression(for_node->iterator,cond_block);
-                cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
-                          .Ldloc(iter_il_type);
-                cond_block->Add(il_type);
-                cond_block->Stfld(il_type, document->getTokenRef(fld->variable->getFullName()));
+                visitFld(fld,cond_block);
+                cond_block->Stfld(iter_il_type, getTokenRef(fld));
                 break;
             }
             case ast::Expression::ArgUse:{
                 auto arg = (ast::Arg*)for_node->iterator;
-                auto il_type = mapILType(arg->type->getPrototype());
-                cond_block->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex());
-                visitExpression(for_node->iterator,cond_block);
-                cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
-                           .Ldloc(iter_il_type);
-                cond_block->Add(il_type);
-                cond_block->Starg(il_type);
+                visitArg(arg,cond_block);
+                cond_block->Starg(iter_il_type);
                 break;
             }
             case ast::Expression::Local:{
                 auto local = (ast::Local*)for_node->iterator;
-                auto il_type = mapILType(local->type->getPrototype());
-                cond_block->Push(DataType::u16,(data::u16)local->variable->getLayoutIndex());
-                visitExpression(for_node->iterator,cond_block);
-                cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
-                           .Ldloc(iter_il_type);
-                cond_block->Add(il_type);
-                cond_block->Stloc(il_type);
+                visitLocal(local,cond_block);
+                cond_block->Stloc(iter_il_type);
                 break;
             }
             case ast::Expression::Element:{
                 auto element = (ast::ArrayElement*)for_node->iterator;
-                auto il_type = mapILType(element->type->getPrototype());
-                visitExpression(element->array,cond_block);
-                visitExpression(element->offset,cond_block);
-                visitExpression(for_node->iterator,cond_block);
-                cond_block->Push(DataType::u16,(data::u16)for_node->step_variable->getLayoutIndex())
-                           .Ldloc(iter_il_type);
-                cond_block->Add(il_type);
-                cond_block->Stelem(il_type,getArrayElementTokenRef(element));
+                visitArrayElement(element,cond_block);
+                cond_block->Stelem(iter_il_type);
                 break;
             }
             default: PANIC;
@@ -539,19 +516,19 @@ namespace evoBasic{
          */
 
         // beg < end
-        cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex())
                    .Ldloc(iter_il_type)
-                   .Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+                   .Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex())
                    .Ldloc(iter_il_type)
                    .LT(iter_il_type);
         // iter < beg
         visitExpression(for_node->iterator,cond_block);
-        cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex())
                    .Ldloc(iter_il_type)
                    .LT(iter_il_type);
         // iter > end
         visitExpression(for_node->iterator,cond_block);
-        cond_block->Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex())
                 .Ldloc(iter_il_type)
                 .GT(iter_il_type);
 
@@ -562,19 +539,19 @@ namespace evoBasic{
 
 
         // beg > end
-        cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex())
                     .Ldloc(iter_il_type)
-                    .Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+                    .Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex())
                     .Ldloc(iter_il_type)
                     .GT(iter_il_type);
         // iter < end
         visitExpression(for_node->iterator,cond_block);
-        cond_block->Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex())
                     .Ldloc(iter_il_type)
                     .LT(iter_il_type);
         // iter > beg
         visitExpression(for_node->iterator,cond_block);
-        cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex())
                 .Ldloc(iter_il_type)
                 .GT(iter_il_type);
 
@@ -585,16 +562,16 @@ namespace evoBasic{
 
 
         // beg == end
-        cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex())
                 .Ldloc(iter_il_type)
-                .Push(DataType::u16,(data::u16)for_node->end_variable->getLayoutIndex())
+                .Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex())
                 .Ldloc(iter_il_type)
                 .EQ(iter_il_type);
         // iter != beg
         visitExpression(for_node->iterator,cond_block);
-        cond_block->Push(DataType::u16,(data::u16)for_node->begin_variable->getLayoutIndex())
+        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex())
                 .Ldloc(iter_il_type)
-                .NE(DataType::i32);
+                .NE(DataTypeEnum::i32);
 
         cond_block->And()
                    .Jif(after_block);
@@ -713,11 +690,70 @@ namespace evoBasic{
     }
 
     void ILGen::visitEnumMember(ast::EnumMember* enum_member_node, il::BasicBlock *current){
-        current->Push(DataType::i32,enum_member_node->member->getIndex());
+        current->Push(DataTypeEnum::i32, enum_member_node->member->getIndex());
+    }
+
+    void ILGen::loadExpressionValue(ast::Expression *terminal, il::BasicBlock *current) {
+        switch(terminal->expression_kind){
+            case ast::Expression::Binary:
+            case ast::Expression::Cast:
+            case ast::Expression::Parentheses:
+            case ast::Expression::Ftn:
+            case ast::Expression::VFtn:
+            case ast::Expression::SFtn:
+            case ast::Expression::Ext:
+            case ast::Expression::Digit:
+            case ast::Expression::Decimal:
+            case ast::Expression::Char:
+                visitExpression(terminal,current);
+                break;
+            case ast::Expression::Assign:{
+                auto assign = static_cast<ast::Assign*>(terminal);
+                visitAssign(assign,current);
+                loadAssignLhsValue(assign,current);
+                break;
+            }
+            case ast::Expression::Element:{
+                auto element = static_cast<ast::ArrayElement*>(terminal);
+                visitArrayElement(element,current);
+                current->Ldelem(mapILType(element->type));
+                break;
+            }
+            case ast::Expression::Local:{
+                auto local = static_cast<ast::Local*>(terminal);
+                visitLocal(local,current);
+                current->Ldloc(mapILType(local->type));
+                break;
+            }
+            case ast::Expression::ArgUse:{
+                auto arg = static_cast<ast::Arg*>(terminal);
+                visitArg(arg,current);
+                if(arg->is_ref){
+                    current->Ldarg(DataTypeEnum::ref)
+                            .Load(mapILType(arg->type));
+                }
+                else{
+                    current->Ldarg(mapILType(arg->type));
+                }
+                break;
+            }
+            case ast::Expression::Fld:{
+                auto fld = static_cast<ast::Fld*>(terminal);
+                visitFld(fld,current);
+                current->Ldfld(mapILType(fld->type), getTokenRef(fld));
+                break;
+            }
+            case ast::Expression::SFld:{
+                auto sfld = static_cast<ast::SFld*>(terminal);
+                visitSFld(sfld,current);
+                current->Ldsfld(mapILType(sfld->type), getTokenRef(sfld));
+                break;
+            }
+        }
     }
 
     void ILGen::visitUnary(ast::Unary *unary_node, il::BasicBlock *current) {
-        visitExpression(unary_node->terminal,current);
+        loadExpressionValue(unary_node->terminal, current);
         auto il_type = mapILType(unary_node->type->getPrototype());
         using Op = ast::Unary::Op;
         switch(unary_node->op){
@@ -728,8 +764,8 @@ namespace evoBasic{
     }
 
     void ILGen::visitBinary(ast::Binary *binary_node, il::BasicBlock *current) {
-        visitExpression(binary_node->lhs,current);
-        visitExpression(binary_node->rhs,current);
+        loadExpressionValue(binary_node->lhs, current);
+        loadExpressionValue(binary_node->rhs, current);
         auto il_type = mapILType(binary_node->lhs->type->getPrototype());
         using Op = ast::Binary::Op;
         switch (binary_node->op) {
@@ -752,190 +788,420 @@ namespace evoBasic{
         }
     }
 
-    void ILGen::visitAssign(ast::Assign *assign_node, il::BasicBlock *current) {
-        auto expr = assign_node->lhs;
-        switch (expr->expression_kind) {
-            case ast::Expression::Fld:{
-                auto fld = (ast::Fld*)expr;
-                visitExpression(fld->ref,current);
-                visitExpression(assign_node->rhs,current);
-                current->Stfld(mapILType(fld->variable->getPrototype()),
-                               document->getTokenRef(fld->variable->getFullName()));
-                break;
-            }
-            case ast::Expression::SFld:{
-                auto sfld = (ast::SFld*)expr;
-                visitExpression(assign_node->rhs,current);
-                current->Stsfld(mapILType(sfld->variable->getPrototype()),
-                                document->getTokenRef(sfld->variable->getFullName()));
-                break;
-            }
+    TokenRef *ILGen::getArrayElementTokenRef(ast::ArrayElement *element_node){
+        return document->getTokenRef(element_node->array->type->getPrototype()->getFullName());
+    }
+    
+    void ILGen::loadAssignLhsValue(ast::Assign *assign_node, il::BasicBlock *current){
+        switch (assign_node->lhs->expression_kind) {
             case ast::Expression::Element:{
-                auto array_element = (ast::ArrayElement*)expr;
-                loadArrayRef(array_element,current);
-                visitExpression(array_element->offset,current);
-                visitExpression(assign_node->rhs,current);
-                current->Stelem(mapILType(array_element->type->getPrototype()),getArrayElementTokenRef(array_element));
-                break;
-            }
-            case ast::Expression::ArgUse:{
-                auto arg = (ast::Arg*)expr;
-                auto data_type = mapILType(arg->variable->getPrototype());
-                current->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex());
-                if(arg->is_ref){
-                    current->Ldarg(DataType::ref);
-                    visitExpression(assign_node->rhs,current);
-                    current->Store(data_type);
-                }
-                else{
-                    visitExpression(assign_node->rhs,current);
-                    current->Starg(data_type);
-                }
+                auto element = static_cast<ast::ArrayElement*>(assign_node->lhs);
+                visitArrayElement(element,current);
+                auto element_token = getArrayElementTokenRef(element);
+                current->Ldelem(mapILType(element->type));
                 break;
             }
             case ast::Expression::Local:{
-                auto local = (ast::Local*)expr;
-                current->Push(DataType::u16,(data::u16)local->variable->getLayoutIndex());
-                visitExpression(assign_node->rhs,current);
-                current->Stloc(mapILType(local->variable->getPrototype()));
+                auto local = static_cast<ast::Local*>(assign_node->lhs);
+                visitLocal(local,current);
+                current->Ldloc(mapILType(local->type));
                 break;
             }
-            default: PANIC;
+            case ast::Expression::ArgUse:{
+                auto arg = static_cast<ast::Arg*>(assign_node->lhs);
+                auto il_type = mapILType(arg->type);
+                visitArg(arg,current);
+                if(arg->is_ref){
+                    current->Ldarg(DataTypeEnum::ref)
+                            .Load(il_type);
+                }
+                else{
+                    current->Ldarg(il_type);
+                }
+                break;
+            }
+            case ast::Expression::Fld:{
+                auto fld = static_cast<ast::Fld*>(assign_node->lhs);
+                auto fld_token = document->getTokenRef(fld->variable->getPrototype()->getFullName());
+                visitFld(fld,current);
+                current->Ldfld(mapILType(fld->type),fld_token);
+                break;
+            }
+            case ast::Expression::SFld:{
+                auto sfld = static_cast<ast::SFld*>(assign_node->lhs);
+                visitSFld(sfld,current);
+                current->Ldsfld(mapILType(sfld->type), getTokenRef(sfld));
+                break;
+            }
+        }
+    }
+    
+    void ILGen::loadAssignLhsAddress(ast::Assign *assign_node, il::BasicBlock *current){
+        switch (assign_node->lhs->expression_kind) {
+            case ast::Expression::Element:{
+                auto element = static_cast<ast::ArrayElement*>(assign_node->lhs);
+                visitArrayElement(element,current);
+                current->Ldelema(mapILType(element->type));
+                break;
+            }
+            case ast::Expression::Local:{
+                auto local = static_cast<ast::Local*>(assign_node->lhs);
+                visitLocal(local,current);
+                current->Ldloca();
+                break;
+            }
+            case ast::Expression::ArgUse:{
+                auto arg = static_cast<ast::Arg*>(assign_node->lhs);
+                visitArg(arg,current);
+                if(arg->is_ref){
+                    current->Ldarg(DataTypeEnum::ref);
+                }
+                else{
+                    current->Ldarga();
+                }
+                break;
+            }
+            case ast::Expression::Fld:{
+                auto fld = static_cast<ast::Fld*>(assign_node->lhs);
+                visitFld(fld,current);
+                current->Ldflda(getTokenRef(fld));
+                break;
+            }
+            case ast::Expression::SFld:{
+                auto sfld = static_cast<ast::SFld*>(assign_node->lhs);
+                visitSFld(sfld,current);
+                current->Ldsflda(getTokenRef(sfld));
+                break;
+            }
+        }
+    }
+    
+    void ILGen::visitAssign(ast::Assign *assign_node, il::BasicBlock *current) {
+        switch(assign_node->rhs->expression_kind){
+            case ast::Expression::Unary:
+                visitUnary(static_cast<ast::Unary*>(assign_node->rhs),current);
+                break;
+            case ast::Expression::Binary:
+                visitBinary(static_cast<ast::Binary*>(assign_node->rhs),current);
+                break;
+            case ast::Expression::Cast:
+                visitCast(static_cast<ast::Cast*>(assign_node->rhs),current);
+                break;
+            case ast::Expression::Assign:{
+                auto assign_rhs = static_cast<ast::Assign*>(assign_node->rhs);
+                visitAssign(assign_rhs,current);
+                loadAssignLhsValue(assign_rhs,current);
+                break;
+            }
+            case ast::Expression::Parentheses:
+                visitParentheses(static_cast<ast::Parentheses*>(assign_node->rhs),current);
+                break;
+            case ast::Expression::Element:{
+                auto element = static_cast<ast::ArrayElement*>(assign_node->rhs);
+                visitArrayElement(element,current);
+                current->Ldelem(mapILType(element->type));
+                break;
+            }
+            case ast::Expression::Ftn:
+                visitFtnCall(static_cast<ast::FtnCall*>(assign_node->rhs),current);
+                break;
+            case ast::Expression::VFtn:
+                visitVFtnCall(static_cast<ast::VFtnCall*>(assign_node->rhs),current);
+                break;
+            case ast::Expression::SFtn:
+                visitSFtnCall(static_cast<ast::SFtnCall*>(assign_node->rhs),current);
+                break;
+            case ast::Expression::Ext:
+                visitExtCall(static_cast<ast::ExtCall*>(assign_node->rhs),current);
+                break;
+            case ast::Expression::Local: {
+                auto local = static_cast<ast::Local*>(assign_node->rhs);
+                visitLocal(local,current);
+                current->Ldloc(mapILType(local->type));
+                break;
+            }
+            case ast::Expression::ArgUse:{
+                auto arg = static_cast<ast::Arg*>(assign_node->rhs);
+                visitArg(arg,current);
+                if(arg->is_ref){
+                    current->Ldarg(DataTypeEnum::ref)
+                            .Load(mapILType(arg->type));
+                }
+                else{
+                    current->Ldarg(mapILType(arg->type));
+                }
+                break;
+            }
+            case ast::Expression::Fld:{
+                auto fld = static_cast<ast::Fld*>(assign_node->rhs);
+                current->Ldfld(mapILType(fld->type), getTokenRef(fld));
+                break;
+            }
+            case ast::Expression::SFld:{
+                auto sfld = static_cast<ast::SFld*>(assign_node->rhs);
+                visitSFld(sfld,current);
+                current->Ldsfld(mapILType(sfld->type), getTokenRef(sfld));
+            }
+        }
+
+        TokenRef *record_or_array = nullptr;
+        switch(assign_node->lhs->expression_kind){
+            case ast::Expression::Element:{
+                auto element = static_cast<ast::ArrayElement*>(assign_node->lhs);
+                visitArrayElement(element,current);
+                current->Stelem(mapILType(element->type));
+                break;
+            }
+            case ast::Expression::Local:{
+                auto local = static_cast<ast::Local*>(assign_node->lhs);
+                visitLocal(local,current);
+                current->Stloc(mapILType(local->type));
+                break;
+            }
+            case ast::Expression::ArgUse:{
+                auto arg = static_cast<ast::Arg*>(assign_node->lhs);
+                visitArg(arg,current);
+                current->Push(DataTypeEnum::u16, (data::u16)arg->variable->getOffset());
+                if(arg->is_ref){
+                    current->Store(mapILType(arg->type));
+                }
+                else{
+                    current->Starg(mapILType(arg->type));
+                }
+                break;
+            }
+            case ast::Expression::Fld:{
+                auto fld = static_cast<ast::Fld*>(assign_node->lhs);
+                visitFld(fld,current);
+                current->Stfld(mapILType(fld->type), getTokenRef(fld));
+                break;
+            }
+            case ast::Expression::SFld:{
+                auto sfld = static_cast<ast::SFld*>(assign_node->lhs);
+                visitSFld(sfld,current);
+                current->Stfld(mapILType(sfld->type), getTokenRef(sfld));
+                break;
+            }
         }
     }
 
     void ILGen::visitCast(ast::Cast *cast_node, il::BasicBlock *current) {
-        visitExpression(cast_node->expr,current);
-        current->Conv(mapILType(cast_node->expr->type->getPrototype()),mapILType(cast_node->target));
+
     }
 
     void ILGen::visitParentheses(ast::Parentheses *parentheses_node, il::BasicBlock *current) {
-        visitExpression(parentheses_node->expr,current);
+
     }
 
     void ILGen::visitArrayElement(ast::ArrayElement *element_node, il::BasicBlock *current) {
-        loadArrayRef(element_node,current);
-        visitExpression(element_node->offset,current);
-        current->Ldelem(mapILType(element_node->type->getPrototype()),getArrayElementTokenRef(element_node));
+        switch(element_node->array->expression_kind){
+            case ast::Expression::Element:{
+                auto element = static_cast<ast::ArrayElement*>(element_node->array);
+                visitArrayElement(element,current);
+                current->Ldelema(mapILType(element->type));
+                break;
+            }
+            case ast::Expression::Local:{
+                auto local = static_cast<ast::Local*>(element_node->array);
+                visitLocal(local,current);
+                current->Ldloca();
+                break;
+            }
+            case ast::Expression::ArgUse:{
+                auto arg = static_cast<ast::Arg*>(element_node->array);
+                if(arg->is_ref){
+                    current->Ldarg(mapILType(arg->type));
+                }
+                else{
+                    current->Ldarga();
+                }
+                break;
+            }
+            case ast::Expression::Fld:{
+                auto fld = static_cast<ast::Fld*>(element_node->array);
+                current->Ldflda(getTokenRef(fld));
+                break;
+            }
+            case ast::Expression::SFld:{
+                auto sfld = static_cast<ast::SFld*>(element_node->array);
+                current->Ldsflda(getTokenRef(sfld));
+                break;
+            }
+        }
+
+        switch(element_node->offset->expression_kind){
+            case ast::Expression::Unary:
+            case ast::Expression::Binary:
+            case ast::Expression::Cast:
+            case ast::Expression::Parentheses:
+            case ast::Expression::Ftn:
+            case ast::Expression::SFtn:
+            case ast::Expression::VFtn:
+            case ast::Expression::Ext:
+            case ast::Expression::Digit:
+                visitExpression(element_node->offset,current);
+                break;
+            case ast::Expression::Assign:{
+                auto assign = static_cast<ast::Assign*>(element_node->offset);
+                visitAssign(assign,current);
+                loadAssignLhsValue(assign,current);
+                break;
+            }
+            case ast::Expression::Element:{
+                auto element = static_cast<ast::ArrayElement*>(element_node->offset);
+                current->Ldelem(mapILType(element->type));
+                break;
+            }
+            case ast::Expression::Local:{
+                auto local = static_cast<ast::Local*>(element_node->offset);
+                current->Ldloc(mapILType(local->type));
+                break;
+            }
+            case ast::Expression::ArgUse:{
+                auto arg = static_cast<ast::Arg*>(element_node->offset);
+                if(arg->is_ref){
+                    current->Ldarg(DataTypeEnum::ref)
+                            .Load(mapILType(arg->type));
+                }
+                else{
+                    current->Ldarg(mapILType(arg->type));
+                }
+                break;
+            }
+            case ast::Expression::Fld:{
+                auto fld = static_cast<ast::Fld*>(element_node->offset);
+                current->Ldfld(mapILType(fld->type), getTokenRef(fld));
+                break;
+            }
+            case ast::Expression::SFld:{
+                auto sfld = static_cast<ast::SFld*>(element_node->offset);
+                current->Ldsfld(mapILType(sfld->type), getTokenRef(sfld));
+                break;
+            }
+        }
     }
+
+    TokenRef *ILGen::getTokenRef(ast::Fld *fld){
+        return document->getTokenRef(fld->variable->getFullName());
+    }
+
+    TokenRef *ILGen::getTokenRef(ast::SFld *sfld){
+        return document->getTokenRef(sfld->variable->getFullName());
+    }
+
 
     void ILGen::visitDelegate(ast::Delegate *delegate_node, il::BasicBlock *current) {
         //todo
     }
 
-    TokenRef *ILGen::getArrayElementTokenRef(ast::ArrayElement *array_element){
-        switch(array_element->array->expression_kind){
-            case ast::Expression::Fld:{
-                auto fld = static_cast<ast::Fld*>(array_element->array);
-                auto array_prototype = dynamic_cast<type::Array*>(fld->variable->getPrototype());
-                return document->getTokenRef(array_prototype->getElementPrototype()->getFullName());
-            }
-            case ast::Expression::SFld:{
-                auto sfld = static_cast<ast::SFld*>(array_element->array);
-                auto array_prototype = dynamic_cast<type::Array*>(sfld->variable->getPrototype());
-                return document->getTokenRef(array_prototype->getElementPrototype()->getFullName());
-            }
-            case ast::Expression::Local:{
-                auto local = static_cast<ast::Local*>(array_element->array);
-                auto array_prototype = dynamic_cast<type::Array*>(local->variable->getPrototype());
-                return document->getTokenRef(array_prototype->getElementPrototype()->getFullName());
-            }
-            case ast::Expression::ArgUse:{
-                auto arg_use = static_cast<ast::Arg*>(array_element->array);
-                auto array_prototype = dynamic_cast<type::Array*>(arg_use->variable->getPrototype());
-                return document->getTokenRef(array_prototype->getElementPrototype()->getFullName());
-            }
-        }
-    }
-
-    void ILGen::loadArrayRef(ast::ArrayElement *array_element, il::BasicBlock *current){
-        switch(array_element->array->expression_kind){
-            case ast::Expression::Fld:{
-                auto fld = static_cast<ast::Fld*>(array_element->array);
-                visitExpression(fld->ref,current);
-                current->Ldflda(document->getTokenRef(fld->variable->getFullName()));
-                auto array_prototype = dynamic_cast<type::Array*>(fld->variable->getPrototype());
-                break;
-            }
-            case ast::Expression::SFld:{
-                auto sfld = static_cast<ast::SFld*>(array_element->array);
-                current->Ldsflda(document->getTokenRef(sfld->variable->getFullName()));
-                auto array_prototype = dynamic_cast<type::Array*>(sfld->variable->getPrototype());
-                break;
-            }
-            case ast::Expression::Local:{
-                auto local = static_cast<ast::Local*>(array_element->array);
-                current->Push(DataType::u16,(data::u16)local->variable->getLayoutIndex());
-                current->Ldloca();
-                auto array_prototype = dynamic_cast<type::Array*>(local->variable->getPrototype());
-                break;
-            }
-            case ast::Expression::ArgUse:{
-                auto arg_use = static_cast<ast::Arg*>(array_element->array);
-                current->Push(DataType::u16,(data::u16)arg_use->variable->getLayoutIndex());
-                if(arg_use->is_ref){
-                    current->Ldarg(DataType::ref);
-                }
-                else{
-                    current->Ldarga();
-                }
-                auto array_prototype = dynamic_cast<type::Array*>(arg_use->variable->getPrototype());
-                break;
-            }
-        }
-    }
-
     void ILGen::visitArgument(ast::Argument *argument_node, il::BasicBlock *current) {
-        auto expr = argument_node->expr;
         if(argument_node->byval){
-            // pass byval
-            visitExpression(expr,current);
-        }
-        else{
-            // pass byref
-            if(expr->expression_kind == ast::Expression::Assign){
-                auto assign = (ast::Assign*)expr;
-                visitAssign(assign,current);
-                expr = assign->lhs;
-            }
-
-            switch (expr->expression_kind) {
-                case ast::Expression::Fld:{
-                    auto fld = (ast::Fld*)expr;
-                    visitExpression(fld->ref,current);
-                    current->Ldflda(document->getTokenRef(fld->variable->getFullName()));
+            switch(argument_node->expr->expression_kind){
+                case ast::Expression::Unary:
+                case ast::Expression::Binary:
+                case ast::Expression::Cast:
+                case ast::Expression::Ftn:
+                case ast::Expression::SFtn:
+                case ast::Expression::VFtn:
+                case ast::Expression::Ext:
+                case ast::Expression::Digit:
+                case ast::Expression::Decimal:
+                case ast::Expression::String:
+                case ast::Expression::Char:
+                case ast::Expression::Boolean:
+                case ast::Expression::Parentheses:
+                case ast::Expression::EnumMember:{
+                    visitExpression(argument_node->expr,current);
                     break;
                 }
-                case ast::Expression::SFld:{
-                    auto sfld = (ast::SFld*)expr;
-                    current->Ldsflda(document->getTokenRef(sfld->variable->getFullName()));
+                case ast::Expression::Assign:{
+                    auto assign = static_cast<ast::Assign*>(argument_node->expr);
+                    visitAssign(assign,current);
+                    loadAssignLhsValue(assign,current);
                     break;
                 }
                 case ast::Expression::Element:{
-                    auto element = (ast::ArrayElement*)expr;
-                    loadArrayRef(element,current);
-                    visitExpression(element->offset,current);
-                    current->Ldelema(getArrayElementTokenRef(element));
+                    auto element = static_cast<ast::ArrayElement*>(argument_node->expr);
+                    visitArrayElement(element,current);
+                    current->Ldelem(mapILType(element->type));
+                    break;
+                }
+                case ast::Expression::Local:{
+                    auto local = static_cast<ast::Local*>(argument_node->expr);
+                    visitLocal(local,current);
+                    current->Ldloc(mapILType(local->type));
                     break;
                 }
                 case ast::Expression::ArgUse:{
-                    auto arg = (ast::Arg*)expr;
-                    current->Push(DataType::u16,(data::u16)arg->variable->getLayoutIndex());
+                    auto arg = static_cast<ast::Arg*>(argument_node->expr);
+                    visitArg(arg,current);
                     if(arg->is_ref){
-                        current->Ldarg(DataType::ref);
+                        current->Ldarg(DataTypeEnum::ref)
+                                .Load(mapILType(arg->type));
+                    }
+                    else{
+                        current->Ldarg(mapILType(arg->type));
+                    }
+                    break;
+                }
+                case ast::Expression::Fld:{
+                    auto fld = static_cast<ast::Fld*>(argument_node->expr);
+                    visitFld(fld,current);
+                    current->Ldfld(mapILType(fld->type), getTokenRef(fld));
+                    break;
+                }
+                case ast::Expression::SFld:{
+                    auto sfld = static_cast<ast::SFld*>(argument_node->expr);
+                    visitSFld(sfld,current);
+                    current->Ldsfld(mapILType(sfld->type), getTokenRef(sfld));
+                    break;
+                }
+            }
+        }
+        else{
+            switch(argument_node->expr->expression_kind){
+                case ast::Expression::Assign:{
+                    auto assign = static_cast<ast::Assign*>(argument_node->expr);
+                    visitAssign(assign,current);
+                    loadAssignLhsValue(assign,current);
+                    break;
+                }
+                case ast::Expression::Element:{
+                    auto element = static_cast<ast::ArrayElement*>(argument_node->expr);
+                    visitArrayElement(element,current);
+                    current->Ldelema(mapILType(element->type));
+                    break;
+                }
+                case ast::Expression::Local:{
+                    auto local = static_cast<ast::Local*>(argument_node->expr);
+                    visitLocal(local,current);
+                    current->Ldloca();
+                    break;
+                }
+                case ast::Expression::ArgUse:{
+                    auto arg = static_cast<ast::Arg*>(argument_node->expr);
+                    visitArg(arg,current);
+
+                    if(arg->is_ref){
+                        current->Ldarg(mapILType(arg->type));
                     }
                     else{
                         current->Ldarga();
                     }
                     break;
                 }
-                case ast::Expression::Local:{
-                    auto local = (ast::Local*)expr;
-                    current->Push(DataType::u16,(data::u16)local->variable->getLayoutIndex())
-                            .Ldloca();
+                case ast::Expression::Fld:{
+                    auto fld = static_cast<ast::Fld*>(argument_node->expr);
+                    visitFld(fld,current);
+                    current->Ldflda(getTokenRef(fld));
                     break;
                 }
-                default: PANIC;
+                case ast::Expression::SFld:{
+                    auto sfld = static_cast<ast::SFld*>(argument_node->expr);
+                    visitSFld(sfld,current);
+                    current->Ldsflda(getTokenRef(sfld));
+                    break;
+                }
             }
         }
     }
@@ -946,9 +1212,53 @@ namespace evoBasic{
         current->Newobj(document->getTokenRef(new_node->target->getFullName()));
     }
 
+    void ILGen::loadFtnRef(ast::Expression *ref, il::BasicBlock *current){
+        switch(ref->expression_kind){
+            case ast::Expression::Cast:
+            case ast::Expression::Parentheses:
+            case ast::Expression::Ftn:
+            case ast::Expression::SFtn:
+            case ast::Expression::Ext:{
+                visitExpression(ref,current);
+                break;
+            }
+            case ast::Expression::Element:{
+                auto element = static_cast<ast::ArrayElement*>(ref);
+                current->Ldelem(mapILType(element->type));
+                break;
+            }
+            case ast::Expression::Local:{
+                auto local = static_cast<ast::Local*>(ref);
+                current->Ldloc(mapILType(local->type));
+                break;
+            }
+            case ast::Expression::ArgUse:{
+                auto arg = static_cast<ast::Arg*>(ref);
+                if(arg->is_ref){
+                    current->Ldarg(DataTypeEnum::ref)
+                            .Load(mapILType(arg->type));
+                }
+                else{
+                    current->Ldarg(mapILType(arg->type));
+                }
+                break;
+            }
+            case ast::Expression::Fld:{
+                auto fld = static_cast<ast::Fld*>(ref);
+                current->Ldfld(mapILType(fld->type),getTokenRef(fld));
+                break;
+            }
+            case ast::Expression::SFld:{
+                auto sfld = static_cast<ast::SFld*>(ref);
+                current->Ldsfld(mapILType(sfld->type),getTokenRef(sfld));
+                break;
+            }
+        }
+    }
+
     void ILGen::visitFtnCall(ast::FtnCall *ftn_node, il::BasicBlock *current) {
         loadCalleeArguments(ftn_node,current);
-        visitExpression(ftn_node->ref,current);
+        loadFtnRef(ftn_node->ref,current);
         current->Ldftn(document->getTokenRef(ftn_node->function->getFullName()));
         current->Call();
     }
@@ -973,7 +1283,7 @@ namespace evoBasic{
 
     void ILGen::visitVFtnCall(ast::VFtnCall *vftn_node, il::BasicBlock *current) {
         loadCalleeArguments(vftn_node,current);
-        visitExpression(vftn_node->ref,current);
+        loadFtnRef(vftn_node->ref,current);
         current->Ldvftn(document->getTokenRef(vftn_node->function->getFullName()));
         current->Callvirt();
     }
@@ -991,62 +1301,83 @@ namespace evoBasic{
     }
 
     void ILGen::visitSFld(ast::SFld *sfld_node, il::BasicBlock *current) {
-        auto token = document->getTokenRef(sfld_node->variable->getFullName());
-        current->Ldsfld(mapILType(sfld_node->variable->getPrototype()),token);
+        // do nothing
     }
 
     void ILGen::visitFld(ast::Fld *fld_node, il::BasicBlock *current) {
-        auto token = document->getTokenRef(fld_node->variable->getFullName());
-        visitExpression(fld_node->ref,current);
-        current->Ldfld(mapILType(fld_node->variable->getPrototype()),token);
+        switch(fld_node->ref->expression_kind){
+            case ast::Expression::Cast:
+            case ast::Expression::Parentheses:
+                visitExpression(fld_node,current);
+                break;
+            case ast::Expression::Element:{
+                auto element = static_cast<ast::ArrayElement*>(fld_node->ref);
+                visitArrayElement(element,current);
+                current->Ldelem(mapILType(element->type));
+                break;
+            }
+            case ast::Expression::Local:{
+                auto local = static_cast<ast::Local*>(fld_node->ref);
+                visitLocal(local,current);
+                current->Ldloc(mapILType(local->type));
+                break;
+            }
+            case ast::Expression::ArgUse:{
+                auto arg = static_cast<ast::Arg*>(fld_node->ref);
+                if(arg->is_ref){
+                    current->Ldarg(DataTypeEnum::ref)
+                            .Load(mapILType(arg->type));
+                }
+                else{
+                    current->Ldarg(mapILType(arg->type));
+                }
+                break;
+            }
+            case ast::Expression::Fld:{
+                auto fld = static_cast<ast::Fld*>(fld_node->ref);
+                visitFld(fld,current);
+                current->Ldfld(mapILType(fld->type), getTokenRef(fld));
+                break;
+            }
+            case ast::Expression::SFld:{
+                auto sfld = static_cast<ast::SFld*>(fld_node->ref);
+                visitSFld(sfld,current);
+                current->Ldsfld(mapILType(sfld->type),getTokenRef(sfld));
+                break;
+            }
+        }
+        current->Ldfld(mapILType(fld_node->type), getTokenRef(fld_node));
     }
 
     void ILGen::visitLocal(ast::Local *local_node, il::BasicBlock *current) {
         auto index = local_node->variable->getLayoutIndex();
-        current->Push(DataType::u16,(data::u16)index);
-        current->Ldloc(mapILType(local_node->variable->getPrototype()));
+        current->Push(DataTypeEnum::u16, (data::u16)index);
     }
 
     void ILGen::visitArg(ast::Arg *arg_node, il::BasicBlock *current) {
         auto index = arg_node->variable->getLayoutIndex();
-        current->Push(DataType::u16,(data::u16)index);
-        auto data_type = mapILType(arg_node->variable->getPrototype());
-        switch(arg_node->variable->getPrototype()->getKind()){
-            case type::SymbolKind::Record:
-            case type::SymbolKind::Array:
-                if(arg_node->is_ref)
-                    current->Ldarg(DataType::ref);
-                else
-                    current->Ldarga();
-                break;
-            default:
-                if(arg_node->is_ref)
-                    current->Ldarg(DataType::ref)
-                            .Load(data_type);
-                else
-                    current->Ldarg(data_type);
-        }
+        current->Push(DataTypeEnum::u16, (data::u16)index);
     }
 
     void ILGen::visitDigit(ast::Digit *digit_node, il::BasicBlock *current) {
-        current->Push(DataType::i32,digit_node->value);
+        current->Push(DataTypeEnum::i32, digit_node->value);
     }
 
     void ILGen::visitDecimal(ast::Decimal *decimal_node, il::BasicBlock *current) {
-        current->Push(DataType::f64,decimal_node->value);
+        current->Push(DataTypeEnum::f64, decimal_node->value);
     }
 
     void ILGen::visitString(ast::String *string_node, il::BasicBlock *current) {
-        current->Ldc(document->getTokenRef(string_node->value));
+        //current->Ldc(document->getTokenRef(string_node->value));
         //todo: call ctor for String
     }
 
     void ILGen::visitChar(ast::Char *char_node, il::BasicBlock *current) {
-        current->Push(DataType::character,char_node->value);
+        current->Push(DataTypeEnum::character, char_node->value);
     }
 
     void ILGen::visitBoolean(ast::Boolean *boolean_node, il::BasicBlock *current) {
-        current->Push(DataType::boolean,boolean_node->value);
+        current->Push(DataTypeEnum::boolean, boolean_node->value);
     }
 
 }

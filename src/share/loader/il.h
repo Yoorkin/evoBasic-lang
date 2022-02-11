@@ -29,6 +29,7 @@ namespace evoBasic::il{
     class Member;
     class Document;
     class InterfaceFunction;
+    class TokenRef;
 
 
     class Node {
@@ -51,6 +52,31 @@ namespace evoBasic::il{
         Inst(Document *document,Bytecode begin_mark,std::istream &stream);
         using ByteSize = data::u64;
         virtual ByteSize getByteSize() = 0;
+    };
+
+    class DataType{
+        DataTypeEnum dataTypeEnum;
+        TokenRef *token = nullptr;
+    public:
+        DataType(DataTypeEnum em) {
+            ASSERT_TRUE(em == DataTypeEnum::array || em == DataTypeEnum::record);
+            dataTypeEnum = em;
+        }
+
+        DataType(DataTypeEnum em,TokenRef *token) {
+            ASSERT_TRUE(em != DataTypeEnum::array && em != DataTypeEnum::record);
+            dataTypeEnum = em;
+            this->token = token;
+        }
+
+        DataTypeEnum getKind(){
+            return dataTypeEnum;
+        }
+
+        TokenRef *getToken(){
+            ASSERT_TRUE(token==nullptr);
+            return token;
+        }
     };
 
 
@@ -435,7 +461,7 @@ namespace evoBasic::il{
 
     class InstWithToken : public Inst{
     public:
-        enum Op{Ldftn,Ldsftn,Ldvftn,Ldc,Newobj,Invoke,Ldflda,Ldsflda,Ldelema}op;
+        enum Op{Ldftn,Ldsftn,Ldvftn,Ldc,Newobj,Invoke,Ldflda,Ldsflda}op;
     private:
         TokenRef *token = nullptr;
         Bytecode opToBytecode(Op op);
@@ -477,7 +503,7 @@ namespace evoBasic::il{
         DataType type;
         std::any value;
     public:
-        InstPush(Document *document,DataType type,std::any value);
+        InstPush(Document *document, DataType type, std::any value);
         std::string toString()override;
         ByteSize getByteSize()override;
         void toHex(std::ostream &stream)override;
@@ -486,13 +512,13 @@ namespace evoBasic::il{
     class InstWithData : public Inst{
     public:
         enum Op{Ldarg,Starg,Load,Store,Ldloc,Stloc,
-                Add,Sub,Mul,Div,FDiv,EQ,NE,LT,GT,LE,GE,Neg,Pop,Dup};
+                Add,Sub,Mul,Div,FDiv,EQ,NE,LT,GT,LE,GE,Neg,Pop,Dup,Ldelem,Stelem,Ldelema};
     private:
         Op op;
         DataType type;
         Bytecode opToBytecode(Op op);
     public:
-        InstWithData(Document *document,Op op,DataType type);
+        InstWithData(Document *document, Op op, DataType type);
         std::string toString()override;
         void toHex(std::ostream &stream)override;
         ByteSize getByteSize()override;
@@ -500,14 +526,14 @@ namespace evoBasic::il{
 
     class InstWithDataToken : public Inst{
     public:
-        enum Op{Ldfld,Ldsfld,Stfld,Stsfld,Ldelem,Stelem};
+        enum Op{Ldfld,Ldsfld,Stfld,Stsfld};
     private:
         Op op;
         DataType type;
         TokenRef *token = nullptr;
         Bytecode opToBytecode(Op op);
     public:
-        InstWithDataToken(Document *document,Op op, DataType type, TokenRef *token);
+        InstWithDataToken(Document *document, Op op, DataType type, TokenRef *token);
         std::string toString()override;
         ByteSize getByteSize()override;
         void toHex(std::ostream &stream)override;
@@ -526,7 +552,7 @@ namespace evoBasic::il{
     class InstConv : public Inst{
         DataType src,dst;
     public:
-        InstConv(Document *document,DataType src,DataType dst);
+        InstConv(Document *document, DataType src, DataType dst);
         std::string toString()override;
         ByteSize getByteSize()override;
         void toHex(std::ostream &stream)override;
@@ -636,9 +662,9 @@ namespace evoBasic::il{
         BasicBlock &Ldsflda(TokenRef *sfld);
         BasicBlock &Stfld(DataType data, TokenRef *fld);
         BasicBlock &Stsfld(DataType data, TokenRef *sfld);
-        BasicBlock &Ldelem(DataType data,TokenRef *element);
-        BasicBlock &Ldelema(TokenRef *element);
-        BasicBlock &Stelem(DataType data,TokenRef *element);
+        BasicBlock &Ldelem(DataType data);
+        BasicBlock &Ldelema(DataType data);
+        BasicBlock &Stelem(DataType data);
         BasicBlock &Ldnull();
         BasicBlock &Newobj(TokenRef *cls);
         BasicBlock &Castcls(TokenRef *src, TokenRef *dst);

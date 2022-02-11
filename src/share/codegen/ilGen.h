@@ -90,6 +90,24 @@ namespace evoBasic{
         void loadArrayRef(ast::ArrayElement *array_element, il::BasicBlock *current);
 
         il::TokenRef *getArrayElementTokenRef(ast::ArrayElement *array_element);
+
+        void loadAssignLhsValue(ast::Assign *assign_node, il::BasicBlock *current);
+
+        void loadAssignLhsAddress(ast::Assign *assign_node, il::BasicBlock *current);
+
+        il::TokenRef *getRecordOrArrayTypeTokenRef(DataTypeEnum il_type, ExpressionType *type);
+
+        il::TokenRef *getTokenRef(ast::Fld *fld);
+
+        il::TokenRef *getTokenRef(ast::SFld *sfld);
+
+        il::DataType mapILType(type::Prototype *type);
+
+        il::DataType mapILType(ExpressionType *type);
+
+        void loadFtnRef(ast::Expression *ref, il::BasicBlock *current);
+
+        void loadExpressionValue(ast::Expression *terminal, il::BasicBlock *current);
     };
 
 }
