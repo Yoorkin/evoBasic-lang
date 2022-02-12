@@ -5,16 +5,21 @@ set(CMAKE_CXX_STANDARD 20)
 
 add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
 add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
+add_compile_options("-Wno-everything")
 
-file(GLOB UTILS_SOURCE ${CMAKE_SOURCE_DIR}/src/utils/*.cpp)
-file(GLOB VM_SOURCE ${CMAKE_SOURCE_DIR}/src/vm/*.cpp)
 
-file(GLOB COMPILER_INCLUDE ${CMAKE_SOURCE_DIR}/src/compiler ${CMAKE_SOURCE_DIR}/src/compiler/semantic)
-file(GLOB UTILS_INCLUDE ${CMAKE_SOURCE_DIR}/src/utils)
-file(GLOB VM_INCLUDE ${CMAKE_SOURCE_DIR}/src/vm)
+set(EVO_SHARE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/src/share")
+set(EVO_LIB_DIR  "${CMAKE_BINARY_DIR}/lib")
+set(EVO_BIN_DIR "${CMAKE_BINARY_DIR}/bin")
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/src/compiler ${CMAKE_BINARY_DIR}/ecc)
-add_subdirectory(${CMAKE_SOURCE_DIR}/src/vm ${CMAKE_BINARY_DIR}/evm)
-add_subdirectory(test ${CMAKE_BINARY_DIR}/test_dir)
+include_directories(${EVO_SHARE_SOURCE_DIR})
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/ecc ${CMAKE_BINARY_DIR}/ecc)
+add_subdirectory(${CMAKE_SOURCE_DIR}/src/evm ${CMAKE_BINARY_DIR}/vm)
+# add_subdirectory(test ${CMAKE_BINARY_DIR}/test_dir)
+
+
+link_directories(${EVO_LIB_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${EVO_LIB_DIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${EVO_BIN_DIR})
 
 

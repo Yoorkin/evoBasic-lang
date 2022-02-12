@@ -4,12 +4,10 @@
 
 #ifndef EVOBASIC_COMPILEHELPER_H
 #define EVOBASIC_COMPILEHELPER_H
-#include "ir.h"
 #include "lexer.h"
 #include "parser.h"
 #include "token.h"
 #include "context.h"
-#include "codeGen.h"
 #include "logger.h"
 #include "strstream"
 //using namespace std;
@@ -43,7 +41,7 @@
 //    return (sa.str() == sb.str());
 //}
 //
-//bool is_block_eq(Block *a,Block *b){
+//bool is_block_eq(BasicBlock *a,BasicBlock *b){
 //    auto al = a->getInstructions().size();
 //    auto bl = a->getInstructions().size();
 //    if(al!=bl)return false;

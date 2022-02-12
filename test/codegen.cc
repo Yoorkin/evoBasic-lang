@@ -20,7 +20,7 @@ using namespace evoBasic::vm;
 //
 //        End Function
 //    )code");
-//    auto block = new Block("test");
+//    auto block = new BasicBlock("test");
 //    block->PushFrameBase()
 //        .Push(Data::ptr,new Const<data::ptr>(5))
 //        .Add(Data::ptr)
@@ -48,7 +48,7 @@ using namespace evoBasic::vm;
 //            b = 100 + 50
 //        End Function
 //    )code");
-//    auto block = new Block("test");
+//    auto block = new BasicBlock("test");
 //    block->PushFrameBase()
 //            .Push(Data::ptr,new Const<data::ptr>(4))
 //            .Add(Data::ptr)
@@ -80,7 +80,7 @@ using namespace evoBasic::vm;
 //            b = a
 //        End Function
 //    )code");
-//    auto block = new Block("test");
+//    auto block = new BasicBlock("test");
 //    block->PushFrameBase()
 //            .Push(Data::ptr,new Const<data::ptr>(4))
 //            .Add(Data::ptr)
@@ -135,7 +135,7 @@ using namespace evoBasic::vm;
 //
 //        End Function
 //    )code");
-//    auto block = new Block("test");
+//    auto block = new BasicBlock("test");
 //    block->PushFrameBase()
 //        .Push(Data::ptr,new Const<data::ptr>(5))
 //        .Add(Data::ptr)
@@ -167,7 +167,7 @@ using namespace evoBasic::vm;
 //            b.m4 = 100
 //        End Function
 //    )code");
-//    auto block = new Block("test");
+//    auto block = new BasicBlock("test");
 //    block->PushFrameBase()
 //            .Push(Data::ptr,new Const<data::ptr>(8))
 //            .Add(Data::ptr)
@@ -211,7 +211,7 @@ using namespace evoBasic::vm;
 //            b[4] = a.m1 + 2
 //        End Function
 //    )code");
-//    auto block = new Block("test");
+//    auto block = new BasicBlock("test");
 //    block->PushFrameBase()
 //            .Push(Data::ptr,new Const<data::ptr>(8))
 //            .Add(Data::ptr)

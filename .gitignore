@@ -5,3 +5,10 @@ test/cmake-build-debug
 doxygen.config
 latex
 html
+build
+.cache
+.vs
+out
+Debug
+tags
+.ycm_extra_conf.py
