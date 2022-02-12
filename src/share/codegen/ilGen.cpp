@@ -941,7 +941,16 @@ namespace evoBasic{
                 auto sfld = static_cast<ast::SFld*>(assign_node->rhs);
                 visitSFld(sfld,current);
                 current->Ldsfld(mapILType(sfld->type), getTokenRef(sfld));
+                break;
             }
+            case ast::Expression::Digit:
+            case ast::Expression::Decimal:
+            case ast::Expression::String:
+            case ast::Expression::Char:
+            case ast::Expression::Boolean:
+            case ast::Expression::EnumMember:
+                loadExpressionValue(assign_node->rhs,current);
+                break;
         }
 
         TokenRef *record_or_array = nullptr;
@@ -961,9 +970,9 @@ namespace evoBasic{
             case ast::Expression::ArgUse:{
                 auto arg = static_cast<ast::Arg*>(assign_node->lhs);
                 visitArg(arg,current);
-                current->Push(DataTypeEnum::u16, (data::u16)arg->variable->getOffset());
                 if(arg->is_ref){
-                    current->Store(mapILType(arg->type));
+                    current->Ldarg(DataTypeEnum::ref)
+                            .Store(mapILType(arg->type));
                 }
                 else{
                     current->Starg(mapILType(arg->type));
@@ -986,11 +995,65 @@ namespace evoBasic{
     }
 
     void ILGen::visitCast(ast::Cast *cast_node, il::BasicBlock *current) {
-
+        switch(cast_node->expr->expression_kind){
+            case ast::Expression::Unary:
+            case ast::Expression::Binary:
+            case ast::Expression::Cast:
+            case ast::Expression::Parentheses:
+            case ast::Expression::Element:
+            case ast::Expression::Ftn:
+            case ast::Expression::VFtn:
+            case ast::Expression::SFtn:
+            case ast::Expression::Ext:
+            case ast::Expression::Digit:
+            case ast::Expression::Decimal:
+            case ast::Expression::String:
+            case ast::Expression::Char:
+            case ast::Expression::Boolean:
+            case ast::Expression::EnumMember:
+                visitExpression(cast_node->expr,current);
+                break;
+            case ast::Expression::Assign:{
+                auto assign = static_cast<ast::Assign*>(cast_node->expr);
+                visitAssign(assign,current);
+                loadAssignLhsValue(assign,current);
+                break;
+            }
+            case ast::Expression::Local:{
+                auto local = static_cast<ast::Local*>(cast_node->expr);
+                visitLocal(local,current);
+                current->Ldloc(mapILType(local->type));
+                break;
+            }
+            case ast::Expression::ArgUse:{
+                auto arg = static_cast<ast::Arg*>(cast_node->expr);
+                visitArg(arg,current);
+                if(arg->is_ref){
+                    current->Ldarg(DataTypeEnum::ref)
+                            .Load(mapILType(arg->type));
+                }
+                else{
+                    current->Ldarg(mapILType(arg->type));
+                }
+                break;
+            }
+            case ast::Expression::Fld:{
+                auto fld = static_cast<ast::Fld*>(cast_node->expr);
+                visitFld(fld,current);
+                current->Ldfld(mapILType(fld->type), getTokenRef(fld));
+                break;
+            }
+            case ast::Expression::SFld:{
+                auto sfld = static_cast<ast::SFld*>(cast_node->expr);
+                visitSFld(sfld,current);
+                current->Ldsfld(mapILType(sfld->type), getTokenRef(sfld));
+                break;
+            }
+        }
     }
 
     void ILGen::visitParentheses(ast::Parentheses *parentheses_node, il::BasicBlock *current) {
-
+        PANIC;
     }
 
     void ILGen::visitArrayElement(ast::ArrayElement *element_node, il::BasicBlock *current) {
@@ -1009,6 +1072,7 @@ namespace evoBasic{
             }
             case ast::Expression::ArgUse:{
                 auto arg = static_cast<ast::Arg*>(element_node->array);
+                visitArg(arg,current);
                 if(arg->is_ref){
                     current->Ldarg(mapILType(arg->type));
                 }
@@ -1019,11 +1083,13 @@ namespace evoBasic{
             }
             case ast::Expression::Fld:{
                 auto fld = static_cast<ast::Fld*>(element_node->array);
+                visitFld(fld,current);
                 current->Ldflda(getTokenRef(fld));
                 break;
             }
             case ast::Expression::SFld:{
                 auto sfld = static_cast<ast::SFld*>(element_node->array);
+                visitSFld(sfld,current);
                 current->Ldsflda(getTokenRef(sfld));
                 break;
             }
@@ -1312,41 +1378,76 @@ namespace evoBasic{
                 break;
             case ast::Expression::Element:{
                 auto element = static_cast<ast::ArrayElement*>(fld_node->ref);
+                auto il_type = mapILType(element->type);
                 visitArrayElement(element,current);
-                current->Ldelem(mapILType(element->type));
+                if(il_type.getKind() == DataTypeEnum::record){
+                    current->Ldelema(il_type);
+                }
+                else{
+                    current->Ldelem(il_type);
+                }
                 break;
             }
             case ast::Expression::Local:{
                 auto local = static_cast<ast::Local*>(fld_node->ref);
+                auto il_type = mapILType(local->type);
                 visitLocal(local,current);
-                current->Ldloc(mapILType(local->type));
+                if(il_type.getKind() == DataTypeEnum::record) {
+                    current->Ldloca();
+                }
+                else{
+                    current->Ldloc(il_type);
+                }
                 break;
             }
             case ast::Expression::ArgUse:{
                 auto arg = static_cast<ast::Arg*>(fld_node->ref);
+                auto il_type = mapILType(arg->type);
+                visitArg(arg,current);
                 if(arg->is_ref){
-                    current->Ldarg(DataTypeEnum::ref)
-                            .Load(mapILType(arg->type));
+                    if(il_type.getKind() == DataTypeEnum::record){
+                        current->Ldarg(DataTypeEnum::ref);
+                    }
+                    else{
+                        current->Ldarg(DataTypeEnum::ref)
+                                .Load(mapILType(arg->type));
+                    }
                 }
                 else{
-                    current->Ldarg(mapILType(arg->type));
+                    if(il_type.getKind() == DataTypeEnum::record){
+                        current->Ldarga();
+                    }
+                    else{
+                        current->Ldarg(mapILType(arg->type));
+                    }
                 }
                 break;
             }
             case ast::Expression::Fld:{
                 auto fld = static_cast<ast::Fld*>(fld_node->ref);
+                auto il_type = mapILType(fld->type);
                 visitFld(fld,current);
-                current->Ldfld(mapILType(fld->type), getTokenRef(fld));
+                if(il_type.getKind() == DataTypeEnum::record){
+                    current->Ldflda(getTokenRef(fld));
+                }
+                else{
+                    current->Ldfld(il_type, getTokenRef(fld));
+                }
                 break;
             }
             case ast::Expression::SFld:{
                 auto sfld = static_cast<ast::SFld*>(fld_node->ref);
+                auto il_type = mapILType(sfld->type);
                 visitSFld(sfld,current);
-                current->Ldsfld(mapILType(sfld->type),getTokenRef(sfld));
+                if(il_type.getKind() == DataTypeEnum::record){
+                    current->Ldsflda(getTokenRef(sfld));
+                }
+                else{
+                    current->Ldsfld(mapILType(sfld->type),getTokenRef(sfld));
+                }
                 break;
             }
         }
-        current->Ldfld(mapILType(fld_node->type), getTokenRef(fld_node));
     }
 
     void ILGen::visitLocal(ast::Local *local_node, il::BasicBlock *current) {

@@ -396,6 +396,20 @@
 |`Fld(SFld)`|Ldsfld|
 |`Fld(String)`|Nop|
 
+for record:
+|AST|Instructions|
+|-|-|
+|`Fld(Cast)`|Nop|
+|`Fld(Parentheses)`|Nop|
+|`Fld(ArrayElement)`|Ldelema|
+|`Fld(Local)`|Ldloca|
+|`Fld(Arg(ByRef))`|Ldarg|
+|`Fld(Arg(ByVal))`|Ldarga|
+|`Fld(Fld)`|Ldflda|
+|`Fld(SFld)`|Ldsflda|
+|`Fld(String)`|Nop|
+
+
 ## SFld
 |AST|Instructions|
 |-|-|
