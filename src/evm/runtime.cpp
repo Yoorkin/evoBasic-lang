@@ -154,7 +154,7 @@ namespace evoBasic::vm{
             Runtime *runtime = nullptr;
             switch(member->getKind()){
                 case il::MemberKind::SFld:
-                    runtime = new StaticFieldSlot(cls->size,dynamic_cast<il::SFld*>(member));
+                    runtime = new StaticFieldSlot(cls,cls->size,dynamic_cast<il::SFld*>(member));
                     cls->size += cls->table->getRuntime<Sizeable>(member->getNameToken()->getID())->getByteLength();
                     break;
                 case il::MemberKind::Fld:
@@ -371,8 +371,12 @@ namespace evoBasic::vm{
     FieldSlot::FieldSlot(data::u64 offset, il::Fld *info)
         : Runtime(nullptr),offset(offset),il_info(info){}
 
-    StaticFieldSlot::StaticFieldSlot(data::u64 offset, il::SFld *info)
-        : Runtime(nullptr),offset(offset),il_info(info){}
+    StaticFieldSlot::StaticFieldSlot(Class *owner,data::u64 offset, il::SFld *info)
+        : Runtime(nullptr),offset(offset),il_info(info),owner(owner){}
+
+    data::Byte *StaticFieldSlot::getAddress() {
+        return owner->address<data::Byte*>(this);
+    }
 
     Module::Module(TokenTable *table, il::Module *info)
         : NameSpace(table), il_info(info){}

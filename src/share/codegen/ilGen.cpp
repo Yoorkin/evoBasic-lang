@@ -1050,6 +1050,7 @@ namespace evoBasic{
                 break;
             }
         }
+        current->Conv(mapILType(cast_node->expr->type), mapILType(cast_node->target));
     }
 
     void ILGen::visitParentheses(ast::Parentheses *parentheses_node, il::BasicBlock *current) {

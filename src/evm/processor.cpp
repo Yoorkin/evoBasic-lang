@@ -7,7 +7,7 @@
 namespace evoBasic::vm{
 
     template<template <typename P> class Operation>
-    void forEachType(vm::Stack &operand, ExecutionEnv &env) {
+    void forEachScalarType(vm::Stack &operand, ExecutionEnv &env) {
         auto data = env.template consume<Bytecode>();
         switch (data) {
             case Bytecode::boolean: Operation<data::boolean>::call(operand, env); break;
@@ -27,6 +27,41 @@ namespace evoBasic::vm{
                 PANIC;
         }
     }
+
+
+    using OperationHandler = std::function<void(Stack&,ExecutionEnv&,data::u64)>;
+    void forEachType(OperationHandler handler,vm::Stack &operand, ExecutionEnv &env){
+        auto data = env.template consume<Bytecode>();
+        switch(data){
+            case Bytecode::boolean: handler(operand,env,sizeof(data::boolean)); break;
+            case Bytecode::i8:      handler(operand,env,sizeof(data::i8));      break;
+            case Bytecode::i16:     handler(operand,env,sizeof(data::i16));     break;
+            case Bytecode::i32:     handler(operand,env,sizeof(data::i32));     break;
+            case Bytecode::i64:     handler(operand,env,sizeof(data::i64));     break;
+            case Bytecode::f32:     handler(operand,env,sizeof(data::f32));     break;
+            case Bytecode::f64:     handler(operand,env,sizeof(data::f64));     break;
+            case Bytecode::u8:      handler(operand,env,sizeof(data::u8));      break;
+            case Bytecode::u16:     handler(operand,env,sizeof(data::u16));     break;
+            case Bytecode::u32:     handler(operand,env,sizeof(data::u32));     break;
+            case Bytecode::u64:     handler(operand,env,sizeof(data::u64));     break;
+            case Bytecode::array:{
+                env.template consume<Bytecode>();
+                auto id = env.template consume<il::TokenDef::ID>();
+                auto array = env.getFunction()->getTokenTable()->template getRuntime<Array>(id);
+                handler(operand,env,array->getByteLength());
+                break;
+            }
+            case Bytecode::record:{
+                env.template consume<Bytecode>();
+                auto id = env.template consume<il::TokenDef::ID>();
+                auto record = env.getFunction()->getTokenTable()->template getRuntime<Record>(id);
+                handler(operand,env,record->getByteLength());
+                break;
+            }
+        }
+    }
+
+
 
     template<typename T>
     struct OpEQ {
@@ -118,7 +153,6 @@ namespace evoBasic::vm{
         }
     };
 
-
     template<typename T>
     struct OpFDiv {
         static void call(Stack &operand, ExecutionEnv &env) {
@@ -133,23 +167,6 @@ namespace evoBasic::vm{
         static void call(Stack &operand, ExecutionEnv &env) {
             T rhs = operand.pop<T>();
             operand.push<T>(-rhs);
-        }
-    };
-
-    template<typename T>
-    struct OpLoad {
-        static void call(Stack &operand, ExecutionEnv &env) {
-            T* address = operand.pop<T*>();
-            operand.push<T>(*address);
-        }
-    };
-
-    template<typename T>
-    struct OpStore {
-        static void call(Stack &operand, ExecutionEnv &env) {
-            T value = operand.pop<T>();
-            T* address = reinterpret_cast<T*>(operand.pop<data::address>());
-            *address = value;
         }
     };
 
@@ -175,90 +192,92 @@ namespace evoBasic::vm{
         }
     };
 
-    template<typename T>
-    struct OpLdarg{
-        static void call(Stack &operand, ExecutionEnv &env){
-            auto index = operand.pop<data::u16>();
-            auto offset = env.getFunction()->getParamOffset(index);
-            auto value = env.getFrame().read<T>(offset);
-            operand.push(value);
-        }
-    };
+    void OpLoadHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
+        auto src_address = operand.pop<data::Byte*>();
+        operand.pushFrom(length,src_address);
+    }
 
-    template<typename T>
-    struct OpStarg{
-        static void call(Stack &operand, ExecutionEnv &env){
-            auto value = operand.pop<T>();
-            auto index = operand.pop<data::u16>();
-            auto offset = env.getFunction()->getParamOffset(index);
-            env.getFrame().write<T>(offset,value);
-        }
-    };
+    void OpStoreHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
+        auto dst_address = reinterpret_cast<data::Byte*>(operand.pop<data::address>());
+        operand.popTo(length,dst_address);
+    }
 
-    template<typename T>
-    struct OpLdloc{
-        static void call(Stack &operand, ExecutionEnv &env){
-            auto index = operand.pop<data::u16>();
-            auto offset = env.getFunction()->getLocalOffset(index);
-            auto value = env.getFrame().read<T>(offset);
-            operand.push(value);
-        }
-    };
+    void OpLdargHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
+        auto index = operand.pop<data::u16>();
+        auto offset = env.getFunction()->getParamOffset(index);
+        operand.pushFrom(length,env.getFrame().getRawPtrAt(offset));
+    }
 
-    template<typename T>
-    struct OpStloc{
-        static void call(Stack &operand, ExecutionEnv &env){
-            auto value = operand.pop<T>();
-            auto index = operand.pop<data::u16>();
-            auto offset = env.getFunction()->getLocalOffset(index);
-            env.getFrame().write<T>(offset,value);
-        }
-    };
+    void OpStargHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
+        auto index = operand.pop<data::u16>();
+        auto offset = env.getFunction()->getParamOffset(index);
+        operand.popTo(length,env.getFrame().getRawPtrAt(offset));
+    }
 
-    template<typename T>
-    struct OpLdfld{
-        static void call(Stack &operand, ExecutionEnv &env){
-            auto obj = operand.pop<ClassInstance*>();
-            auto token_id = env.consume<il::TokenDef::ID>();
-            auto field_slot = env.getFunction()->getTokenTable()->getRuntime<FieldSlot>(token_id);
-            auto value = obj->read<T>(field_slot);
-            operand.push(value);
-        }
-    };
+    void OpLdlocHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
+        auto index = operand.pop<data::u16>();
+        auto offset = env.getFunction()->getLocalOffset(index);
+        operand.pushFrom(length,env.getFrame().getRawPtrAt(offset));
+    }
 
+    void OpStlocHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
+        auto index = operand.pop<data::u16>();
+        auto offset = env.getFunction()->getLocalOffset(index);
+        operand.popTo(length,env.getFrame().getRawPtrAt(offset));
+    }
 
-    template<typename T>
-    struct OpLdsfld{
-        static void call(Stack &operand, ExecutionEnv &env){
-            auto obj = operand.pop<ClassInstance*>();
-            auto token_id = env.consume<il::TokenDef::ID>();
-            auto field_slot = env.getFunction()->getTokenTable()->getRuntime<StaticFieldSlot>(token_id);
-            auto value = obj->getClass()->read<T>(field_slot);
-            operand.push(value);
-        }
-    };
+    void OpLdfldHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
+        auto obj = operand.pop<ClassInstance*>();
+        env.consume<data::Byte>();
+        auto token_id = env.consume<il::TokenDef::ID>();
+        auto field_slot = env.getFunction()->getTokenTable()->getRuntime<FieldSlot>(token_id);
+        auto src_address = obj->address<data::Byte*>(field_slot);
+        operand.pushFrom(length,src_address);
+    }
 
-    template<typename T>
-    struct OpStfld{
-        static void call(Stack &operand, ExecutionEnv &env){
-            auto value = operand.pop<T>();
-            auto obj = operand.pop<ClassInstance*>();
-            auto token_id = env.consume<il::TokenDef::ID>();
-            auto field_slot = env.getFunction()->getTokenTable()->getRuntime<FieldSlot>(token_id);
-            obj->write<T>(field_slot,value);
-        }
-    };
+    void OpStfldHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
+        auto obj = operand.pop<ClassInstance*>();
+        env.consume<data::Byte>();
+        auto token_id = env.consume<il::TokenDef::ID>();
+        auto field_slot = env.getFunction()->getTokenTable()->getRuntime<FieldSlot>(token_id);
+        auto src_address = obj->address<data::Byte*>(field_slot);
+        operand.popTo(length,src_address);
+    }
 
-    template<typename T>
-    struct OpStsfld{
-        static void call(Stack &operand, ExecutionEnv &env){
-            auto value = operand.pop<T>();
-            auto obj = operand.pop<ClassInstance*>();
-            auto token_id = env.consume<il::TokenDef::ID>();
-            auto field_slot = env.getFunction()->getTokenTable()->getRuntime<StaticFieldSlot>(token_id);
-            obj->getClass()->write<T>(field_slot,value);
-        }
-    };
+    void OpStsfldHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
+        env.consume<data::Byte>();
+        auto token_id = env.consume<il::TokenDef::ID>();
+        auto field_slot = env.getFunction()->getTokenTable()->getRuntime<StaticFieldSlot>(token_id);
+        operand.popTo(length,field_slot->getAddress());
+    }
+
+    void OpLdsfldHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
+        env.consume<data::Byte>();
+        auto token_id = env.consume<il::TokenDef::ID>();
+        auto field_slot = env.getFunction()->getTokenTable()->getRuntime<StaticFieldSlot>(token_id);
+        operand.pushFrom(length,field_slot->getAddress());
+    }
+
+    void OpLdelemHandler(Stack &operand, ExecutionEnv &env, data::u64 element_length) {
+        auto index = operand.pop<data::u16>();
+        auto ref = operand.pop<data::address>();
+        ref += index * element_length;
+        operand.pushFrom(element_length,reinterpret_cast<data::Byte*>(ref));
+    }
+
+    void OpLdelemaHandler(Stack &operand, ExecutionEnv &env, data::u64 element_length) {
+        auto index = operand.pop<data::u16>();
+        auto ref = operand.pop<data::address>();
+        ref += index * element_length;
+        operand.push(ref);
+    }
+
+    void OpStelemHandler(Stack &operand, ExecutionEnv &env, data::u64 element_length) {
+        auto index = operand.pop<data::u16>();
+        auto ref = operand.pop<data::address>();
+        ref += index * element_length;
+        operand.popTo(element_length,reinterpret_cast<data::Byte*>(ref));
+    }
 
     template<typename Src>
     struct OpConv {
@@ -312,7 +331,7 @@ namespace evoBasic::vm{
     void Processor::copyArgs(Function *function){
         auto frame_address = getCurrentEnv().getFrame().address<data::Byte>(0);
         for(auto length : function->getParamsLength()){
-            operand.copy(length,frame_address);
+            operand.popTo(length,frame_address);
             frame_address += length;
         }
     }
@@ -439,22 +458,22 @@ namespace evoBasic::vm{
                     break;
                 }
                 case Bytecode::Ldarg:
-                    forEachType<OpLdarg>(operand,getCurrentEnv());
+                    forEachType(OpLdargHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Load:
-                    forEachType<OpLoad>(operand,getCurrentEnv());
+                    forEachType(OpLoadHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Starg:
-                    forEachType<OpLdarg>(operand,getCurrentEnv());
+                    forEachType(OpLdargHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Store:
-                    forEachType<OpStore>(operand,getCurrentEnv());
+                    forEachType(OpStoreHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Ldloc:
-                    forEachType<OpLdloc>(operand,getCurrentEnv());
+                    forEachType(OpLdlocHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Stloc:
-                    forEachType<OpStloc>(operand,getCurrentEnv());
+                    forEachType(OpStlocHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Not:
                     operand.push<data::boolean>(!operand.pop<data::boolean>());
@@ -514,83 +533,70 @@ namespace evoBasic::vm{
                     break;
                 }
                 case Bytecode::Ldfld:
-                    forEachType<OpLdfld>(operand, getCurrentEnv());
+                    forEachType(OpLdfldHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Ldsfld:
-                    forEachType<OpLdsfld>(operand, getCurrentEnv());
+                    forEachType(OpLdsfldHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Stfld:
-                    forEachType<OpStfld>(operand, getCurrentEnv());
+                    forEachType(OpStfldHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Stsfld:
-                    forEachType<OpStsfld>(operand, getCurrentEnv());
+                    forEachType(OpStsfldHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Ldelem: {
-                    auto index = operand.pop<data::u16>();
-                    auto ref = operand.pop<data::address>();
-                    getCurrentEnv().consume<data::Byte>();
-                    auto token_id = getCurrentEnv().consume<il::TokenDef::ID>();
-                    auto element = getCurrentEnv().getFunction()->getTokenTable()->getRuntime<FieldSlot>(token_id);
-                    auto element_length = dynamic_cast<Sizeable*>(element)->getByteLength();
-                    ref += index * element_length;
-                    operand.push(element_length,reinterpret_cast<char*>(ref));
+                    forEachType(OpLdelemHandler, operand, getCurrentEnv());
                     break;
                 }
                 case Bytecode::Ldelema: {
-                    auto index = operand.pop<data::u16>();
-                    auto ref = operand.pop<data::address>();
-                    getCurrentEnv().consume<data::Byte>();
-                    auto token_id = getCurrentEnv().consume<il::TokenDef::ID>();
-                    auto element = getCurrentEnv().getFunction()->getTokenTable()->getRuntime<FieldSlot>(token_id);
-                    ref += index * dynamic_cast<Sizeable*>(element)->getByteLength();
-                    operand.push(ref);
+                    forEachType(OpLdelemaHandler, operand, getCurrentEnv());
                     break;
                 }
                 case Bytecode::Stelem:{
-
+                    forEachType(OpStelemHandler, operand, getCurrentEnv());
                     break;
                 }
                 case Bytecode::Add:
-                    forEachType<OpAdd>(operand, getCurrentEnv());
+                    forEachScalarType<OpAdd>(operand, getCurrentEnv());
                     break;
                 case Bytecode::Sub:
-                    forEachType<OpSub>(operand, getCurrentEnv());
+                    forEachScalarType<OpSub>(operand, getCurrentEnv());
                     break;
                 case Bytecode::Mul:
-                    forEachType<OpMul>(operand, getCurrentEnv());
+                    forEachScalarType<OpMul>(operand, getCurrentEnv());
                     break;
                 case Bytecode::Div:
-                    forEachType<OpDiv>(operand, getCurrentEnv());
+                    forEachScalarType<OpDiv>(operand, getCurrentEnv());
                     break;
                 case Bytecode::FDiv:
-                    forEachType<OpFDiv>(operand, getCurrentEnv());
+                    forEachScalarType<OpFDiv>(operand, getCurrentEnv());
                     break;
                 case Bytecode::EQ:
-                    forEachType<OpEQ>(operand, getCurrentEnv());
+                    forEachScalarType<OpEQ>(operand, getCurrentEnv());
                     break;
                 case Bytecode::NE:
-                    forEachType<OpNE>(operand, getCurrentEnv());
+                    forEachScalarType<OpNE>(operand, getCurrentEnv());
                     break;
                 case Bytecode::LT:
-                    forEachType<OpLT>(operand, getCurrentEnv());
+                    forEachScalarType<OpLT>(operand, getCurrentEnv());
                     break;
                 case Bytecode::GT:
-                    forEachType<OpGT>(operand, getCurrentEnv());
+                    forEachScalarType<OpGT>(operand, getCurrentEnv());
                     break;
                 case Bytecode::LE:
-                    forEachType<OpLE>(operand, getCurrentEnv());
+                    forEachScalarType<OpLE>(operand, getCurrentEnv());
                     break;
                 case Bytecode::GE:
-                    forEachType<OpGE>(operand, getCurrentEnv());
+                    forEachScalarType<OpGE>(operand, getCurrentEnv());
                     break;
                 case Bytecode::Neg:
-                    forEachType<OpNeg>(operand, getCurrentEnv());
+                    forEachScalarType<OpNeg>(operand, getCurrentEnv());
                     break;
                 case Bytecode::Pop:
-                    forEachType<OpPop>(operand, getCurrentEnv());
+                    forEachScalarType<OpPop>(operand, getCurrentEnv());
                     break;
                 case Bytecode::Dup:
-                    forEachType<OpDup>(operand, getCurrentEnv());
+                    forEachScalarType<OpDup>(operand, getCurrentEnv());
                     break;
                 case Bytecode::Jif:{
                     auto accept = operand.pop<data::boolean>();
@@ -604,13 +610,13 @@ namespace evoBasic::vm{
                     break;
                 }
                 case Bytecode::Push:
-                    forEachType<OpPush>(operand, getCurrentEnv());
+                    forEachScalarType<OpPush>(operand, getCurrentEnv());
                     break;
                 case Bytecode::CastCls:
                     PANIC;
                     break;
                 case Bytecode::Conv:
-                    forEachType<OpConv>(operand, getCurrentEnv());
+                    forEachScalarType<OpConv>(operand, getCurrentEnv());
                     break;
             }
         }

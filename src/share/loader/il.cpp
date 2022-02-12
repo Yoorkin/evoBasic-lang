@@ -697,7 +697,7 @@ namespace evoBasic::il{
             read(stream,Bytecode::PtdAcsDef);
             access = AccessFlag::Protected;
         }
-        else PANIC;
+        else PANICMSG(to_string(stream.tellg()));
 
         name = new TokenRef(document,stream);
     }
@@ -1060,7 +1060,6 @@ namespace evoBasic::il{
     }
 	
     void Record::toHex(std::ostream &stream) {
-        write(stream,Bytecode::RecordDef);
         Member::toHex(stream);
         for(auto member : getMembers())member->toHex(stream);
         write(stream,Bytecode::EndMark);

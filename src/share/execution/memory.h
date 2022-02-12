@@ -13,6 +13,7 @@ namespace evoBasic::vm{
         void *mem = nullptr;
         char *ptr = nullptr;
     public:
+        Stack(const Stack&)=delete;
         explicit Stack(size_t size){
             mem = ptr = (char*)malloc(size);
         }
@@ -35,7 +36,7 @@ namespace evoBasic::vm{
             return tmp;
         }
 
-        void push(data::u16 length, char *src){
+        void pushFrom(data::u16 length, data::Byte *src){
             while(length--){
                 *ptr = *src;
                 ptr++;
@@ -43,17 +44,10 @@ namespace evoBasic::vm{
             }
         }
 
-        void pop(data::u16 length, char *dst){
+        void popTo(data::u16 length, data::Byte *dst){
             while(length--){
                 *(dst + length) = *ptr;
                 ptr--;
-            }
-        }
-
-        void copy(data::u16 length,data::Byte *dst){
-            ptr-=length;
-            for(int i =0;i<length;i++){
-                dst[i]=ptr[i];
             }
         }
 
@@ -67,7 +61,9 @@ namespace evoBasic::vm{
         }
 
         ~Stack(){
-            delete mem;
+            if(mem!=NULL){
+                //free(mem);
+            }
         }
     };
 
@@ -100,6 +96,10 @@ namespace evoBasic::vm{
             ret.mem = mem + offset;
             ret.is_borrowed = true;
             return ret;
+        }
+
+        data::Byte *getRawPtrAt(data::u64 offset){
+            return (data::Byte*)(mem + offset);
         }
 
         ~Memory(){

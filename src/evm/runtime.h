@@ -14,6 +14,7 @@ namespace evoBasic::vm{
 
     class RuntimeContext;
     class TokenTable;
+    class Class;
 
     enum class RuntimeKind{
         Context,Class,Enum,Module,Record,Interface,Function,
@@ -142,9 +143,11 @@ namespace evoBasic::vm{
         friend evoBasic::vm::RuntimeContext;
         data::u64 offset = -1;
         il::SFld *il_info = nullptr;
+        Class *owner = nullptr;
     public:
-        StaticFieldSlot(data::u64 offset,il::SFld *info);
+        StaticFieldSlot(Class *owner,data::u64 offset,il::SFld *info);
         RuntimeKind getKind()override{ return RuntimeKind::StaticFieldSlot; }
+        data::Byte *getAddress();
     };
 
     class Module : public NameSpace,public Sizeable{
