@@ -83,7 +83,7 @@ namespace evoBasic::vm{
         template<typename T>
         T *getRuntime(il::TokenDef::ID id){
             if(!cache[id]) loadCache(id);
-            return (T*)cache[id];
+            return dynamic_cast<T*>(cache[id]);
         }
     };
 
@@ -136,6 +136,7 @@ namespace evoBasic::vm{
         il::Fld *il_info = nullptr;
     public:
         FieldSlot(data::u64 offset,il::Fld *info);
+        data::u64 getOffset();
         RuntimeKind getKind()override{ return RuntimeKind::FieldSlot; }
     };
 
@@ -200,35 +201,6 @@ namespace evoBasic::vm{
         Enum(TokenTable *table,il::Enum *info);
         RuntimeKind getKind()override{ return RuntimeKind::Enum; }
         il::Enum *late_binding = nullptr;
-    };
-
-    class RecordInstance{
-        Record *record = nullptr;
-        char *field_memory = nullptr;
-    public:
-        template<typename T>
-        T *getField(FieldSlot slot){
-
-        }
-    };
-
-    struct ClassInstance{
-        Class *klass = nullptr;
-        char *field_memory = nullptr;
-    public:
-        template<typename T>
-        T read(FieldSlot *slot){
-
-        }
-        template<typename T>
-        void write(FieldSlot *slot,T value){
-
-        }
-        template<typename T>
-        T address(FieldSlot *slot){
-
-        }
-        Class *getClass();
     };
 
     class RuntimeContext : public NameSpace{

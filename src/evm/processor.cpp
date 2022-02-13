@@ -44,20 +44,22 @@ namespace evoBasic::vm{
             case Bytecode::u16:     handler(operand,env,sizeof(data::u16));     break;
             case Bytecode::u32:     handler(operand,env,sizeof(data::u32));     break;
             case Bytecode::u64:     handler(operand,env,sizeof(data::u64));     break;
+            case Bytecode::ref:     handler(operand,env,sizeof(data::address)); break;
             case Bytecode::array:{
-                env.template consume<Bytecode>();
+                env.template consume<data::Byte>();
                 auto id = env.template consume<il::TokenDef::ID>();
                 auto array = env.getFunction()->getTokenTable()->template getRuntime<Array>(id);
                 handler(operand,env,array->getByteLength());
                 break;
             }
             case Bytecode::record:{
-                env.template consume<Bytecode>();
+                env.template consume<data::Byte>();
                 auto id = env.template consume<il::TokenDef::ID>();
                 auto record = env.getFunction()->getTokenTable()->template getRuntime<Record>(id);
                 handler(operand,env,record->getByteLength());
                 break;
             }
+            default:PANIC;
         }
     }
 
@@ -193,7 +195,7 @@ namespace evoBasic::vm{
     };
 
     void OpLoadHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
-        auto src_address = operand.pop<data::Byte*>();
+        auto src_address = reinterpret_cast<data::Byte*>(operand.pop<data::address>());
         operand.pushFrom(length,src_address);
     }
 
@@ -227,20 +229,20 @@ namespace evoBasic::vm{
     }
 
     void OpLdfldHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
-        auto obj = operand.pop<ClassInstance*>();
+        auto obj_base = operand.pop<data::Byte*>();
         env.consume<data::Byte>();
         auto token_id = env.consume<il::TokenDef::ID>();
         auto field_slot = env.getFunction()->getTokenTable()->getRuntime<FieldSlot>(token_id);
-        auto src_address = obj->address<data::Byte*>(field_slot);
+        auto src_address = obj_base + field_slot->getOffset();
         operand.pushFrom(length,src_address);
     }
 
     void OpStfldHandler(Stack &operand, ExecutionEnv &env, data::u64 length) {
-        auto obj = operand.pop<ClassInstance*>();
+        auto obj_base = operand.pop<data::Byte*>();
         env.consume<data::Byte>();
         auto token_id = env.consume<il::TokenDef::ID>();
         auto field_slot = env.getFunction()->getTokenTable()->getRuntime<FieldSlot>(token_id);
-        auto src_address = obj->address<data::Byte*>(field_slot);
+        auto src_address = obj_base + field_slot->getOffset();
         operand.popTo(length,src_address);
     }
 
@@ -259,24 +261,25 @@ namespace evoBasic::vm{
     }
 
     void OpLdelemHandler(Stack &operand, ExecutionEnv &env, data::u64 element_length) {
-        auto index = operand.pop<data::u16>();
-        auto ref = operand.pop<data::address>();
-        ref += index * element_length;
+        auto offset = operand.pop<data::i32>();
+        data::Byte *ref;
+        operand.popTo(sizeof(data::Byte*),reinterpret_cast<data::Byte*>(&ref));
+        ref += offset * element_length;
         operand.pushFrom(element_length,reinterpret_cast<data::Byte*>(ref));
     }
 
     void OpLdelemaHandler(Stack &operand, ExecutionEnv &env, data::u64 element_length) {
-        auto index = operand.pop<data::u16>();
+        auto offset = operand.pop<data::i32>();
         auto ref = operand.pop<data::address>();
-        ref += index * element_length;
+        ref += offset * element_length;
         operand.push(ref);
     }
 
     void OpStelemHandler(Stack &operand, ExecutionEnv &env, data::u64 element_length) {
-        auto index = operand.pop<data::u16>();
-        auto ref = operand.pop<data::address>();
-        ref += index * element_length;
-        operand.popTo(element_length,reinterpret_cast<data::Byte*>(ref));
+        auto offset = operand.pop<data::i32>();
+        data::Byte *ref = operand.pop<data::Byte*>();
+        ref += offset * element_length;
+        operand.popTo(element_length,ref);
     }
 
     template<typename Src>
@@ -324,12 +327,13 @@ namespace evoBasic::vm{
 
     Processor::Processor(RuntimeContext *context,Function *function, size_t operand_size, size_t frame_size)
         : context(context),operand(operand_size),frame(frame_size){
-        execution_stack.push(ExecutionEnv(function,frame.borrow(0)));
+        auto env = ExecutionEnv(function,frame.borrow(0));
+        execution_stack.push(env);
         frame_top += function->getStackFrameLength();
     }
 
     void Processor::copyArgs(Function *function){
-        auto frame_address = getCurrentEnv().getFrame().address<data::Byte>(0);
+        auto frame_address = getCurrentEnv().getFrame().address(0);
         for(auto length : function->getParamsLength()){
             operand.popTo(length,frame_address);
             frame_address += length;
@@ -414,7 +418,7 @@ namespace evoBasic::vm{
                 }
                 case Bytecode::Call:{
                     auto function = getCurrentEnv().consume<Function*>();
-                    auto ref = operand.top<ClassInstance*>();
+                    auto obj_base = operand.top<data::Byte*>();
                     execution_stack.push(ExecutionEnv(function,frame.borrow(frame_top)));
                     frame_top += function->getStackFrameLength();
                     copyArgs(function);
@@ -423,8 +427,8 @@ namespace evoBasic::vm{
                 }
                 case Bytecode::CallVirt:{
                     auto slot = getCurrentEnv().consume<VirtualFtnSlot>();
-                    auto ref = operand.top<ClassInstance*>();
-                    auto function = ref->getClass()->virtualFunctionDispatch(slot);
+                    auto klass = *((Class**)operand.top<data::Byte*>());
+                    auto function = klass->virtualFunctionDispatch(slot);
                     execution_stack.push(ExecutionEnv(function,frame.borrow(frame_top)));
                     frame_top += function->getStackFrameLength();
                     copyArgs(function);
@@ -446,14 +450,14 @@ namespace evoBasic::vm{
                 case Bytecode::Ldloca:{
                     auto index = operand.pop<data::u16>();
                     auto offset = getCurrentEnv().getFunction()->getLocalOffset(index);
-                    auto address = getCurrentEnv().getFrame().address<char>(offset);
-                    operand.push(address);
+                    auto address = getCurrentEnv().getFrame().address(offset);
+                    operand.pushFrom(sizeof(data::Byte*),reinterpret_cast<data::Byte*>(&address));
                     break;
                 }
                 case Bytecode::Ldarga:{
                     auto index = operand.pop<data::u16>();
                     auto offset = getCurrentEnv().getFunction()->getParamOffset(index);
-                    auto address = getCurrentEnv().getFrame().address<char>(offset);
+                    auto address = getCurrentEnv().getFrame().address(offset);
                     operand.push(address);
                     break;
                 }
@@ -517,18 +521,20 @@ namespace evoBasic::vm{
                     break;
                 }
                 case Bytecode::Ldflda:{
-                    auto obj = operand.pop<ClassInstance*>();
+                    auto obj_base = operand.pop<data::Byte*>();
+                    getCurrentEnv().consume<data::Byte>();
                     auto token_id = getCurrentEnv().consume<il::TokenDef::ID>();
                     auto field_slot = getCurrentEnv().getFunction()->getTokenTable()->getRuntime<FieldSlot>(token_id);
-                    auto address = obj->address<data::Byte*>(field_slot);
+                    auto address = obj_base + field_slot->getOffset();
                     operand.push(address);
                     break;
                 }
                 case Bytecode::Ldsflda:{
-                    auto obj = operand.pop<ClassInstance*>();
+                    auto klass = *((Class**)operand.pop<data::Byte*>());
+                    getCurrentEnv().consume<data::Byte>();
                     auto token_id = getCurrentEnv().consume<il::TokenDef::ID>();
                     auto field_slot = getCurrentEnv().getFunction()->getTokenTable()->getRuntime<StaticFieldSlot>(token_id);
-                    auto address = obj->getClass()->address<data::Byte*>(field_slot);
+                    auto address = klass->address<data::Byte*>(field_slot);
                     operand.push(address);
                     break;
                 }

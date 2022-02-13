@@ -755,7 +755,7 @@ namespace evoBasic::il{
         while(predict(stream,Bytecode::ImplDef)){
             impl_interface_list.push_back(new TokenRef(document,stream));
         }
-        Scope::loadMembersFromStream(document,stream);
+        members = Scope::loadMembersFromStream(document,stream);
         read(stream,Bytecode::EndMark);
     }
 
@@ -832,7 +832,7 @@ namespace evoBasic::il{
         : Scope(document,Bytecode::ModuleDef,access,name,std::move(members)){}
 
     Module::Module(Document *document, std::istream &stream) : Scope(document,Bytecode::ModuleDef,stream){
-        loadMembersFromStream(document,stream);
+        members = loadMembersFromStream(document,stream);
         read(stream,Bytecode::EndMark);
     }
 
@@ -884,7 +884,7 @@ namespace evoBasic::il{
     }
 
     Interface::Interface(Document *document, istream &stream) : Scope(document,Bytecode::InterfaceDef,stream){
-        loadMembersFromStream(document,stream);
+        members = loadMembersFromStream(document,stream);
         read(stream,Bytecode::EndMark);
     }
 
@@ -1018,6 +1018,10 @@ namespace evoBasic::il{
         delete type;
     }
 
+    TokenRef *Fld::getTypeToken() {
+        return type;
+    }
+
 
     SFld::SFld(Document *document, AccessFlag access, TokenRef *name, TokenRef *type)
         : Member(document,Bytecode::SFldDef,access,name),type(type){}
@@ -1058,7 +1062,11 @@ namespace evoBasic::il{
     SFld::~SFld() {
         delete type;
     }
-	
+
+    TokenRef *SFld::getTypeToken() {
+        return type;
+    }
+
     void Record::toHex(std::ostream &stream) {
         Member::toHex(stream);
         for(auto member : getMembers())member->toHex(stream);
@@ -1076,7 +1084,7 @@ namespace evoBasic::il{
 
     Record::Record(Document *document, istream &stream)
         : Scope(document,Bytecode::RecordDef,stream){
-		loadMembersFromStream(document,stream);
+		members = loadMembersFromStream(document,stream);
 		read(stream,Bytecode::EndMark);
     }
 
@@ -1639,7 +1647,7 @@ namespace evoBasic::il{
             case u64:     return Bytecode::u64;
             case f32:     return Bytecode::f32;
             case f64:     return Bytecode::f64;
-            case ref:     return Bytecode::u64;
+            case ref:     return Bytecode::ref;
             case boolean: return Bytecode::boolean;
             case array:   return Bytecode::array;
             case record:  return Bytecode::record;
