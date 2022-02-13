@@ -610,7 +610,7 @@ namespace evoBasic::il{
         switch (type.getKind()) {
             case DataTypeEnum::record:
             case DataTypeEnum::array:
-                return sizeof(TokenRef*) + 2;
+                return 1 + sizeof(TokenRef::ID) + 2;
             default:
                 return 2;
         }

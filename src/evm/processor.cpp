@@ -262,15 +262,14 @@ namespace evoBasic::vm{
 
     void OpLdelemHandler(Stack &operand, ExecutionEnv &env, data::u64 element_length) {
         auto offset = operand.pop<data::i32>();
-        data::Byte *ref;
-        operand.popTo(sizeof(data::Byte*),reinterpret_cast<data::Byte*>(&ref));
+        data::Byte *ref = operand.pop<data::Byte*>();
         ref += offset * element_length;
         operand.pushFrom(element_length,reinterpret_cast<data::Byte*>(ref));
     }
 
     void OpLdelemaHandler(Stack &operand, ExecutionEnv &env, data::u64 element_length) {
         auto offset = operand.pop<data::i32>();
-        auto ref = operand.pop<data::address>();
+        auto ref = operand.pop<data::Byte*>();
         ref += offset * element_length;
         operand.push(ref);
     }

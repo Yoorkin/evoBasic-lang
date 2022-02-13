@@ -1075,7 +1075,7 @@ namespace evoBasic{
                 auto arg = static_cast<ast::Arg*>(element_node->array);
                 visitArg(arg,current);
                 if(arg->is_ref){
-                    current->Ldarg(mapILType(arg->type));
+                    current->Ldarg(DataTypeEnum::ref);
                 }
                 else{
                     current->Ldarga();
