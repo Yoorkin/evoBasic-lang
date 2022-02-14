@@ -1230,7 +1230,7 @@ namespace evoBasic{
                 case ast::Expression::Assign:{
                     auto assign = static_cast<ast::Assign*>(argument_node->expr);
                     visitAssign(assign,current);
-                    loadAssignLhsValue(assign,current);
+                    loadAssignLhsAddress(assign,current);
                     break;
                 }
                 case ast::Expression::Element:{
@@ -1250,7 +1250,7 @@ namespace evoBasic{
                     visitArg(arg,current);
 
                     if(arg->is_ref){
-                        current->Ldarg(mapILType(arg->type));
+                        current->Ldarg(DataTypeEnum::ref);
                     }
                     else{
                         current->Ldarga();

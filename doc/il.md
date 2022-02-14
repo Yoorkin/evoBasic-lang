@@ -69,9 +69,9 @@
 |`stsfld.<DataType> <StaticFieldToken>` |..., `data type` -> ...|
 |`ldsfld.<DataType> <staticFieldToken>` |... -> ..., `data type`|
 |`ldsflda <StaticFieldToken>`           |... -> ..., ref|
-|`stelem.<DataType>`                    |..., `data type value`, ref, u16 -> ...|
-|`ldelem.<DataType>`                    |..., ref, u16 -> ..., `data type`|
-|`ldelema.<DataType>`                   |..., ref, u16 -> ..., ref|
+|`stelem.<DataType>`                    |..., `data type value`, ref, i32 -> ...|
+|`ldelem.<DataType>`                    |..., ref, i32 -> ..., `data type`|
+|`ldelema.<DataType>`                   |..., ref, i32 -> ..., ref|
 |`store.<DataType>`                     |..., `data type value`, ref -> ...|
 |`load.<DataType>`                      |..., ref -> ..., `data type value`|
 |`ldnull`                               |... -> ..., `null ref or ptr`|

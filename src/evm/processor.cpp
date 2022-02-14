@@ -19,8 +19,8 @@ namespace evoBasic::vm{
             case Bytecode::f64:     Operation<data::f64>::call(operand, env);     break;
             case Bytecode::u8:      Operation<data::u8>::call(operand, env);      break;
             case Bytecode::u16:     Operation<data::u16>::call(operand, env);     break;
-            case Bytecode::u32:     Operation<data::u16>::call(operand, env);     break;
-            case Bytecode::u64:     Operation<data::u16>::call(operand, env);     break;
+            case Bytecode::u32:     Operation<data::u32>::call(operand, env);     break;
+            case Bytecode::u64:     Operation<data::u64>::call(operand, env);     break;
             case Bytecode::ref:     Operation<data::address>::call(operand,env);  break;
             case Bytecode::array:
             case Bytecode::record:
@@ -44,7 +44,7 @@ namespace evoBasic::vm{
             case Bytecode::u16:     handler(operand,env,sizeof(data::u16));     break;
             case Bytecode::u32:     handler(operand,env,sizeof(data::u32));     break;
             case Bytecode::u64:     handler(operand,env,sizeof(data::u64));     break;
-            case Bytecode::ref:     handler(operand,env,sizeof(data::address)); break;
+            case Bytecode::ref:     handler(operand,env,sizeof(data::Byte*));   break;
             case Bytecode::array:{
                 env.template consume<data::Byte>();
                 auto id = env.template consume<il::TokenDef::ID>();
@@ -399,7 +399,8 @@ namespace evoBasic::vm{
     void Processor::run() {
         bool running = true;
         while(running){
-            switch (getCurrentEnv().consume<Bytecode>()) {
+            auto code = getCurrentEnv().consume<Bytecode>();
+            switch (code) {
                 case Bytecode::Nop:
                     break;
                 case Bytecode::Ret:
