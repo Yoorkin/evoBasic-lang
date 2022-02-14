@@ -325,8 +325,8 @@ namespace evoBasic{
         FOR_EACH(iter,let_node->variable){
             if(iter->initial){
                 auto data_type = mapILType(iter->variable_symbol->getPrototype());
+                loadExpressionValue(iter->initial,current);
                 current->Push(DataTypeEnum::u16, (data::u16)iter->variable_symbol->getLayoutIndex());
-                visitExpression(iter->initial,current);
                 current->Stloc(data_type);
             }
         }
@@ -1121,6 +1121,7 @@ namespace evoBasic{
             }
             case ast::Expression::Local:{
                 auto local = static_cast<ast::Local*>(element_node->offset);
+                visitLocal(local,current);
                 current->Ldloc(mapILType(local->type));
                 break;
             }
