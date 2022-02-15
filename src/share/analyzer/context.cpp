@@ -212,6 +212,8 @@ namespace evoBasic{
 
     CompileTimeContext::CompileTimeContext() : conversion_rules(&builtin) {
         global = new type::Module;
+        global->setAccessFlag(AccessFlag::Public);
+
         loader = new Loader();
 
         global->setName("global");

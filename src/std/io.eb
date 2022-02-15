@@ -1,0 +1,45 @@
+
+Public Module IO
+
+    Declare Sub PutChar Lib "intrinsic" Alias "#0" (Byval Value As Byte)
+    Declare Function GetChar Lib "intrinsic" Alias "#1" () As Byte
+
+    Public Sub WriteChar(Byval c As Byte)
+        PutChar(c)
+    End Sub
+
+    Public Function ReadChar() As Byte
+        Return GetChar()
+    End Function
+
+    Public Sub PrintInt(Byval number As Integer)
+        let c = 48
+        let n = number \ 10
+        c = c + (number - n * 10)
+        If n <> 0 Then
+            PrintInt(n)
+        End If
+        PutChar(c)
+    End Sub
+
+    Public Sub PrintLong(Byval number As Long)
+        let c = 48
+        let n = number \ 10
+        c = c + (number - n * 10)
+        If n <> 0 Then
+            PrintLong(n)
+        End If
+        PutChar(c)
+    End Sub
+
+    Public Sub PrintByte(Byval number As Byte)
+        let c = 48
+        let n = number \ 10
+        c = c + (number - n * 10)
+        If n <> 0 Then
+            PrintByte(n)
+        End If
+        PutChar(c)
+    End Sub
+
+End Module

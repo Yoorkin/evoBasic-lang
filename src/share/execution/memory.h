@@ -65,8 +65,8 @@ namespace evoBasic::vm{
         }
 
         ~Memory(){
-            if(!is_borrowed)
-                free(mem);
+            //if(!is_borrowed)
+                //free(mem);
         }
     };
 

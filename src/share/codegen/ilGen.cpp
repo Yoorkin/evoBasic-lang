@@ -64,7 +64,7 @@ namespace evoBasic{
     il::SFld *ILGen::visitStaticField(ast::Variable *variable_node){
         auto variable = variable_node->variable_symbol;
         auto name = document->getTokenRef(variable->getName());
-        auto type = document->getTokenRef(variable->getPrototype()->getName());
+        auto type = document->getTokenRef(variable->getPrototype()->getFullName());
         return new SFld(document,variable->getAccessFlag(),name,type);
     }
 
@@ -242,6 +242,8 @@ namespace evoBasic{
             case FunctionFlag::Override:
                 ftn = new VFtn(document,function_node->access,ftn_name,parameter,result,locals,blocks);
                 break;
+            default:
+                PANIC;
         }
         return ftn;
     }
@@ -440,17 +442,17 @@ namespace evoBasic{
         auto iter_il_type = mapILType(for_node->begin->type);
 
         // store value of begin/end/step expression into begin/end/step variable
-        current->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex());
         loadExpressionValue(for_node->begin,current);
+        current->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex());
         current->Stloc(iter_il_type);
 
-        current->Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex());
         loadExpressionValue(for_node->end,current);
+        current->Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex());
         current->Stloc(iter_il_type);
 
         if(for_node->step){
-            current->Push(DataTypeEnum::u16, (data::u16)for_node->step_variable->getLayoutIndex());
             visitExpression(for_node->step,current);
+            current->Push(DataTypeEnum::u16, (data::u16)for_node->step_variable->getLayoutIndex());
             current->Stloc(iter_il_type);
         }
 
@@ -491,7 +493,7 @@ namespace evoBasic{
             case ast::Expression::ArgUse:{
                 auto arg = (ast::Arg*)for_node->iterator;
                 visitArg(arg,cond_block);
-                cond_block->Starg(iter_il_type);
+                cond_block->Starg(iter_il_type);//todo fix bug
                 break;
             }
             case ast::Expression::Local:{
@@ -514,66 +516,13 @@ namespace evoBasic{
          *  beg > end & (iter < end | iter > beg) ||
          *  beg == end & iter != beg
          */
-
-        // beg < end
+        // store value of begin/end/step expression into begin/end/step variable
+        loadExpressionValue(for_node->iterator,cond_block);
         cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex())
-                   .Ldloc(iter_il_type)
-                   .Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex())
-                   .Ldloc(iter_il_type)
-                   .LT(iter_il_type);
-        // iter < beg
-        visitExpression(for_node->iterator,cond_block);
-        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex())
-                   .Ldloc(iter_il_type)
-                   .LT(iter_il_type);
-        // iter > end
-        visitExpression(for_node->iterator,cond_block);
+                .Ldloc(iter_il_type);
         cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex())
-                .Ldloc(iter_il_type)
-                .GT(iter_il_type);
-
-        cond_block->Or()
-                   .And()
-                   .Jif(after_block);
-
-
-
-        // beg > end
-        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex())
-                    .Ldloc(iter_il_type)
-                    .Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex())
-                    .Ldloc(iter_il_type)
-                    .GT(iter_il_type);
-        // iter < end
-        visitExpression(for_node->iterator,cond_block);
-        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex())
-                    .Ldloc(iter_il_type)
-                    .LT(iter_il_type);
-        // iter > beg
-        visitExpression(for_node->iterator,cond_block);
-        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex())
-                .Ldloc(iter_il_type)
-                .GT(iter_il_type);
-
-        cond_block->Or()
-                   .And()
-                   .Jif(after_block);
-
-
-
-        // beg == end
-        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex())
-                .Ldloc(iter_il_type)
-                .Push(DataTypeEnum::u16, (data::u16)for_node->end_variable->getLayoutIndex())
-                .Ldloc(iter_il_type)
-                .EQ(iter_il_type);
-        // iter != beg
-        visitExpression(for_node->iterator,cond_block);
-        cond_block->Push(DataTypeEnum::u16, (data::u16)for_node->begin_variable->getLayoutIndex())
-                .Ldloc(iter_il_type)
-                .NE(DataTypeEnum::i32);
-
-        cond_block->And()
+                .Ldloc(iter_il_type);
+        cond_block->Intrinsic(vm::IntrinsicEnum::ItNotInRange)
                    .Jif(after_block);
 
         cond_block->Br(stmt_block);
@@ -988,7 +937,7 @@ namespace evoBasic{
             case ast::Expression::SFld:{
                 auto sfld = static_cast<ast::SFld*>(assign_node->lhs);
                 visitSFld(sfld,current);
-                current->Stfld(mapILType(sfld->type), getTokenRef(sfld));
+                current->Stsfld(mapILType(sfld->type), getTokenRef(sfld));
                 break;
             }
         }

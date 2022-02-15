@@ -862,7 +862,7 @@ namespace evoBasic::il{
     void Module::fillSymbolDetail(CompileTimeContext *context) {
         for(auto member : getMembers()){
             auto member_symbol = member->prepareSymbol();
-            member->fillSymbolDetail(nullptr);
+            member->fillSymbolDetail(context);
             symbol->add(member_symbol);
         }
     }

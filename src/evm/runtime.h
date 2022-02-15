@@ -15,6 +15,7 @@ namespace evoBasic::vm{
     class RuntimeContext;
     class TokenTable;
     class Class;
+    class Module;
 
     enum class RuntimeKind{
         Context,Class,Enum,Module,Record,Interface,Function,
@@ -142,10 +143,13 @@ namespace evoBasic::vm{
 
     class StaticFieldSlot : public Runtime{
         friend evoBasic::vm::RuntimeContext;
+        friend Class;
+        friend Module;
         data::u64 offset = -1;
         il::SFld *il_info = nullptr;
-        Class *owner = nullptr;
+        Runtime *owner = nullptr;
     public:
+        StaticFieldSlot(Module *owner,data::u64 offset,il::SFld *info);
         StaticFieldSlot(Class *owner,data::u64 offset,il::SFld *info);
         RuntimeKind getKind()override{ return RuntimeKind::StaticFieldSlot; }
         data::Byte *getAddress();
@@ -158,6 +162,13 @@ namespace evoBasic::vm{
     public:
         Module(TokenTable *table,il::Module *info);
         RuntimeKind getKind()override{ return RuntimeKind::Module; }
+
+        template<typename T>
+        T address(StaticFieldSlot *slot){
+            return (T)(static_field_memory + slot->offset);
+        }
+
+        ~Module();
     };
 
     class Record : public NameSpace,public Sizeable{
@@ -179,19 +190,14 @@ namespace evoBasic::vm{
         Class(TokenTable *table,il::Class *info);
         RuntimeKind getKind()override{ return RuntimeKind::Class; }
         Function *virtualFunctionDispatch(VirtualFtnSlot slot);
-        template<typename T>
-        T read(StaticFieldSlot *slot){
 
-        }
-        template<typename T>
-        void write(StaticFieldSlot *slot, T value){
-
-        }
         template<typename T>
         T address(StaticFieldSlot *slot){
-
+            return (T)(static_field_memory + slot->offset);
         }
+
         Runtime *find(std::string name)override;
+        ~Class();
     };
 
     class Enum : public NameSpace{
@@ -214,6 +220,8 @@ namespace evoBasic::vm{
         void collectDetailRecursively(Runtime *runtime);
     public:
         explicit RuntimeContext(std::list<il::Document*> &documents);
+
+        void fillModuleStaticField(Runtime *pRuntime);
     };
 
 

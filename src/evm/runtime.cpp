@@ -23,14 +23,7 @@ namespace evoBasic::vm{
         auto fullname = tokens[idx]->getFullName();
         auto first = fullname.front();
         fullname.pop_front();
-
-        if(first == "global"){
-            for(auto name : fullname){
-                target = ((NameSpace*)target)->find(name);
-            }
-            cache[idx] = target;
-        }
-        else if(first == "array"){
+        if(first == "array"){
             auto size = stoi(fullname.front());
             fullname.pop_front();
             fullname.pop_front(); // pop "global"
@@ -38,6 +31,12 @@ namespace evoBasic::vm{
                 target = ((NameSpace*)target)->find(name);
             }
             cache[idx] = new Array(target,size);
+        }
+        else if(first == "global"){
+            for(auto name : fullname){
+                target = ((NameSpace*)target)->find(name);
+            }
+            cache[idx] = target;
         }
         NotNull(cache[idx]);
     }
@@ -195,6 +194,30 @@ namespace evoBasic::vm{
         }
     }
 
+    void RuntimeContext::fillModuleStaticField(Runtime *runtime) {
+        if(runtime->getKind() == RuntimeKind::Module){
+            auto mod = dynamic_cast<Module*>(runtime);
+            data::u64 static_field_size = 0;
+            for(auto member : mod->il_info->getMembers()) {
+                switch (member->getKind()) {
+                    case il::MemberKind::SFld: {
+                        auto sfld = dynamic_cast<il::SFld*>(member);
+                        auto slot = new StaticFieldSlot(mod, static_field_size, sfld);
+                        auto sfld_name = sfld->getNameToken()->getDef()->getName();
+                        mod->childs.insert({sfld_name,slot});
+                        static_field_size += mod->table->getRuntime<Sizeable>(sfld->getTypeToken()->getID())->getByteLength();
+                        break;
+                    }
+                }
+            }
+
+            mod->static_field_memory = (char*)malloc(static_field_size);
+
+            for(auto [_,child] : mod->childs){
+                fillModuleStaticField(child);
+            }
+        }
+    }
     void RuntimeContext::collectDetailRecursively(Runtime *runtime) {
         switch(runtime->getKind()){
             case RuntimeKind::Module: {
@@ -281,6 +304,10 @@ namespace evoBasic::vm{
         include_dependencies.solve();
         for(auto record : include_dependencies.getTopologicalOrder()){
             recordFieldsResolution(record);
+        }
+
+        for(auto [_,runtime] : childs){
+            fillModuleStaticField(runtime);
         }
 
         inherit_dependencies.solve();
@@ -386,15 +413,28 @@ namespace evoBasic::vm{
         return offset;
     }
 
+    StaticFieldSlot::StaticFieldSlot(Module *owner,data::u64 offset, il::SFld *info)
+            : Runtime(nullptr),offset(offset),il_info(info),owner(owner){}
+
     StaticFieldSlot::StaticFieldSlot(Class *owner,data::u64 offset, il::SFld *info)
         : Runtime(nullptr),offset(offset),il_info(info),owner(owner){}
 
     data::Byte *StaticFieldSlot::getAddress() {
-        return owner->address<data::Byte*>(this);
+        switch(owner->getKind()){
+            case RuntimeKind::Module:
+                return dynamic_cast<Module*>(owner)->address<data::Byte*>(this);
+            case RuntimeKind::Class:
+                return dynamic_cast<Class*>(owner)->address<data::Byte*>(this);
+        }
     }
 
     Module::Module(TokenTable *table, il::Module *info)
         : NameSpace(table), il_info(info){}
+
+    Module::~Module() {
+        if(static_field_memory)
+            free(static_field_memory);
+    }
 
     Record::Record(TokenTable *table, il::Record *info)
         : NameSpace(table),il_info(info){}
@@ -411,6 +451,11 @@ namespace evoBasic::vm{
 
     Function *Class::virtualFunctionDispatch(VirtualFtnSlot slot) {
         return vtable[slot.getOffset()];
+    }
+
+    Class::~Class() {
+        if(static_field_memory)
+            free(static_field_memory);
     }
 
     Enum::Enum(TokenTable *table, il::Enum *info)
