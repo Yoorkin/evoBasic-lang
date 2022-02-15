@@ -610,7 +610,7 @@ namespace evoBasic::il{
         switch (type.getKind()) {
             case DataTypeEnum::record:
             case DataTypeEnum::array:
-                return sizeof(TokenRef*) + 2;
+                return 1 + sizeof(TokenRef::ID) + 2;
             default:
                 return 2;
         }
@@ -697,7 +697,7 @@ namespace evoBasic::il{
             read(stream,Bytecode::PtdAcsDef);
             access = AccessFlag::Protected;
         }
-        else PANIC;
+        else PANICMSG(to_string(stream.tellg()));
 
         name = new TokenRef(document,stream);
     }
@@ -755,7 +755,7 @@ namespace evoBasic::il{
         while(predict(stream,Bytecode::ImplDef)){
             impl_interface_list.push_back(new TokenRef(document,stream));
         }
-        Scope::loadMembersFromStream(document,stream);
+        members = Scope::loadMembersFromStream(document,stream);
         read(stream,Bytecode::EndMark);
     }
 
@@ -832,7 +832,7 @@ namespace evoBasic::il{
         : Scope(document,Bytecode::ModuleDef,access,name,std::move(members)){}
 
     Module::Module(Document *document, std::istream &stream) : Scope(document,Bytecode::ModuleDef,stream){
-        loadMembersFromStream(document,stream);
+        members = loadMembersFromStream(document,stream);
         read(stream,Bytecode::EndMark);
     }
 
@@ -862,7 +862,7 @@ namespace evoBasic::il{
     void Module::fillSymbolDetail(CompileTimeContext *context) {
         for(auto member : getMembers()){
             auto member_symbol = member->prepareSymbol();
-            member->fillSymbolDetail(nullptr);
+            member->fillSymbolDetail(context);
             symbol->add(member_symbol);
         }
     }
@@ -884,7 +884,7 @@ namespace evoBasic::il{
     }
 
     Interface::Interface(Document *document, istream &stream) : Scope(document,Bytecode::InterfaceDef,stream){
-        loadMembersFromStream(document,stream);
+        members = loadMembersFromStream(document,stream);
         read(stream,Bytecode::EndMark);
     }
 
@@ -1018,6 +1018,10 @@ namespace evoBasic::il{
         delete type;
     }
 
+    TokenRef *Fld::getTypeToken() {
+        return type;
+    }
+
 
     SFld::SFld(Document *document, AccessFlag access, TokenRef *name, TokenRef *type)
         : Member(document,Bytecode::SFldDef,access,name),type(type){}
@@ -1058,9 +1062,12 @@ namespace evoBasic::il{
     SFld::~SFld() {
         delete type;
     }
-	
+
+    TokenRef *SFld::getTypeToken() {
+        return type;
+    }
+
     void Record::toHex(std::ostream &stream) {
-        write(stream,Bytecode::RecordDef);
         Member::toHex(stream);
         for(auto member : getMembers())member->toHex(stream);
         write(stream,Bytecode::EndMark);
@@ -1077,7 +1084,7 @@ namespace evoBasic::il{
 
     Record::Record(Document *document, istream &stream)
         : Scope(document,Bytecode::RecordDef,stream){
-		loadMembersFromStream(document,stream);
+		members = loadMembersFromStream(document,stream);
 		read(stream,Bytecode::EndMark);
     }
 
@@ -1640,7 +1647,7 @@ namespace evoBasic::il{
             case u64:     return Bytecode::u64;
             case f32:     return Bytecode::f32;
             case f64:     return Bytecode::f64;
-            case ref:     return Bytecode::u64;
+            case ref:     return Bytecode::ref;
             case boolean: return Bytecode::boolean;
             case array:   return Bytecode::array;
             case record:  return Bytecode::record;

@@ -14,6 +14,8 @@ namespace evoBasic::vm{
 
     class RuntimeContext;
     class TokenTable;
+    class Class;
+    class Module;
 
     enum class RuntimeKind{
         Context,Class,Enum,Module,Record,Interface,Function,
@@ -82,7 +84,7 @@ namespace evoBasic::vm{
         template<typename T>
         T *getRuntime(il::TokenDef::ID id){
             if(!cache[id]) loadCache(id);
-            return (T*)cache[id];
+            return dynamic_cast<T*>(cache[id]);
         }
     };
 
@@ -135,16 +137,22 @@ namespace evoBasic::vm{
         il::Fld *il_info = nullptr;
     public:
         FieldSlot(data::u64 offset,il::Fld *info);
+        data::u64 getOffset();
         RuntimeKind getKind()override{ return RuntimeKind::FieldSlot; }
     };
 
     class StaticFieldSlot : public Runtime{
         friend evoBasic::vm::RuntimeContext;
+        friend Class;
+        friend Module;
         data::u64 offset = -1;
         il::SFld *il_info = nullptr;
+        Runtime *owner = nullptr;
     public:
-        StaticFieldSlot(data::u64 offset,il::SFld *info);
+        StaticFieldSlot(Module *owner,data::u64 offset,il::SFld *info);
+        StaticFieldSlot(Class *owner,data::u64 offset,il::SFld *info);
         RuntimeKind getKind()override{ return RuntimeKind::StaticFieldSlot; }
+        data::Byte *getAddress();
     };
 
     class Module : public NameSpace,public Sizeable{
@@ -154,6 +162,13 @@ namespace evoBasic::vm{
     public:
         Module(TokenTable *table,il::Module *info);
         RuntimeKind getKind()override{ return RuntimeKind::Module; }
+
+        template<typename T>
+        T address(StaticFieldSlot *slot){
+            return (T)(static_field_memory + slot->offset);
+        }
+
+        ~Module();
     };
 
     class Record : public NameSpace,public Sizeable{
@@ -175,19 +190,14 @@ namespace evoBasic::vm{
         Class(TokenTable *table,il::Class *info);
         RuntimeKind getKind()override{ return RuntimeKind::Class; }
         Function *virtualFunctionDispatch(VirtualFtnSlot slot);
-        template<typename T>
-        T read(StaticFieldSlot *slot){
 
-        }
-        template<typename T>
-        void write(StaticFieldSlot *slot, T value){
-
-        }
         template<typename T>
         T address(StaticFieldSlot *slot){
-
+            return (T)(static_field_memory + slot->offset);
         }
+
         Runtime *find(std::string name)override;
+        ~Class();
     };
 
     class Enum : public NameSpace{
@@ -197,35 +207,6 @@ namespace evoBasic::vm{
         Enum(TokenTable *table,il::Enum *info);
         RuntimeKind getKind()override{ return RuntimeKind::Enum; }
         il::Enum *late_binding = nullptr;
-    };
-
-    class RecordInstance{
-        Record *record = nullptr;
-        char *field_memory = nullptr;
-    public:
-        template<typename T>
-        T *getField(FieldSlot slot){
-
-        }
-    };
-
-    struct ClassInstance{
-        Class *klass = nullptr;
-        char *field_memory = nullptr;
-    public:
-        template<typename T>
-        T read(FieldSlot *slot){
-
-        }
-        template<typename T>
-        void write(FieldSlot *slot,T value){
-
-        }
-        template<typename T>
-        T address(FieldSlot *slot){
-
-        }
-        Class *getClass();
     };
 
     class RuntimeContext : public NameSpace{
@@ -239,6 +220,8 @@ namespace evoBasic::vm{
         void collectDetailRecursively(Runtime *runtime);
     public:
         explicit RuntimeContext(std::list<il::Document*> &documents);
+
+        void fillModuleStaticField(Runtime *pRuntime);
     };
 
 

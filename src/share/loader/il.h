@@ -151,6 +151,7 @@ namespace evoBasic::il{
     };
 
     class Scope : public Member{
+    protected:
         std::list<Member*> members;
     public:
         static std::list<Member*> loadMembersFromStream(Document *document,std::istream &stream);
@@ -231,6 +232,7 @@ namespace evoBasic::il{
     public:
         Fld(Document *document,AccessFlag access,TokenRef *name,TokenRef *type);
         Fld(Document *document,std::istream &stream);
+        TokenRef *getTypeToken();
         std::string toString()override;
         MemberKind getKind()override{ return MemberKind::Fld; }
         DebugInfo *toStructuredInfo()override;
@@ -246,6 +248,7 @@ namespace evoBasic::il{
     public:
         SFld(Document *document,AccessFlag access,TokenRef *name,TokenRef *type);
         SFld(Document *document,std::istream &stream);
+        TokenRef *getTypeToken();
         std::string toString()override;
         MemberKind getKind()override{ return MemberKind::SFld; }
         DebugInfo *toStructuredInfo()override;

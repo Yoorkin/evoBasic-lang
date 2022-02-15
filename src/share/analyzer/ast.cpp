@@ -75,7 +75,20 @@ namespace evoBasic::ast{
     }
 
     DebugInfo *Function::debug() {
-        auto ret = new DebugInfo{Format() << "<Function> " << function_symbol->getName()};
+        Format fmt;
+        fmt << "<Function> " << function_symbol->getName();
+        switch(access){
+            case AccessFlag::Public:
+                fmt << " Public";
+                break;
+            case AccessFlag::Private:
+                fmt << " Private ";
+                break;
+            case AccessFlag::Protected:
+                fmt << " Protected ";
+                break;
+        }
+        auto ret = new DebugInfo{fmt};
         for(auto &option : function_symbol->getArgsOptions()){
             ret->childs.push_back(
                     new DebugInfo{Format() << "<Optional> " << option->getName(),{option->getDefaultArgument()->debug()}}

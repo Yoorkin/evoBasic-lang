@@ -239,6 +239,7 @@ namespace evoBasic{
     std::any TypeAnalyzer::visitFunction(parseTree::Function *function_node, TypeAnalyzerArgs args) {
         auto ast_node = new ast::Function;
         auto function = function_node->function_symbol;
+        ast_node->access = function_node->function_symbol->getAccessFlag();
         args.domain = args.function = ast_node->function_symbol = function;
         //verify default expression of optional parameter
         args.checking_arg_index = 0;
@@ -663,6 +664,7 @@ namespace evoBasic{
             case ast::Expression::SFld:
             case ast::Expression::Assign:
             case ast::Expression::EnumMember:
+            case ast::Expression::TmpPath:
                 ret = ast_rhs;
                 break;
             default:

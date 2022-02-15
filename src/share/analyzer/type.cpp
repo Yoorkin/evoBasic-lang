@@ -336,7 +336,7 @@ namespace evoBasic::type{
 
     std::list<std::string> Symbol::getFullName() {
         list<string> ls;
-        if(getParent()) ls = move(getParent()->getFullName());
+        if(getParent()) ls = getParent()->getFullName();
         ls.push_back(getName());
         return ls;
     }

@@ -13,6 +13,7 @@ namespace evoBasic::vm{
                 case IntrinsicEnum::PutChar: return putchar_;
                 case IntrinsicEnum::GetChar: return getchar_;
                 case IntrinsicEnum::MemSet:  return memset_;
+                case IntrinsicEnum::ItNotInRange: return isIteratorNotInRange;
             }
         }
 
@@ -35,6 +36,22 @@ namespace evoBasic::vm{
                 *ptr = value;
                 ptr++;
             }
+        }
+
+        void isIteratorNotInRange(Stack *operand) {
+            auto end = operand->pop<data::i32>();
+            auto beg = operand->pop<data::i32>();
+            auto iter = operand->pop<data::i32>();
+            /*
+            *  beg < end & (iter < beg | iter > end) ||
+            *  beg > end & (iter < end | iter > beg) ||
+            *  beg == end & iter != beg
+            */
+            bool result = (beg < end && (iter < beg || iter > end) ||
+                beg > end && (iter < end || iter > beg) ||
+                beg == end && iter != beg);
+
+            operand->push((data::boolean)result);
         }
     }
 
