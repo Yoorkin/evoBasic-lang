@@ -67,6 +67,7 @@ int main(int argc,char *argv[]){
     }
     else{
         loader->loadPackages();
+        cout << context.debug() << endl;
         auto entrance = context.getEntrance();
         if(!entrance){
             Logger::error("Sub Main not found.");

@@ -638,7 +638,7 @@ namespace evoBasic::il{
         for(auto inst : insts)inst->toHex(stream);
     }
 
-    BasicBlock::BasicBlock(Document *document) : Node(document){}
+    BasicBlock::BasicBlock(Document *document,std::string tag) : Node(document),tag(tag){}
 
     DebugInfo *BasicBlock::toStructuredInfo() {
         auto ret = Node::toStructuredInfo();
@@ -649,7 +649,7 @@ namespace evoBasic::il{
     }
 
     std::string BasicBlock::toString() {
-        return to_string(getAddress());
+        return Format()<< getAddress() << ' ' << tag;
     }
 
     TokenRef::TokenRef(Document *document, data::u64 id) : Node(document,Bytecode::TokenRef),id(id){}

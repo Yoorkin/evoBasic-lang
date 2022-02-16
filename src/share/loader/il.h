@@ -613,6 +613,7 @@ namespace evoBasic::il{
         Inst::ByteSize address = -1;
         Inst::ByteSize size = -1;
         std::vector<Inst*> insts;
+        std::string tag;
     public:
         Inst::ByteSize getAddress();
         Inst::ByteSize getByteSize();
@@ -622,7 +623,7 @@ namespace evoBasic::il{
         DebugInfo *toStructuredInfo()override;
         void toHex(std::ostream &stream)override;
 
-        BasicBlock(Document *document);
+        BasicBlock(Document *document,std::string tag);
 
         BasicBlock &Br(BasicBlock *block);
         BasicBlock &Jif(BasicBlock *block);

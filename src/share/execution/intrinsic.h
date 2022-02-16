@@ -9,7 +9,7 @@
 
 namespace evoBasic::vm{
 
-    enum class IntrinsicEnum {PutChar,GetChar,MemSet,ItNotInRange,PutInt};
+    enum class IntrinsicEnum {PutChar,GetChar,MemSet,ItNotInRange,PutInt,DebugBool};
 
     using IntrinsicHandler = std::function<void(Stack*)>;
 
@@ -26,6 +26,8 @@ namespace evoBasic::vm{
         void isIteratorNotInRange(Stack *operand);
 
         void putInt(Stack *operand);
+
+        void DebugBool(Stack *operand);
 
     }
 

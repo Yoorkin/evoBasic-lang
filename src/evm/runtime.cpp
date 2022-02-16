@@ -355,6 +355,28 @@ namespace evoBasic::vm{
     }
 
 
+    void debugRuntimeSymbol(DebugInfo *info,std::ostream &stream,std::string indent){
+        stream << indent << info->text;
+        if(!info->childs.empty()){
+            stream << " {\n";
+            for(auto i : info->childs){
+                debugRuntimeSymbol(i,stream,indent + "    ");
+            }
+            stream << indent << "}";
+        }
+        stream << '\n';
+    }
+
+
+    std::string RuntimeContext::debug() {
+        auto info = global->toStructuredInfo();
+        std::stringstream stream;
+        stream << "# Runtime Symbol \n";
+        debugRuntimeSymbol(info,stream,"");
+        return stream.str();
+    }
+
+
     Runtime::Runtime(TokenTable *table) : table(table) {}
 
     TokenTable *Runtime::getTokenTable() {
@@ -432,8 +454,45 @@ namespace evoBasic::vm{
         return params_length;
     }
 
+    DebugInfo *Function::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " Function";
+        Format p;
+        p << "Param(" << getParamsStackFrameLength() << "):";
+        for(int i=0;i<getParams().size();i++){
+            p << getParamOffset(i);
+            if(i!=getParams().size()-1){
+                p << ',';
+            }
+        }
+
+        Format l;
+        l << "Local(" << getLocalsStackFrameLength() << "):";
+        for(int i=0;i<getLocals().size();i++){
+            l << getLocalOffset(i);
+            if(i!=getLocals().size()-1){
+                l << ',';
+            }
+        }
+
+        return new DebugInfo{
+            fmt,{
+                new DebugInfo{p},
+                new DebugInfo{l}
+            }
+        };
+    }
+
     ForeignFunction::ForeignFunction(std::string library, std::string name, il::Ext *info)
         : Runtime(nullptr),name(name),il_info(info){}
+
+    DebugInfo *ForeignFunction::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " FFI(\"" << library << "\",\"" << name << "\")";
+        return new DebugInfo{fmt};
+    }
 
     VirtualFtnSlot::VirtualFtnSlot(data::u64 offset, il::VFtn *info)
         : Runtime(nullptr),offset(offset),il_info(info){}
@@ -442,11 +501,25 @@ namespace evoBasic::vm{
         return offset;
     }
 
+    DebugInfo *VirtualFtnSlot::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " VirtualFtnSlot(" << offset << ")";
+        return new DebugInfo{fmt};
+    }
+
     FieldSlot::FieldSlot(data::u64 offset, il::Fld *info)
         : Runtime(nullptr),offset(offset),il_info(info){}
 
     data::u64 FieldSlot::getOffset() {
         return offset;
+    }
+
+    DebugInfo *FieldSlot::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " FieldSlot(" << offset << ")";
+        return new DebugInfo{fmt};
     }
 
     StaticFieldSlot::StaticFieldSlot(Module *owner,data::u64 offset, il::SFld *info)
@@ -469,6 +542,13 @@ namespace evoBasic::vm{
         }
     }
 
+    DebugInfo *StaticFieldSlot::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " StaticFieldSlot(" << offset << ")";
+        return new DebugInfo{fmt};
+    }
+
     Module::Module(TokenTable *table, il::Module *info)
         : NameSpace(table), il_info(info){}
 
@@ -481,8 +561,25 @@ namespace evoBasic::vm{
         return static_field_memory + offset;
     }
 
+    DebugInfo *Module::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " Module";
+        auto ret =  new DebugInfo{fmt};
+        for(auto [_,rt] : getChilds())
+            ret->childs.push_back(rt->toStructuredInfo());
+        return ret;
+    }
+
     Record::Record(TokenTable *table, il::Record *info)
         : NameSpace(table),il_info(info){}
+
+    DebugInfo *Record::toStructuredInfo() {
+        return new DebugInfo{
+            Format() << il_info->getNameToken()->getDef()->getName()
+                     << " Record(" << byte_length << ")"
+        };
+    }
 
 
     Class::Class(TokenTable *table, il::Class *info)
@@ -507,8 +604,25 @@ namespace evoBasic::vm{
         return static_field_memory + offset;
     }
 
+    DebugInfo *Class::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " Class";
+        auto ret =  new DebugInfo{fmt};
+        for(auto [_,rt] : getChilds())
+            ret->childs.push_back(rt->toStructuredInfo());
+        return ret;
+    }
+
     Enum::Enum(TokenTable *table, il::Enum *info)
         : NameSpace(table),il_info(info){}
+
+    DebugInfo *Enum::toStructuredInfo() {
+        return new DebugInfo{
+            Format() << il_info->getNameToken()->getDef()->getName()
+                     << " Enum"
+        };
+    }
 
     BuiltInKind BuiltIn::getBuiltInKind() {
         return kind;
@@ -535,6 +649,14 @@ namespace evoBasic::vm{
         size = getBuiltInSize(kind);
     }
 
+    std::vector<std::string> builtin_to_string = {"boolean","u8","u16","u32","u64","i8","i16","i32","i64","f32","f64"};
+    DebugInfo *BuiltIn::toStructuredInfo() {
+        Format fmt;
+        fmt << std::to_string((data::u64)this)
+            << " BuiltIn " << builtin_to_string[(int)kind];
+        return new DebugInfo{fmt};
+    }
+
     Array::Array(Runtime *element, data::u64 count)
             : Runtime(nullptr),element_type(element),count(count){
         size = count * dynamic_cast<Sizeable*>(element)->getByteLength();
@@ -548,6 +670,14 @@ namespace evoBasic::vm{
         return count;
     }
 
+    DebugInfo *Array::toStructuredInfo() {
+        Format fmt;
+        fmt << std::to_string((data::u64)this)
+            << " Array["<<count<<"]"
+            << std::to_string((data::u64)element_type);
+        return new DebugInfo{fmt};
+    }
+
 
     data::Byte *Global::getStaticFieldPtr(data::u64 offset) {
         return global_static_field_memory + offset;
@@ -555,6 +685,15 @@ namespace evoBasic::vm{
 
     Global::~Global() {
         free(global_static_field_memory);
+    }
+
+    DebugInfo *Global::toStructuredInfo() {
+        Format fmt;
+        fmt << "Global";
+        auto ret =  new DebugInfo{fmt};
+        for(auto [_,rt] : getChilds())
+            ret->childs.push_back(rt->toStructuredInfo());
+        return ret;
     }
 }
 

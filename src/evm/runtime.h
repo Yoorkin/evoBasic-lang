@@ -32,6 +32,7 @@ namespace evoBasic::vm{
         explicit Runtime(TokenTable *table);
         virtual RuntimeKind getKind()=0;
         TokenTable *getTokenTable();
+        virtual DebugInfo *toStructuredInfo()=0;
     };
 
     class Sizeable{
@@ -55,6 +56,7 @@ namespace evoBasic::vm{
         Runtime *getElementRuntime();
         data::u64 getElementCount();
         RuntimeKind getKind()override{ return RuntimeKind::Array; }
+        DebugInfo *toStructuredInfo()override;
     };
 
     class BuiltIn : public Runtime, public Sizeable{
@@ -63,6 +65,7 @@ namespace evoBasic::vm{
         explicit BuiltIn(BuiltInKind kind);
         RuntimeKind getKind()override{ return RuntimeKind::BuiltIn; }
         BuiltInKind getBuiltInKind();
+        DebugInfo *toStructuredInfo()override;
     };
 
     class NameSpace : public Runtime{
@@ -111,6 +114,7 @@ namespace evoBasic::vm{
         data::u64 getParamsStackFrameLength();
         data::u64 getLocalsStackFrameLength();
         data::u64 getStackFrameLength();
+        DebugInfo *toStructuredInfo()override;
     };
 
     class ForeignFunction : public Runtime{
@@ -120,6 +124,7 @@ namespace evoBasic::vm{
     public:
         ForeignFunction(std::string library,std::string name,il::Ext *info);
         RuntimeKind getKind()override{ return RuntimeKind::ForeignFunction; }
+        DebugInfo *toStructuredInfo()override;
     };
 
     class VirtualFtnSlot : public Runtime{
@@ -130,6 +135,7 @@ namespace evoBasic::vm{
         VirtualFtnSlot(data::u64 offset,il::VFtn *info);
         RuntimeKind getKind()override{ return RuntimeKind::VirtualFtnSlot; }
         data::u64 getOffset();
+        DebugInfo *toStructuredInfo()override;
     };
 
     class FieldSlot : public Runtime{
@@ -140,6 +146,7 @@ namespace evoBasic::vm{
         FieldSlot(data::u64 offset,il::Fld *info);
         data::u64 getOffset();
         RuntimeKind getKind()override{ return RuntimeKind::FieldSlot; }
+        DebugInfo *toStructuredInfo()override;
     };
 
     class StaticFieldSlot : public Runtime{
@@ -156,6 +163,7 @@ namespace evoBasic::vm{
         StaticFieldSlot(Global *owner,data::u64 offset,il::SFld *info);
         RuntimeKind getKind()override{ return RuntimeKind::StaticFieldSlot; }
         data::Byte *getAddress();
+        DebugInfo *toStructuredInfo()override;
     };
 
     class Module : public NameSpace,public Sizeable{
@@ -166,6 +174,7 @@ namespace evoBasic::vm{
         Module(TokenTable *table,il::Module *info);
         RuntimeKind getKind()override{ return RuntimeKind::Module; }
         data::Byte *getStaticFieldPtr(data::u64 offset);
+        DebugInfo *toStructuredInfo()override;
         ~Module();
     };
 
@@ -176,6 +185,7 @@ namespace evoBasic::vm{
     public:
         Record(TokenTable *table,il::Record *info);
         RuntimeKind getKind()override{ return RuntimeKind::Record; }
+        DebugInfo *toStructuredInfo()override;
     };
 
     class Class : public NameSpace,public Sizeable{
@@ -191,6 +201,7 @@ namespace evoBasic::vm{
 
         data::Byte *getStaticFieldPtr(data::u64 offset);
         Runtime *find(std::string name)override;
+        DebugInfo *toStructuredInfo()override;
         ~Class();
     };
 
@@ -201,6 +212,7 @@ namespace evoBasic::vm{
         explicit Global(): NameSpace(nullptr){}
         RuntimeKind getKind()override{ return RuntimeKind::Global; }
         data::Byte *getStaticFieldPtr(data::u64 offset);
+        DebugInfo *toStructuredInfo()override;
         ~Global();
     };
 
@@ -212,6 +224,7 @@ namespace evoBasic::vm{
         Enum(TokenTable *table,il::Enum *info);
         RuntimeKind getKind()override{ return RuntimeKind::Enum; }
         il::Enum *late_binding = nullptr;
+        DebugInfo *toStructuredInfo()override;
     };
 
 
@@ -230,7 +243,7 @@ namespace evoBasic::vm{
         Function *getEntrance();
         Global *getGlobalRuntime();
         explicit RuntimeContext(std::list<il::Document*> &documents);
-
+        std::string debug();
         ~RuntimeContext();
     };
 
