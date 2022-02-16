@@ -107,6 +107,7 @@ namespace evoBasic{
 
         ast::Member *visitAllMember(type::Domain *domain, parseTree::Member *member, TypeAnalyzerArgs args);
 
+        std::any visitExit(parseTree::Exit *exit_node, TypeAnalyzerArgs args);
     };
 }
 

@@ -556,7 +556,7 @@ namespace evoBasic{
     }
 
     void ILGen::visitReturn(ast::Return *return_node, il::BasicBlock *current) {
-        visitExpression(return_node->expr,current);
+        loadExpressionValue(return_node->expr,current);
         current->Ret();
     }
 
@@ -949,7 +949,6 @@ namespace evoBasic{
             case ast::Expression::Binary:
             case ast::Expression::Cast:
             case ast::Expression::Parentheses:
-            case ast::Expression::Element:
             case ast::Expression::Ftn:
             case ast::Expression::VFtn:
             case ast::Expression::SFtn:
@@ -966,6 +965,12 @@ namespace evoBasic{
                 auto assign = static_cast<ast::Assign*>(cast_node->expr);
                 visitAssign(assign,current);
                 loadAssignLhsValue(assign,current);
+                break;
+            }
+            case ast::Expression::Element:{
+                auto element = static_cast<ast::ArrayElement*>(cast_node->expr);
+                visitArrayElement(element,current);
+                current->Ldelem(mapILType(element->type));
                 break;
             }
             case ast::Expression::Local:{
@@ -1076,6 +1081,7 @@ namespace evoBasic{
             }
             case ast::Expression::ArgUse:{
                 auto arg = static_cast<ast::Arg*>(element_node->offset);
+                visitArg(arg,current);
                 if(arg->is_ref){
                     current->Ldarg(DataTypeEnum::ref)
                             .Load(mapILType(arg->type));

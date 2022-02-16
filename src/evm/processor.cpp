@@ -468,7 +468,7 @@ namespace evoBasic::vm{
                     forEachType(OpLoadHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Starg:
-                    forEachType(OpLdargHandler, operand, getCurrentEnv());
+                    forEachType(OpStargHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Store:
                     forEachType(OpStoreHandler, operand, getCurrentEnv());
@@ -530,11 +530,10 @@ namespace evoBasic::vm{
                     break;
                 }
                 case Bytecode::Ldsflda:{
-                    auto klass = *((Class**)operand.pop<data::Byte*>());
                     getCurrentEnv().consume<data::Byte>();
                     auto token_id = getCurrentEnv().consume<il::TokenDef::ID>();
                     auto field_slot = getCurrentEnv().getFunction()->getTokenTable()->getRuntime<StaticFieldSlot>(token_id);
-                    auto address = klass->address<data::Byte*>(field_slot);
+                    auto address = field_slot->getAddress();
                     operand.push(address);
                     break;
                 }

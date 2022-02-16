@@ -14,6 +14,7 @@ namespace evoBasic::vm{
                 case IntrinsicEnum::GetChar: return getchar_;
                 case IntrinsicEnum::MemSet:  return memset_;
                 case IntrinsicEnum::ItNotInRange: return isIteratorNotInRange;
+                case IntrinsicEnum::PutInt:       return putInt;
             }
         }
 
@@ -52,6 +53,11 @@ namespace evoBasic::vm{
                 beg == end && iter != beg);
 
             operand->push((data::boolean)result);
+        }
+
+        void putInt(Stack *operand){
+            auto value = operand->pop<data::i32>();
+            std::cout<<std::endl<<'#'<<value<<std::endl;
         }
     }
 

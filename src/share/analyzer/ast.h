@@ -208,8 +208,11 @@ namespace evoBasic::ast{
     };
 
     struct Exit : Statement{
-        Exit(){stmt_flag = exit_;}
-        enum {For,While,Sub}exit_flag;
+        enum Kind{For,While,Sub}exit_flag;
+        Exit(Kind kind){
+            stmt_flag = exit_;
+            exit_flag = kind;
+        }
         DebugInfo *debug()override;
     };
 

@@ -67,7 +67,7 @@ int main(int argc,char *argv[]){
     }
     else{
         loader->loadPackages();
-        auto entrance = dynamic_cast<Function*>(context.find("main"));
+        auto entrance = context.getEntrance();
         if(!entrance){
             Logger::error("Sub Main not found.");
         }

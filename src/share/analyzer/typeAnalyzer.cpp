@@ -1149,5 +1149,15 @@ namespace evoBasic{
         return (ast::Statement*)new ast::Continue;
     }
 
+    std::any TypeAnalyzer::visitExit(parseTree::stmt::Exit *exit_node, TypeAnalyzerArgs args) {
+        switch(exit_node->exit_flag){
+            case parseTree::stmt::Exit::For:
+                return (ast::Statement*)new ast::Exit(ast::Exit::For);
+            case parseTree::stmt::Exit::While:
+                return (ast::Statement*)new ast::Exit(ast::Exit::While);
+            case parseTree::stmt::Exit::Sub:
+                return (ast::Statement*)new ast::Exit(ast::Exit::Sub);
+        }
+    }
 
 }

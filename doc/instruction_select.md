@@ -52,7 +52,7 @@
 |`Cast(Cast,Target)`|Cast|
 |`Cast(Assign,Target)`|load value of assignment,Cast|
 |`Cast(Parentheses,Target)`|Cast|
-|`Cast(ArrayElement,Target)`||
+|`Cast(ArrayElement,Target)`|Ldelem,Cast|
 |`Cast(FtnCall,Target)`|Cast|
 |`Cast(VFtnCall,Target)`|Cast|
 |`Cast(SFtnCall,Target)`|Cast|

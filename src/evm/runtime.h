@@ -16,9 +16,10 @@ namespace evoBasic::vm{
     class TokenTable;
     class Class;
     class Module;
+    class Global;
 
     enum class RuntimeKind{
-        Context,Class,Enum,Module,Record,Interface,Function,
+        Global,Class,Enum,Module,Record,Interface,Function,
         VirtualFtnSlot,FieldSlot,StaticFieldSlot,
         ForeignFunction,BuiltIn,Array
     };
@@ -145,12 +146,14 @@ namespace evoBasic::vm{
         friend evoBasic::vm::RuntimeContext;
         friend Class;
         friend Module;
+        friend RuntimeContext;
         data::u64 offset = -1;
         il::SFld *il_info = nullptr;
         Runtime *owner = nullptr;
     public:
         StaticFieldSlot(Module *owner,data::u64 offset,il::SFld *info);
         StaticFieldSlot(Class *owner,data::u64 offset,il::SFld *info);
+        StaticFieldSlot(Global *owner,data::u64 offset,il::SFld *info);
         RuntimeKind getKind()override{ return RuntimeKind::StaticFieldSlot; }
         data::Byte *getAddress();
     };
@@ -158,16 +161,11 @@ namespace evoBasic::vm{
     class Module : public NameSpace,public Sizeable{
         friend evoBasic::vm::RuntimeContext;
         il::Module *il_info = nullptr;
-        char *static_field_memory = nullptr;
+        data::Byte *static_field_memory = nullptr;
     public:
         Module(TokenTable *table,il::Module *info);
         RuntimeKind getKind()override{ return RuntimeKind::Module; }
-
-        template<typename T>
-        T address(StaticFieldSlot *slot){
-            return (T)(static_field_memory + slot->offset);
-        }
-
+        data::Byte *getStaticFieldPtr(data::u64 offset);
         ~Module();
     };
 
@@ -182,7 +180,7 @@ namespace evoBasic::vm{
 
     class Class : public NameSpace,public Sizeable{
         friend evoBasic::vm::RuntimeContext;
-        char *static_field_memory = nullptr;
+        data::Byte *static_field_memory = nullptr;
         Class *base_class = nullptr;
         std::vector<Function*> vtable;
         il::Class *il_info = nullptr;
@@ -191,14 +189,21 @@ namespace evoBasic::vm{
         RuntimeKind getKind()override{ return RuntimeKind::Class; }
         Function *virtualFunctionDispatch(VirtualFtnSlot slot);
 
-        template<typename T>
-        T address(StaticFieldSlot *slot){
-            return (T)(static_field_memory + slot->offset);
-        }
-
+        data::Byte *getStaticFieldPtr(data::u64 offset);
         Runtime *find(std::string name)override;
         ~Class();
     };
+
+    class Global : public NameSpace{
+        friend evoBasic::vm::RuntimeContext;
+        data::Byte *global_static_field_memory = nullptr;
+    public:
+        explicit Global(): NameSpace(nullptr){}
+        RuntimeKind getKind()override{ return RuntimeKind::Global; }
+        data::Byte *getStaticFieldPtr(data::u64 offset);
+        ~Global();
+    };
+
 
     class Enum : public NameSpace{
         friend evoBasic::vm::RuntimeContext;
@@ -209,19 +214,24 @@ namespace evoBasic::vm{
         il::Enum *late_binding = nullptr;
     };
 
-    class RuntimeContext : public NameSpace{
+
+    class RuntimeContext{
+        Global *global = nullptr;
         std::list<TokenTable*> token_tables;
         using NameRuntimePair = std::pair<std::string,Runtime*>;
         std::optional<NameRuntimePair> collectSymbolRecursively(TokenTable *table,il::Member *member);
         void collectDependencies(Runtime *parent, Runtime *current, Dependencies<Class*> &inherit, Dependencies<Record*> &include);
         void recordFieldsResolution(Record *record);
         void classFieldsAndVTableResolution(Class *cls);
-        RuntimeKind getKind()override{ return RuntimeKind::Context; }
         void collectDetailRecursively(Runtime *runtime);
+        void fillModuleStaticField(Runtime *runtime);
+        void fillGlobalStaticFields(std::list<std::pair<TokenTable*,il::Document*>> &document_list);
     public:
+        Function *getEntrance();
+        Global *getGlobalRuntime();
         explicit RuntimeContext(std::list<il::Document*> &documents);
 
-        void fillModuleStaticField(Runtime *pRuntime);
+        ~RuntimeContext();
     };
 
 

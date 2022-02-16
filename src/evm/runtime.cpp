@@ -19,7 +19,7 @@ namespace evoBasic::vm{
     }
 
     void TokenTable::loadCache(data::u64 idx) {
-        Runtime *target = context;
+        Runtime *target = context->getGlobalRuntime();
         auto fullname = tokens[idx]->getFullName();
         auto first = fullname.front();
         fullname.pop_front();
@@ -211,7 +211,7 @@ namespace evoBasic::vm{
                 }
             }
 
-            mod->static_field_memory = (char*)malloc(static_field_size);
+            mod->static_field_memory = (data::Byte*)malloc(static_field_size);
 
             for(auto [_,child] : mod->childs){
                 fillModuleStaticField(child);
@@ -232,8 +232,8 @@ namespace evoBasic::vm{
                 }
                 break;
             }
-            case RuntimeKind::Context:
-                for(auto [_,child] : dynamic_cast<RuntimeContext*>(runtime)->childs){
+            case RuntimeKind::Global:
+                for(auto [_,child] : dynamic_cast<Global*>(runtime)->childs){
                     collectDetailRecursively(child);
                 }
                 break;
@@ -261,7 +261,29 @@ namespace evoBasic::vm{
         }
     }
 
-    RuntimeContext::RuntimeContext(std::list<il::Document*> &documents) : NameSpace(nullptr) {
+    void RuntimeContext::fillGlobalStaticFields(std::list<std::pair<TokenTable*,il::Document*>> &document_list) {
+        data::u64 global_field_size = 0;
+        for(auto [token_table,document] : document_list){
+            for(auto member : document->getMembers()){
+                switch(member->getKind()){
+                    case il::MemberKind::SFld:{
+                        auto sfld = dynamic_cast<il::SFld*>(member);
+                        auto sfld_name = sfld->getNameToken()->getDef()->getName();
+                        auto type_token_id = sfld->getTypeToken()->getID();
+                        global_field_size += token_table->getRuntime<Sizeable>(type_token_id)->getByteLength();
+                        auto slot = new StaticFieldSlot(global,global_field_size,sfld);
+                        global->childs.insert({sfld_name,slot});
+                        break;
+                    }
+                }
+
+            }
+        }
+        global->global_static_field_memory = (data::Byte*)malloc(global_field_size);
+    }
+
+    RuntimeContext::RuntimeContext(std::list<il::Document*> &documents){
+        global = new Global();
 
         std::vector<std::pair<std::string,vm::BuiltIn*>> builtin_list = {
             {"boolean",new BuiltIn(BuiltInKind::boolean)},
@@ -276,7 +298,7 @@ namespace evoBasic::vm{
             {"u64",new BuiltIn(BuiltInKind::u64)}
         };
 
-        for(auto builtin : builtin_list) childs.insert(builtin);
+        for(auto builtin : builtin_list) global->childs.insert(builtin);
 
         std::list<std::pair<TokenTable*,il::Document*>> tmp;
         for(auto document : documents){
@@ -289,7 +311,7 @@ namespace evoBasic::vm{
             for(auto member : document->getMembers()){
                 auto child = collectSymbolRecursively(token_table,member);
                 if(child.has_value()){
-                    this->childs.insert(child.value());
+                    global->childs.insert(child.value());
                 }
             }
         }
@@ -297,8 +319,8 @@ namespace evoBasic::vm{
         Dependencies<Class*> inherit_dependencies;
         Dependencies<Record*> include_dependencies;
 
-        for(auto [_,runtime] : childs){
-            collectDependencies(this,runtime,inherit_dependencies,include_dependencies);
+        for(auto [_,runtime] : global->childs){
+            collectDependencies(global,runtime,inherit_dependencies,include_dependencies);
         }
 
         include_dependencies.solve();
@@ -306,16 +328,30 @@ namespace evoBasic::vm{
             recordFieldsResolution(record);
         }
 
-        for(auto [_,runtime] : childs){
+        for(auto [_,runtime] : global->childs){
             fillModuleStaticField(runtime);
         }
+
+        fillGlobalStaticFields(tmp);
 
         inherit_dependencies.solve();
         for(auto cls : inherit_dependencies.getTopologicalOrder()){
             classFieldsAndVTableResolution(cls);
         }
 
-        collectDetailRecursively(this);
+        collectDetailRecursively(global);
+    }
+
+    RuntimeContext::~RuntimeContext() {
+        delete global;
+    }
+
+    Function *RuntimeContext::getEntrance() {
+        return dynamic_cast<Function*>(global->find("main"));
+    }
+
+    Global *RuntimeContext::getGlobalRuntime() {
+        return global;
     }
 
 
@@ -419,12 +455,17 @@ namespace evoBasic::vm{
     StaticFieldSlot::StaticFieldSlot(Class *owner,data::u64 offset, il::SFld *info)
         : Runtime(nullptr),offset(offset),il_info(info),owner(owner){}
 
+    StaticFieldSlot::StaticFieldSlot(Global *owner,data::u64 offset, il::SFld *info)
+            : Runtime(nullptr),offset(offset),il_info(info),owner(owner){}
+
     data::Byte *StaticFieldSlot::getAddress() {
         switch(owner->getKind()){
             case RuntimeKind::Module:
-                return dynamic_cast<Module*>(owner)->address<data::Byte*>(this);
+                return dynamic_cast<Module*>(owner)->getStaticFieldPtr(offset);
             case RuntimeKind::Class:
-                return dynamic_cast<Class*>(owner)->address<data::Byte*>(this);
+                return dynamic_cast<Class*>(owner)->getStaticFieldPtr(offset);
+            case RuntimeKind::Global:
+                return dynamic_cast<Global*>(owner)->getStaticFieldPtr(offset);
         }
     }
 
@@ -434,6 +475,10 @@ namespace evoBasic::vm{
     Module::~Module() {
         if(static_field_memory)
             free(static_field_memory);
+    }
+
+    data::Byte *Module::getStaticFieldPtr(data::u64 offset) {
+        return static_field_memory + offset;
     }
 
     Record::Record(TokenTable *table, il::Record *info)
@@ -456,6 +501,10 @@ namespace evoBasic::vm{
     Class::~Class() {
         if(static_field_memory)
             free(static_field_memory);
+    }
+
+    data::Byte *Class::getStaticFieldPtr(data::u64 offset) {
+        return static_field_memory + offset;
     }
 
     Enum::Enum(TokenTable *table, il::Enum *info)
@@ -497,6 +546,15 @@ namespace evoBasic::vm{
 
     data::u64 Array::getElementCount() {
         return count;
+    }
+
+
+    data::Byte *Global::getStaticFieldPtr(data::u64 offset) {
+        return global_static_field_memory + offset;
+    }
+
+    Global::~Global() {
+        free(global_static_field_memory);
     }
 }
 
