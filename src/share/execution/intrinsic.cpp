@@ -8,63 +8,120 @@ namespace evoBasic::vm{
 
     namespace intrinsic{
 
-        IntrinsicHandler getHandler(IntrinsicEnum handler_enum){
-            switch(handler_enum){
-                case IntrinsicEnum::PutChar: return putchar_;
-                case IntrinsicEnum::GetChar: return getchar_;
-                case IntrinsicEnum::MemSet:  return memset_;
-                case IntrinsicEnum::ItNotInRange: return isIteratorNotInRange;
-                case IntrinsicEnum::PutInt:       return putInt;
-                case IntrinsicEnum::DebugBool:      return DebugBool;
-            }
+        template<class Return,class ...Args>
+        void handler_call_parameter_expand(Return(*handler)(Args...),Stack *operand){
+            Return ret = (*handler)((operand->pop<Args>())...);
+            operand->push<Return>(ret);
         }
 
-        void putchar_(Stack *operand) {
-            auto raw = operand->pop<data::u8>();
-            putchar(raw);
+        template<class ...Args>
+        void handler_call_parameter_expand(void(*handler)(Args...),Stack *operand){
+            (*handler)((operand->pop<Args>())...);
         }
 
-        void getchar_(Stack *operand) {
-            auto ret = (data::u8)getchar();
-            operand->push<data::u8>(ret);
+        template<class Return,class ...Args>
+        void handler_call_parameter_expand_with_context(Return(*handler)(Args...),Stack *operand,RuntimeContext *context){
+            Return ret = (*handler)(context,(operand->pop<Args>())...);
+            operand->push<Return>(ret);
         }
 
-        void memset_(Stack *operand) {
-            auto size = operand->pop<data::u32>();
-            auto value = operand->pop<data::u8>();
-            auto ptr = operand->pop<data::u8*>();
+        template<class ...Args>
+        void handler_call_parameter_expand_with_context(void(*handler)(Args...),Stack *operand,RuntimeContext *context){
+            (*handler)(context,(operand->pop<Args>())...);
+        }
 
+
+
+
+        void putchar_(data::u8 c) {
+            putchar(c);
+        }
+
+        data::u8 getchar_() {
+            return (data::u8)getchar();
+        }
+
+        void memset_(data::u32 size,data::u8 value,data::u8 *ptr) {
             while(size--){
                 *ptr = value;
                 ptr++;
             }
         }
 
-        void isIteratorNotInRange(Stack *operand) {
-            auto end = operand->pop<data::i32>();
-            auto beg = operand->pop<data::i32>();
-            auto iter = operand->pop<data::i32>();
+        auto isIteratorNotInRange(data::i32 end,data::i32 beg,data::i32 iter)->data::boolean {
             /*
             *  beg < end & (iter < beg | iter > end) ||
             *  beg > end & (iter < end | iter > beg) ||
             *  beg == end & iter != beg
             */
             bool result = (beg < end && (iter < beg || iter > end) ||
-                beg > end && (iter < end || iter > beg) ||
-                beg == end && iter != beg);
+                            beg > end && (iter < end || iter > beg) ||
+                            beg == end && iter != beg);
 
-            operand->push((data::boolean)result);
+            return ((data::boolean)result);
         }
 
-        void putInt(Stack *operand){
-            auto value = operand->pop<data::i32>();
+        void debugInt(data::i32 value){
             std::cout<<'#'<<value<<std::endl;
         }
 
-        void DebugBool(Stack *operand){
-            auto value = operand->pop<data::boolean>();
+        void debugBool(data::boolean value){
             std::cout<<'#'<<(value==0?"false":"true")<<std::endl;
         }
+
+        auto malloc_(data::u32 size)->data::Byte*{
+            return (data::Byte*)malloc(size);
+        }
+
+        void free_(data::Byte *ptr){
+            free(ptr);
+        }
+
+//        void derefBool(Stack *operand);
+//        void derefU8(Stack *operand);
+//        void derefU16(Stack *operand);
+//        void derefU32(Stack *operand);
+//        void derefU64(Stack *operand);
+//        void derefI8(Stack *operand);
+//        void derefI16(Stack *operand);
+//        void derefI32(Stack *operand);
+//        void derefI64(Stack *operand);
+//        void derefF32(Stack *operand);
+//        void derefF64(Stack *operand);
+//        void derefRef(Stack *operand);
+//
+//        auto getTypeID(Stack *operand)->data::Byte* {
+//
+//        }
+
+        void callHandler(IntrinsicEnum index,Stack *operand,RuntimeContext *context){
+            using enum IntrinsicEnum;
+            switch(index){
+                case PutChar:
+                    handler_call_parameter_expand(putchar_,operand);
+                    break;
+                case GetChar:
+                    handler_call_parameter_expand(getchar_,operand);
+                    break;
+                case ItNotInRange:
+                    handler_call_parameter_expand(isIteratorNotInRange,operand);
+                    break;
+                case MAlloc:
+                    handler_call_parameter_expand(malloc_,operand);
+                    break;
+                case Free:
+                    handler_call_parameter_expand(free_,operand);
+                    break;
+                case DebugBool:
+                    handler_call_parameter_expand(debugBool,operand);
+                    break;
+                case DebugInt:
+                    handler_call_parameter_expand(debugInt,operand);
+                    break;
+                default: PANIC;
+            }
+        }
+
     }
 
 }

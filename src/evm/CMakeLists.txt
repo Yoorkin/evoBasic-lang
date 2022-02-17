@@ -3,7 +3,7 @@ project(evoBasic)
 add_executable(
 		evm
 		main.cpp
-		runtime.cpp
+        ../share/execution/runtime.cpp
 		processor.cpp
 		${EVO_SHARE_SOURCE_DIR}/utils/logger.cpp
 		${EVO_SHARE_SOURCE_DIR}/utils/cmd.cpp

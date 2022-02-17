@@ -15,7 +15,10 @@
 #include <utils/data.h>
 #include <utils/utils.h>
 #include <analyzer/context.h>
-#include <execution/intrinsic.h>
+
+namespace evoBasic::vm{
+    enum class IntrinsicEnum;
+}
 
 namespace evoBasic::il{
     class Class;

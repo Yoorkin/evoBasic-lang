@@ -3,7 +3,7 @@
 //
 
 #include "runtime.h"
-#include <execution/intrinsic.h>
+#include "intrinsic.h"
 
 namespace evoBasic::vm{
     Runtime *NameSpace::find(std::string name) {

@@ -4,7 +4,7 @@
 
 #ifndef EVOBASIC_PROCESSOR_H
 #define EVOBASIC_PROCESSOR_H
-#include "runtime.h"
+#include "execution/runtime.h"
 #include <type_traits>
 #include <loader/bytecode.h>
 #include <stack>

@@ -4,6 +4,8 @@
 
 #include "processor.h"
 #include <loader/bytecode.h>
+#include <execution/intrinsic.h>
+
 namespace evoBasic::vm{
 
     template<template <typename P> class Operation>
@@ -517,7 +519,7 @@ namespace evoBasic::vm{
                 }
                 case Bytecode::Intrinsic:{
                     auto index = getCurrentEnv().consume<data::Byte>();
-                    intrinsic::getHandler((IntrinsicEnum)index)(&operand);
+                    intrinsic::callHandler((IntrinsicEnum)index,&operand,context);
                     break;
                 }
                 case Bytecode::Ldflda:{

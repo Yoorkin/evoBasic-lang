@@ -4,6 +4,7 @@
 
 #include "ilGen.h"
 #include<variant>
+#include<execution/intrinsic.h>
 
 namespace evoBasic{
     using namespace il;

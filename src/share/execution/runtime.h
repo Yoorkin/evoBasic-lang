@@ -7,9 +7,9 @@
 #include <vector>
 #include <map>
 #include <string>
-#include <execution/memory.h>
-#include <execution/intrinsic.h>
-#include <loader/il.h>
+#include "memory.h"
+
+#include "loader/il.h"
 namespace evoBasic::vm{
 
     class RuntimeContext;
