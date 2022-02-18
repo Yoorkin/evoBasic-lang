@@ -22,6 +22,6 @@ add_executable(
 	${EVO_SHARE_SOURCE_DIR}/parser/lexer.cpp
 	${EVO_SHARE_SOURCE_DIR}/parser/parser.cpp
 	${EVO_SHARE_SOURCE_DIR}/parser/parseTree.cpp
-)
+		../share/utils/unicode.h)
 
 

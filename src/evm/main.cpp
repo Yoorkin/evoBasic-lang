@@ -22,6 +22,8 @@
 #include "execution/runtime.h"
 #include "processor.h"
 
+#include "utils/unicode.h"
+
 using namespace std;
 using namespace evoBasic;
 using namespace evoBasic::vm;
