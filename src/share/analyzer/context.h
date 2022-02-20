@@ -32,7 +32,7 @@ namespace evoBasic{
 
         using Primitive = type::primitive::Primitive;
         std::vector<Primitive*> primitive_vector;
-        std::vector<std::string> operators_name;
+        std::vector<unicode::Utf8String> operators_name;
         type::primitive::VariantClass *variant_class = nullptr;
         type::Error *error_symbol = nullptr;
         type::Class *object_class = nullptr;
@@ -45,7 +45,7 @@ namespace evoBasic{
         type::Class *getObjectClass()const;
         type::Class *getStringClass()const;
         type::Error *getErrorPrototype()const;
-        std::string getOperatorName()const;
+        unicode::Utf8String getOperatorName()const;
     };
 
     class ConversionRules{
@@ -79,7 +79,7 @@ namespace evoBasic{
 
         CompileTimeContext(const CompileTimeContext&)=delete;
         CompileTimeContext();
-        type::Symbol *findSymbol(std::list<std::string> full_name);
+        type::Symbol *findSymbol(std::list<unicode::Utf8String> full_name);
         type::Module *getGlobal();
         type::Function *getEntrance();
         void setEntrance(type::Function *function);

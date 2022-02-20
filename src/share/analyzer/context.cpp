@@ -70,7 +70,7 @@ namespace evoBasic{
         return string_class;
     }
 
-    std::string BuiltIn::getOperatorName() const {
+    unicode::Utf8String BuiltIn::getOperatorName() const {
         return std::string();
     }
 
@@ -238,7 +238,7 @@ namespace evoBasic{
         return conversion_rules;
     }
 
-    type::Symbol *CompileTimeContext::findSymbol(list<string> full_name) {
+    type::Symbol *CompileTimeContext::findSymbol(list<unicode::Utf8String> full_name) {
         type::Symbol *current = getGlobal();
         if(full_name.front() != current->getName())
             PANICMSG(full_name.front());

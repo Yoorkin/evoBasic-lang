@@ -2,16 +2,17 @@
 #define EVO_ANALYZER_HELPER
 #include <string>
 #include <parser/parseTree.h>
+#include <utils/unicode.h>
 
 namespace evoBasic{
 
-	std::string getID(parseTree::expr::ID *id);
+	unicode::Utf8String getID(parseTree::expr::ID *id);
 
     int getDigit(parseTree::expr::Digit *digit);
 
-    std::string getString(parseTree::expr::String *str);
+    unicode::Utf8String getString(parseTree::expr::String *str);
 
-    bool is_name_valid(const std::string& name, Location *location, type::Domain *domain);
+    bool is_name_valid(unicode::Utf8String name, Location *location, type::Domain *domain);
 
 }
 #endif

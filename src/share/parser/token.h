@@ -10,32 +10,32 @@
 #include <istream>
 #include <fstream>
 #include <sstream>
+#include <utils/unicode.h>
 
 namespace evoBasic{
 
     class Source{
-        std::vector<std::string> codes;
+        std::vector<unicode::Utf8String> codes;
+        unicode::Utf8String source_;
     protected:
         void load(std::istream &stream);
     public:
-        const std::string& getLine(int idx)const;
-        virtual std::istream &getStream() = 0;
+        const unicode::Utf8String& getLine(int idx)const;
+        virtual unicode::Utf8String &getSource();
     };
 
     class FileSource : public Source{
-        std::string file_path;
+        unicode::Utf8String file_path;
         std::ifstream stream;
     public:
-        explicit FileSource(const std::string& path);
-        const std::string& getPath()const;
-        std::istream &getStream()override;
+        explicit FileSource(const unicode::Utf8String& path);
+        const unicode::Utf8String& getPath()const;
     };
 
     class StringSource : public Source{
         std::istringstream str_stream;
     public:
-        explicit StringSource(std::string code);
-        std::istream &getStream()override;
+        explicit StringSource(unicode::Utf8String code);
     };
 
     class Location{
@@ -48,7 +48,7 @@ namespace evoBasic{
         int getBeginY()const;
         int getEndX()const;
         int getEndY()const;
-        std::string toString()const;
+        unicode::Utf8String toString()const;
         Source *getSource()const;
     };
 
@@ -67,20 +67,19 @@ namespace evoBasic{
             /* end domain token */
             END_IF,END_FUNCTION,END_SUB,END_MODULE,END_CLASS,END_TYPE,END_ENUM,END_SELECT,END_NEW,END_OPERATOR,END_INTERFACE,
         };
-        static std::map<std::string,Enum> reserved_words;
-        static std::vector<std::string> enum_to_string;
+        static std::map<unicode::Utf8String,Enum> reserved_words;
+        static std::vector<unicode::Utf8String> enum_to_string;
     private:
-        std::string lexeme_;
+        unicode::Utf8String lexeme_;
         Location location_;
-
         Enum kind_;
     public:
-        Token(Location location,Enum kind,std::string lexeme);
+        Token(Location location,Enum kind,unicode::Utf8String lexeme);
         Location* getLocation();
-        const std::string& getLexeme()const;
+        unicode::Utf8String& getLexeme();
         Enum getKind();
         void setKind(Token::Enum kind);
-        std::string toString();
+        unicode::Utf8String toString();
     };
 
 }

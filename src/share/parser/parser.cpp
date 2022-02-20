@@ -1011,7 +1011,7 @@ namespace evoBasic{
             lexer->match(Token::DIGIT);
             auto digit = new expr::Digit;
             digit->location = lexer->getToken()->getLocation();
-            digit->value = stoi(lexer->getToken()->getLexeme());
+            digit->value = unicode::stoi(lexer->getToken()->getLexeme());
             return digit;
         }
         else{
@@ -1024,7 +1024,7 @@ namespace evoBasic{
         lexer->match(Token::DECIMAL);
         auto decimal = new expr::Decimal;
         decimal->location = lexer->getToken()->getLocation();
-        decimal->value = stod(lexer->getToken()->getLexeme());
+        decimal->value = unicode::stod(lexer->getToken()->getLexeme());
         return decimal;
     }
 
@@ -1042,7 +1042,7 @@ namespace evoBasic{
         auto ch = new expr::Char;
         ch->location = lexer->getToken()->getLocation();
         auto &lexeme = lexer->getToken()->getLexeme();
-        ch->value = lexer->getToken()->getLexeme()[1];
+        ch->value = *(lexer->getToken()->getLexeme().begin());
         return ch;
     }
 

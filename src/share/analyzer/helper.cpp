@@ -6,14 +6,15 @@
 #include <utils/nullSafe.h>
 
 using namespace std;
+using namespace evoBasic::unicode;
 namespace evoBasic{
 
-	string getID(parseTree::expr::ID *id) {
+	Utf8String getID(parseTree::expr::ID *id) {
         NotNull(id);
-        string ret = id->lexeme;
-        transform(ret.begin(),ret.end(),ret.begin(),[](char c){
-            return tolower(c);
-        });
+        Utf8String ret;
+        for(auto c : id->lexeme){
+            ret.push_back(toLowerCase(c));
+        }
         return ret;
     }
 
@@ -22,12 +23,12 @@ namespace evoBasic{
         return digit->value;
     }
 
-    string getString(parseTree::expr::String *str){
+    unicode::Utf8String getString(parseTree::expr::String *str){
         return str->value;
     }
 
 
-    bool is_name_valid(const string& name,Location *location, type::Domain *domain){
+    bool is_name_valid(unicode::Utf8String name, Location *location, type::Domain *domain){
         NotNull(location);
         if(domain->findInDomainOnly(name)){
             Logger::error(location,i18n::lang->msgNameConflicit());

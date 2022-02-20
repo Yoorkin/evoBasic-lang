@@ -77,7 +77,7 @@ namespace evoBasic{
     }
 
     bool Semantic::solveInheritDependencies(CompileTimeContext *context) {
-        list<string> order;
+        list<unicode::Utf8String> order;
         if(context->inheritDependencies.solve()){
             for(auto &cls : context->inheritDependencies.getTopologicalOrder()){
                 cls->generateClassInfo();

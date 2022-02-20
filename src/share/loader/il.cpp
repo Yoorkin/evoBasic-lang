@@ -29,7 +29,7 @@ namespace evoBasic::il{
     }
 
 
-    TokenRef *Document::getTokenRef(std::string text) {
+    TokenRef *Document::getTokenRef(unicode::Utf8String text) {
         auto target = token_pool_map.find(text);
         if(target == token_pool_map.end()){
             token_pool.push_back(new TextTokenDef(this,token_pool.size(),text));
@@ -39,7 +39,7 @@ namespace evoBasic::il{
         else return new TokenRef(this, target->second);
     }
 
-    TokenRef *Document::getTokenRef(std::list<string> full_name_list) {
+    TokenRef *Document::getTokenRef(std::list<unicode::Utf8String> full_name_list) {
         Format fullname;
         for(auto &name : full_name_list){
             if(&name != &full_name_list.front())fullname<<'.';
@@ -59,7 +59,7 @@ namespace evoBasic::il{
     }
 
 
-    std::string Local::toString() {
+    unicode::Utf8String Local::toString() {
         return Format() << name->toString() << "@" << to_string(address) << " " << type->toString();
     }
 
@@ -347,11 +347,11 @@ namespace evoBasic::il{
         return size;
     }
 
-    std::string Opt::toString() {
+    unicode::Utf8String Opt::toString() {
         return Format() << "optional " << Param::toString();
     }
 
-    std::string Inf::toString() {
+    unicode::Utf8String Inf::toString() {
         return Format() << "ParamArray " << Param::toString();
     }
 
@@ -362,7 +362,7 @@ namespace evoBasic::il{
         : Param(document,Bytecode::InfDef,stream){}
 
 
-    std::string Result::toString() {
+    unicode::Utf8String Result::toString() {
         return Format() << "result " << type->toString();
     }
 
@@ -376,12 +376,12 @@ namespace evoBasic::il{
         }
     }
 
-    std::string Ftn::toString() {
+    unicode::Utf8String Ftn::toString() {
         return FunctionDefine::toString() + " ftn";
     }
 
 
-    std::string VFtn::toString() {
+    unicode::Utf8String VFtn::toString() {
         return FunctionDefine::toString() + " vftn";
     }
 
@@ -403,7 +403,7 @@ namespace evoBasic::il{
         fillParameterList(context,symbol);
     }
 
-    std::string SFtn::toString() {
+    unicode::Utf8String SFtn::toString() {
         return FunctionDefine::toString() + " sftn";
     }
 
@@ -425,11 +425,11 @@ namespace evoBasic::il{
         fillParameterList(context,symbol);
     }
 
-    std::string Ext::toString() {
+    unicode::Utf8String Ext::toString() {
         return FunctionDeclare::toString() + " ext";
     }
 
-    std::string InstWithOp::toString() {
+    unicode::Utf8String InstWithOp::toString() {
         vector<string> str = {"Nop","Ret","CallVirt","CallExt","Callstatic","Call",
                               "Ldnull","And","Or","Xor","Ldloca","Ldarga","Not"};
         Format fmt;
@@ -437,18 +437,18 @@ namespace evoBasic::il{
         return fmt;
     }
 
-    std::string InstWithToken::toString() {
+    unicode::Utf8String InstWithToken::toString() {
         vector<string> str = {"Ldftn","Ldsftn","Ldvftn","Ldc","Newobj","Invoke","Ldflda","Ldsflda"};
         Format fmt;
         fmt << str[(int)op] << ' ' << token->toString();
         return fmt;
     }
 
-    std::string InstJif::toString() {
+    unicode::Utf8String InstJif::toString() {
         return Format() << "Jif " << target->getAddress();
     }
 
-    std::string InstBr::toString() {
+    unicode::Utf8String InstBr::toString() {
         return Format() << "Br " << target->getAddress();
     }
 
@@ -458,7 +458,7 @@ namespace evoBasic::il{
             "ref","ftn","vftn","sftn","boolean","character","delegate"
     };
 
-    std::string InstPush::toString() {
+    unicode::Utf8String InstPush::toString() {
         Format fmt;
         fmt << "Push." << ty[(int)type.getKind()] << ' ';
         switch(type.getKind()){
@@ -500,7 +500,7 @@ namespace evoBasic::il{
         return fmt;
     }
 
-    std::string InstWithData::toString() {
+    unicode::Utf8String InstWithData::toString() {
         vector<string> inst = {"Ldarg","Starg","Load","Store","Ldloc","Stloc",
                                "Add","Sub","Mul","Div","FDiv","EQ","NE","LT","GT","LE","GE","Neg","Pop","Dup",
                                "Ldelem","Stelem","Ldelema"};
@@ -515,7 +515,7 @@ namespace evoBasic::il{
         return fmt;
     }
 
-    std::string InstWithDataToken::toString() {
+    unicode::Utf8String InstWithDataToken::toString() {
         vector<string> inst = {"Ldfld","Ldsfld","Stfld","Stsfld"};
         Format fmt;
         fmt << inst[(int)op] << '.' << ty[(int)type.getKind()] << ' ' << token->toString();
@@ -528,11 +528,11 @@ namespace evoBasic::il{
         return fmt;
     }
 
-    std::string InstCastcls::toString() {
+    unicode::Utf8String InstCastcls::toString() {
         return Format() << "cast." << src_class->toString() << " " << dst_class->toString();
     }
 
-    std::string InstConv::toString() {
+    unicode::Utf8String InstConv::toString() {
         return Format() << "conv." << ty[(int)src.getKind()] << " " << ty[(int)dst.getKind()];
     }
 
@@ -548,7 +548,7 @@ namespace evoBasic::il{
         }
     }
 
-    std::string Document::toString() {
+    unicode::Utf8String Document::toString() {
         Format fmt;
         fmt << "\nToken:\n";
         for(auto token : token_pool){
@@ -638,17 +638,17 @@ namespace evoBasic::il{
         for(auto inst : insts)inst->toHex(stream);
     }
 
-    BasicBlock::BasicBlock(Document *document,std::string tag) : Node(document),tag(tag){}
+    BasicBlock::BasicBlock(Document *document,unicode::Utf8String tag) : Node(document),tag(tag){}
 
     DebugInfo *BasicBlock::toStructuredInfo() {
         auto ret = Node::toStructuredInfo();
         for(auto inst : insts){
-            ret->add(inst->toString());
+            ret->add(new DebugInfo{inst->toString()});
         }
         return ret;
     }
 
-    std::string BasicBlock::toString() {
+    unicode::Utf8String BasicBlock::toString() {
         return Format()<< getAddress() << ' ' << tag;
     }
 
@@ -667,7 +667,7 @@ namespace evoBasic::il{
         return id == -1 || getDocument() == nullptr;
     }
 
-    std::string TokenRef::toString() {
+    unicode::Utf8String TokenRef::toString() {
         return getDocument()->findTokenDef(id)->getName();
     }
 
@@ -718,7 +718,7 @@ namespace evoBasic::il{
         name->toHex(stream);
     }
 
-    std::string Member::toString() {
+    unicode::Utf8String Member::toString() {
         Format fmt;
         fmt<<name->toString()<<" : ";
         switch(access){
@@ -785,7 +785,7 @@ namespace evoBasic::il{
         return new DebugInfo{toString(),info};
     }
 
-    std::string Class::toString() {
+    unicode::Utf8String Class::toString() {
         return Member::toString() + " class";
     }
 
@@ -842,7 +842,7 @@ namespace evoBasic::il{
         return new DebugInfo{toString(),info};
     }
 
-    std::string Module::toString() {
+    unicode::Utf8String Module::toString() {
         return Member::toString() + " module";
     }
 
@@ -888,7 +888,7 @@ namespace evoBasic::il{
         read(stream,Bytecode::EndMark);
     }
 
-    std::string Interface::toString() {
+    unicode::Utf8String Interface::toString() {
         return Member::toString() + " interface";
     }
 
@@ -953,7 +953,7 @@ namespace evoBasic::il{
         return new DebugInfo{toString(),info};
     }
 
-    std::string Enum::toString() {
+    unicode::Utf8String Enum::toString() {
         return Member::toString() + " enum";
     }
 
@@ -995,7 +995,7 @@ namespace evoBasic::il{
         return new DebugInfo{toString()};
     }
 
-    std::string Fld::toString() {
+    unicode::Utf8String Fld::toString() {
         return Member::toString() + " fld(" + type->toString() + ")";
     }
 
@@ -1040,7 +1040,7 @@ namespace evoBasic::il{
         return new DebugInfo{toString()};
     }
 
-    std::string SFld::toString() {
+    unicode::Utf8String SFld::toString() {
         return Member::toString() + " sfld(" + type->toString() + ")";
     }
 
@@ -1096,7 +1096,7 @@ namespace evoBasic::il{
         return new DebugInfo{toString(),info};
     }
 
-    std::string Record::toString() {
+    unicode::Utf8String Record::toString() {
         return Member::toString() + " record";
     }
 
@@ -1145,7 +1145,7 @@ namespace evoBasic::il{
         write(stream,(is_ref ? Bytecode::Byref : Bytecode::Byval));
     }
 
-    std::string Param::toString() {
+    unicode::Utf8String Param::toString() {
         return name->toString() + ':' + type->toString();
     }
 
@@ -1377,7 +1377,7 @@ namespace evoBasic::il{
 
     Ctor::Ctor(Document *document, istream &stream) : FunctionDefine(document,Bytecode::CtorDef,stream){}
 
-    std::string Ctor::toString() {
+    unicode::Utf8String Ctor::toString() {
         return Member::toString() + " ctor";
     }
 
@@ -1466,16 +1466,16 @@ namespace evoBasic::il{
         resources.push_back(node);
     }
 
-    TokenDef *Document::findTokenDef(std::string text) {
+    TokenDef *Document::findTokenDef(unicode::Utf8String text) {
         auto target = token_pool_map.find(text);
         if(target == token_pool_map.end())PANIC;
         return token_pool[target->second];
     }
 
-    Document::Document(std::string package_name)
+    Document::Document(unicode::Utf8String package_name)
         : Node(nullptr,Bytecode::DocumentDef),name(package_name){}
 
-    Document::Document(std::string package_name,istream &stream)
+    Document::Document(unicode::Utf8String package_name,istream &stream)
         : Node(nullptr,Bytecode::DocumentDef,stream),name(package_name){
         while(true){
             TokenDef *token;
@@ -1521,7 +1521,7 @@ namespace evoBasic::il{
         write(stream,Bytecode::EndMark);
     }
 
-    void Document::addDependenceLibrary(std::string name) {
+    void Document::addDependenceLibrary(unicode::Utf8String name) {
         dependencies_token.push_back(getTokenRef(name));
     }
 
@@ -1541,15 +1541,15 @@ namespace evoBasic::il{
         }
     }
 
-    std::list<std::string> Document::getDependenciesPath() {
-        list<string> ret;
+    std::list<unicode::Utf8String> Document::getDependenciesPath() {
+        list<unicode::Utf8String> ret;
         for(auto token : dependencies_token){
             ret.push_back(token->getDef()->getName());
         }
         return ret;
     }
 
-    std::string Document::getPackageName() {
+    unicode::Utf8String Document::getPackageName() {
         return name;
     }
 
@@ -1828,7 +1828,7 @@ namespace evoBasic::il{
         return new DebugInfo{toString()};
     }
 
-    std::string TextTokenDef::getName() {
+    unicode::Utf8String TextTokenDef::getName() {
         return text;
     }
 
@@ -1840,7 +1840,7 @@ namespace evoBasic::il{
         write(stream,Bytecode::EndMark);
     }
 
-    TextTokenDef::TextTokenDef(Document *document, ID id, std::string text)
+    TextTokenDef::TextTokenDef(Document *document, ID id, unicode::Utf8String text)
         : TokenDef(document,Bytecode::TextTokenDef,id),text(std::move(text)){}
 
     TextTokenDef::TextTokenDef(Document *document, istream &stream)
@@ -1854,15 +1854,15 @@ namespace evoBasic::il{
         read(stream,Bytecode::EndMark);
     }
 
-    string TextTokenDef::toString(){
+    unicode::Utf8String TextTokenDef::toString(){
         return Format()<<'#'<<to_string(id)<<' '<<text;
     }
 
-    std::list<std::string> TextTokenDef::getFullName() {
+    std::list<unicode::Utf8String> TextTokenDef::getFullName() {
         return {getName()};
     }
 
-    std::string ConstructedTokenDef::getName() {
+    unicode::Utf8String ConstructedTokenDef::getName() {
         stringstream fmt;
         for(auto &token : sub_token_list){
             if(&token != &sub_token_list.front()) fmt << '.';
@@ -1891,12 +1891,12 @@ namespace evoBasic::il{
         write(stream,Bytecode::EndMark);
     }
 
-    std::string ConstructedTokenDef::toString(){
+    unicode::Utf8String ConstructedTokenDef::toString(){
         return Format()<<'#'<<to_string(id)<<' '<<getName();
     }
 
-    std::list<std::string> ConstructedTokenDef::getFullName() {
-        list<string> ret;
+    std::list<unicode::Utf8String> ConstructedTokenDef::getFullName() {
+        list<unicode::Utf8String> ret;
         for(auto token : sub_token_list){
             ret.push_back(token->toString());
         }
@@ -1938,7 +1938,7 @@ namespace evoBasic::il{
     InterfaceFunction::InterfaceFunction(Document *document, istream &stream)
         : FunctionDeclare(document,Bytecode::ItfFtnDef,stream){}
 
-    std::string InterfaceFunction::toString() {
+    unicode::Utf8String InterfaceFunction::toString() {
         return FunctionDeclare::toString();
     }
 
@@ -2017,7 +2017,7 @@ namespace evoBasic::il{
     InstIntrinsic::InstIntrinsic(Document *document, vm::IntrinsicEnum id)
         : Inst(document,Bytecode::Intrinsic), index((data::u8)id){}
 
-    std::string InstIntrinsic::toString() {
+    unicode::Utf8String InstIntrinsic::toString() {
         return Format()<<"Intrinsic "<< to_string(index);
     }
 

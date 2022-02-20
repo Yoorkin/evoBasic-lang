@@ -4,8 +4,7 @@
 
 #ifndef EVOBASIC_DATADEF_H
 #define EVOBASIC_DATADEF_H
-#include <vector>
-#include <string>
+
 namespace evoBasic::data{
 
     using boolean = bool;

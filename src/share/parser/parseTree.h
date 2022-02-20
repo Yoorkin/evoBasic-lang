@@ -4,6 +4,7 @@
 #include <utils/data.h>
 #include <utils/nullSafe.h>
 #include <utils/enums.h>
+#include <utils/unicode.h>
 #include <memory>
 #include <list>
 
@@ -82,7 +83,7 @@ namespace evoBasic::parseTree{
     using namespace expr;
 
 
-    std::string debugParseTree(Node *ast);
+    unicode::Utf8String debugParseTree(Node *ast);
 
     using Expr = expr::Expression;
 
@@ -442,7 +443,7 @@ namespace evoBasic::parseTree{
             ID(){
                 expression_kind = ExpressionKind::ID_;
             }
-            std::string lexeme;
+            unicode::Utf8String lexeme;
             DebugInfo *debug()override;
         };
 
@@ -485,7 +486,7 @@ namespace evoBasic::parseTree{
             String(){
                 expression_kind = ExpressionKind::string_;
             }
-            std::string value;
+            unicode::Utf8String value;
             DebugInfo *debug()override;
         };
 
@@ -493,7 +494,7 @@ namespace evoBasic::parseTree{
             Char(){
                 expression_kind = ExpressionKind::char_;
             }
-            data::i8 value = 0;
+            unicode::Utf8Char value;
             DebugInfo *debug()override;
         };
 

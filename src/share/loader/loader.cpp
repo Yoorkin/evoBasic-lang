@@ -21,14 +21,14 @@ namespace evoBasic{
             auto path = waiting_package.front();
             waiting_package.pop_front();
 
-            if(!fs::exists(path)){
+            if(!fs::exists(path.getBytes())){
                 Logger::error(Format()<<"missing package: '"<<path<<"' not found");
             }
             else{
-                fstream package_file(path,ios::binary | ios::in);
+                fstream package_file(path.getBytes(),ios::binary | ios::in);
                 if(!package_file)PANIC;
 
-                fs::path package_path(path);
+                fs::path package_path(path.getBytes());
                 auto package = new il::Document(package_path.stem().string(), package_file);
                 auto sub_dependencies = package->getDependenciesPath();
                 for(auto sub_dep : sub_dependencies){

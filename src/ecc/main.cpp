@@ -109,6 +109,7 @@ void enableDevInfo(){
 }
 
 int main(int argc,char *argv[]) {
+
     context = new CompileTimeContext;
     CmdDistributor distributor;
     distributor.on("--dev-info",        enableDevInfo)

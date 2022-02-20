@@ -476,7 +476,7 @@ namespace evoBasic::ast{
         Char(){
             expression_kind = ExpressionKind::String;
         }
-        data::i8 value = 0;
+        unicode::Utf8Char value;
         DebugInfo *debug()override;
     };
 

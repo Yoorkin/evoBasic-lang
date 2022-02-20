@@ -1051,7 +1051,7 @@ namespace evoBasic{
                 }
             };
 
-            std::map<string,parseTree::Argument*> optional_arguments;
+            std::map<unicode::Utf8String,parseTree::Argument*> optional_arguments;
             FOR_EACH(iter,argument){
                 if(iter->expr->expression_kind == parseTree::Expression::colon_){
                     // optional parameter initialization

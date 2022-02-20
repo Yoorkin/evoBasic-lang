@@ -9,19 +9,19 @@
 using namespace std;
 namespace evoBasic{
 
-    const string RED="\033[0;31m",YELLOW="\033[0;33m",PURPLE = "\033[0;35m",NC="\033[0m";
+    const unicode::Utf8String RED="\033[0;31m",YELLOW="\033[0;33m",PURPLE = "\033[0;35m",NC="\033[0m";
 
     std::vector<bool> Logger::channels(50,false);
 
     int Logger::errorCount=0;
     int Logger::warningCount=0;
 
-    void Logger::error(string message) {
+    void Logger::error(unicode::Utf8String message) {
         errorCount++;
         *out << RED << "error: " << message << NC << endl;
     }
 
-    void Logger::warning(string message){
+    void Logger::warning(unicode::Utf8String message){
         warningCount++;
         *out << YELLOW << "warning: " << message << NC << endl;
     }
@@ -76,19 +76,19 @@ namespace evoBasic{
         }
     }
 
-    void Logger::error(const Location *pos, const string &message) {
+    void Logger::error(const Location *pos, const unicode::Utf8String &message) {
         Logger::errorCount++;
         *out << RED << "error: " << message << NC << endl;
         code(pos,true);
     }
 
-    void Logger::warning(const Location *pos, const string &message) {
+    void Logger::warning(const Location *pos, const unicode::Utf8String &message) {
         Logger::warningCount++;
         *out << YELLOW << "warning: " << message << NC << endl;
         code(pos);
     }
 
-    void Logger::panic(const list<std::pair<std::string, Location*>> &callstack, const Location *pos, const string &message) {
+    void Logger::panic(const list<std::pair<unicode::Utf8String, Location*>> &callstack, const Location *pos, const unicode::Utf8String &message) {
         for(const auto& call:callstack){
             if(&call == &callstack.front()){
                 *out<<"In: "<<call.first;
@@ -101,7 +101,7 @@ namespace evoBasic{
         code(pos);
     }
 
-    void Logger::error(std::initializer_list<const Location *> location, const string &message) {
+    void Logger::error(std::initializer_list<const Location *> location, const unicode::Utf8String &message) {
         Logger::errorCount++;
         *out << RED << "error: " << message << NC << endl;
         for(auto pos:location)
@@ -116,7 +116,7 @@ namespace evoBasic{
         channels[(int)channel] = false;
     }
 
-    void Logger::print(Channel channel, std::string message) {
+    void Logger::print(Channel channel, unicode::Utf8String message) {
         if(channels[(int)channel]){
             *out << message;
         }

@@ -1320,7 +1320,7 @@ namespace evoBasic{
         auto ext_symbol = static_cast<type::ExternalFunction*>(ext_node->function);
         if(ext_symbol->getLibName() == "intrinsic"){
             auto alias = ext_symbol->getAlias();
-            current->Intrinsic((vm::IntrinsicEnum)stoi(alias.substr(1, alias.length()-1)));
+            current->Intrinsic((vm::IntrinsicEnum)stoi(alias.substr(1, alias.count()-1)));
         }
         else{
             current->Invoke(document->getTokenRef(ext_node->function->getFullName()));
