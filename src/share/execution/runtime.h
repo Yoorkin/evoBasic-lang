@@ -6,7 +6,7 @@
 #define EVOBASIC_RUNTIME_H
 #include <vector>
 #include <map>
-#include <string>
+#include <utils/unicode.h>
 #include "memory.h"
 
 #include "loader/il.h"
@@ -71,11 +71,11 @@ namespace evoBasic::vm{
     class NameSpace : public Runtime{
         friend CompileTimeContext;
     protected:
-        std::map<std::string,Runtime*> childs;
+        std::map<unicode::Utf8String,Runtime*> childs;
     public:
         explicit NameSpace(TokenTable *table);
-        virtual Runtime *find(std::string name);
-        const std::map<std::string,Runtime*> &getChilds();
+        virtual Runtime *find(unicode::Utf8String name);
+        const std::map<unicode::Utf8String,Runtime*> &getChilds();
     };
 
     class TokenTable{
@@ -119,10 +119,10 @@ namespace evoBasic::vm{
 
     class ForeignFunction : public Runtime{
         friend evoBasic::vm::RuntimeContext;
-        std::string library,name;
+        unicode::Utf8String library,name;
         il::Ext *il_info = nullptr;
     public:
-        ForeignFunction(std::string library,std::string name,il::Ext *info);
+        ForeignFunction(unicode::Utf8String library,unicode::Utf8String name,il::Ext *info);
         RuntimeKind getKind()override{ return RuntimeKind::ForeignFunction; }
         DebugInfo *toStructuredInfo()override;
     };
@@ -200,7 +200,7 @@ namespace evoBasic::vm{
         Function *virtualFunctionDispatch(VirtualFtnSlot slot);
 
         data::Byte *getStaticFieldPtr(data::u64 offset);
-        Runtime *find(std::string name)override;
+        Runtime *find(unicode::Utf8String name)override;
         DebugInfo *toStructuredInfo()override;
         ~Class();
     };
@@ -231,7 +231,7 @@ namespace evoBasic::vm{
     class RuntimeContext{
         Global *global = nullptr;
         std::list<TokenTable*> token_tables;
-        using NameRuntimePair = std::pair<std::string,Runtime*>;
+        using NameRuntimePair = std::pair<unicode::Utf8String,Runtime*>;
         std::optional<NameRuntimePair> collectSymbolRecursively(TokenTable *table,il::Member *member);
         void collectDependencies(Runtime *parent, Runtime *current, Dependencies<Class*> &inherit, Dependencies<Record*> &include);
         void recordFieldsResolution(Record *record);
@@ -243,7 +243,7 @@ namespace evoBasic::vm{
         Function *getEntrance();
         Global *getGlobalRuntime();
         explicit RuntimeContext(std::list<il::Document*> &documents);
-        std::string debug();
+        unicode::Utf8String debug();
         ~RuntimeContext();
     };
 

@@ -1834,7 +1834,7 @@ namespace evoBasic::il{
 
     void TextTokenDef::toHex(ostream &stream) {
         TokenDef::toHex(stream);
-        for(auto c : text){
+        for(char c : text.getBytes()){
             write(stream,c);
         }
         write(stream,Bytecode::EndMark);
@@ -1845,12 +1845,13 @@ namespace evoBasic::il{
 
     TextTokenDef::TextTokenDef(Document *document, istream &stream)
         : TokenDef(document,Bytecode::TextTokenDef,stream) {
-
+        std::string bytes;
         while(!predict(stream,Bytecode::EndMark)){
             char c;
             read(stream,c);
-            text.push_back(c);
+            bytes.push_back(c);
         }
+        text = unicode::Utf8String(bytes);
         read(stream,Bytecode::EndMark);
     }
 

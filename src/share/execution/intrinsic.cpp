@@ -10,24 +10,27 @@ namespace evoBasic::vm{
 
         template<class Return,class ...Args>
         void handler_call_parameter_expand(Return(*handler)(Args...),Stack *operand){
-            Return ret = (*handler)((operand->pop<Args>())...);
+            std::tuple<Args...> args{(operand->pop<Args>())...};
+            Return ret = std::apply(*handler,std::move(args));
             operand->push<Return>(ret);
         }
 
         template<class ...Args>
         void handler_call_parameter_expand(void(*handler)(Args...),Stack *operand){
-            (*handler)((operand->pop<Args>())...);
+            std::tuple<Args...> args{(operand->pop<Args>())...};
+            std::apply(*handler,std::move(args));
         }
 
         template<class Return,class ...Args>
         void handler_call_parameter_expand_with_context(Return(*handler)(Args...),Stack *operand,RuntimeContext *context){
-            Return ret = (*handler)(context,(operand->pop<Args>())...);
-            operand->push<Return>(ret);
+            std::tuple<RuntimeContext,Args...> args{context,(operand->pop<Args>())...};
+            Return ret = std::apply(*handler,std::move(args));
         }
 
         template<class ...Args>
         void handler_call_parameter_expand_with_context(void(*handler)(Args...),Stack *operand,RuntimeContext *context){
-            (*handler)(context,(operand->pop<Args>())...);
+            std::tuple<RuntimeContext,Args...> args{context,(operand->pop<Args>())...};
+            std::apply(*handler,std::move(args));
         }
 
 
@@ -35,6 +38,7 @@ namespace evoBasic::vm{
 
         void putchar_(data::u8 c) {
             putchar(c);
+            std::fflush(stdout);
         }
 
         data::u8 getchar_() {

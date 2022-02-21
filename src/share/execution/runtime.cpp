@@ -6,7 +6,7 @@
 #include "intrinsic.h"
 
 namespace evoBasic::vm{
-    Runtime *NameSpace::find(std::string name) {
+    Runtime *NameSpace::find(unicode::Utf8String name) {
         auto target = childs.find(name);
         if(target == childs.end())return nullptr;
         else return target->second;
@@ -14,7 +14,7 @@ namespace evoBasic::vm{
 
     NameSpace::NameSpace(TokenTable *table) : Runtime(table) {}
 
-    const std::map<std::string, Runtime *> &NameSpace::getChilds() {
+    const std::map<unicode::Utf8String, Runtime *> &NameSpace::getChilds() {
         return childs;
     }
 
@@ -285,7 +285,7 @@ namespace evoBasic::vm{
     RuntimeContext::RuntimeContext(std::list<il::Document*> &documents){
         global = new Global();
 
-        std::vector<std::pair<std::string,vm::BuiltIn*>> builtin_list = {
+        std::vector<std::pair<unicode::Utf8String,vm::BuiltIn*>> builtin_list = {
             {"boolean",new BuiltIn(BuiltInKind::boolean)},
             {"byte",new BuiltIn(BuiltInKind::i8)},
             {"short",new BuiltIn(BuiltInKind::i16)},
@@ -355,7 +355,7 @@ namespace evoBasic::vm{
     }
 
 
-    void debugRuntimeSymbol(DebugInfo *info,std::ostream &stream,std::string indent){
+    void debugRuntimeSymbol(DebugInfo *info,std::ostream &stream,unicode::Utf8String indent){
         stream << indent << info->text;
         if(!info->childs.empty()){
             stream << " {\n";
@@ -368,7 +368,7 @@ namespace evoBasic::vm{
     }
 
 
-    std::string RuntimeContext::debug() {
+    unicode::Utf8String RuntimeContext::debug() {
         auto info = global->toStructuredInfo();
         std::stringstream stream;
         stream << "# Runtime Symbol \n";
@@ -484,7 +484,7 @@ namespace evoBasic::vm{
         };
     }
 
-    ForeignFunction::ForeignFunction(std::string library, std::string name, il::Ext *info)
+    ForeignFunction::ForeignFunction(unicode::Utf8String library, unicode::Utf8String name, il::Ext *info)
         : Runtime(nullptr),name(name),il_info(info){}
 
     DebugInfo *ForeignFunction::toStructuredInfo() {
@@ -585,7 +585,7 @@ namespace evoBasic::vm{
     Class::Class(TokenTable *table, il::Class *info)
         : NameSpace(table),il_info(info){}
 
-    Runtime *Class::find(std::string name) {
+    Runtime *Class::find(unicode::Utf8String name) {
          auto target = NameSpace::find(name);
          if(target)return target;
          else return base_class->find(name);
@@ -649,7 +649,7 @@ namespace evoBasic::vm{
         size = getBuiltInSize(kind);
     }
 
-    std::vector<std::string> builtin_to_string = {"boolean","u8","u16","u32","u64","i8","i16","i32","i64","f32","f64"};
+    std::vector<unicode::Utf8String> builtin_to_string = {"boolean","u8","u16","u32","u64","i8","i16","i32","i64","f32","f64"};
     DebugInfo *BuiltIn::toStructuredInfo() {
         Format fmt;
         fmt << std::to_string((data::u64)this)

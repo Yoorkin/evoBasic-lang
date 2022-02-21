@@ -100,7 +100,7 @@ namespace evoBasic::unicode{
         bool operator==(const Utf8String &rhs);
         void clear();
         bool empty();
-        std::size_t count();
+        std::size_t count()const;
         Utf8String operator+(const Utf8String &rhs)const;
         Utf8String operator+(const Utf8Char &rhs)const;
         Utf8String &operator+=(const Utf8String &rhs);

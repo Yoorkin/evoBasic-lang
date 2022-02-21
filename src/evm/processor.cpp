@@ -514,7 +514,7 @@ namespace evoBasic::vm{
                     getCurrentEnv().consume<data::Byte>();
                     auto token_id = getCurrentEnv().consume<il::TokenDef::ID>();
                     auto rt = getCurrentEnv().getFunction()->getTokenTable()->getRuntime<Runtime>(token_id);
-                    //todo
+                    PANIC;
                     break;
                 }
                 case Bytecode::Intrinsic:{

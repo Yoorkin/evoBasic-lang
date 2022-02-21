@@ -98,12 +98,7 @@ namespace evoBasic::unicode{
         PANIC;
     }
 
-    Utf8String::Utf8String(const char *c_str) {
-        int len = strlen(c_str);
-        bytes.resize(len);
-        for(int i=0;i<len;i++)
-            bytes[i] = c_str[i];
-    }
+    Utf8String::Utf8String(const char *c_str) : bytes(c_str){}
 
     Utf8String::Utf8String(const char *c_str, std::size_t len) {
         bytes.resize(len);
@@ -127,7 +122,7 @@ namespace evoBasic::unicode{
     }
 
     std::size_t Utf8String::size() const {
-        return bytes.size();
+        return count();
     }
 
     const Storage &Utf8String::getBytes() const {
@@ -182,7 +177,7 @@ namespace evoBasic::unicode{
         return *this;
     }
 
-    std::size_t Utf8String::count() {
+    std::size_t Utf8String::count()const {
         std::size_t s = 0,ans = 0;
         while(s<bytes.size()){
             s+=getUnitSize(bytes[s]);
@@ -200,7 +195,7 @@ namespace evoBasic::unicode{
         while(len--){
             end += getUnitSize(bytes[end]);
         }
-        return Utf8String(bytes.substr(beg,beg-end));
+        return Utf8String(bytes.substr(beg,end-beg));
     }
 
     std::ostream &operator<<(std::ostream &lhs, const Utf8String &rhs) {
