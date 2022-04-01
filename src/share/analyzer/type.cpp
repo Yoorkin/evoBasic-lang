@@ -23,7 +23,7 @@ namespace evoBasic::type{
 
 
     void write_ptr(stringstream &stream,data::ptr ptr){
-        stream.write((const char*)&ptr,vm::Data::ptr.getSize());
+        stream.write((const char*)&ptr,type::Primitive::getByteLength(type::Primitive::address));
     }
     
     void strToLowerByRef(unicode::Utf8String& str){
@@ -56,8 +56,8 @@ namespace evoBasic::type{
     }
 
 
-    Enumeration::Enumeration() : Class(SymbolKind::Enum) {
-        setByteLength(vm::Data::ptr.getSize());
+    Enumeration::Enumeration() : Class(SymbolKind::Enum){
+        setByteLength(type::Primitive::getByteLength(type::Primitive::i32));
     }
 
 
@@ -92,7 +92,7 @@ namespace evoBasic::type{
             return Variable::getRealByteLength();
         }
         else{
-            return vm::Data::ptr.getSize();
+            return type::Primitive::getByteLength(type::Primitive::address);
         }
     }
 
@@ -578,20 +578,42 @@ namespace evoBasic::type{
             setAccessFlag(AccessFlag::Public);
         }
 
-        Primitive::Primitive(unicode::Utf8String name, vm::Data data_kind)
+        Primitive::Primitive(unicode::Utf8String name, Primitive::Enum data_kind)
           : Class(SymbolKind::Primitive),kind_(data_kind){
             setName(std::move(name));
             setAccessFlag(AccessFlag::Public);
-            setByteLength(data_kind.getSize());
+            setByteLength(getByteLength(data_kind));
         }
 
         bool Primitive::equal(Prototype *ptr) {
             auto p = ptr->as<Primitive*>();
-            return p && p->kind_.operator==(kind_);
+            return p && p->kind_ == kind_;
         }
 
-        vm::Data Primitive::getDataKind() {
+        Primitive::Enum Primitive::getDataKind() {
             return this->kind_;
+        }
+
+        int Primitive::getByteLength(Primitive::Enum e){
+            switch(e){
+                case boolean:
+                case i8:
+                case u8:
+                    return 1;
+                case i16:
+                case u16:
+                case rune:
+                    return 2;
+                case i32:
+                case u32:
+                case f32:
+                    return 4;
+                case i64:
+                case u64:
+                case f64:
+                case address:
+                    return 8;
+            }
         }
 
     }
@@ -654,9 +676,9 @@ namespace evoBasic::type{
                 return prototype->getByteLength();
             case SymbolKind::Class:
             case SymbolKind::Function:
-                return vm::Data::ptr.getSize();
+                return Primitive::getByteLength(type::Primitive::Enum::address);
             case SymbolKind::Enum:
-                return vm::Data(vm::Data::i32).getSize();
+                return Primitive::getByteLength(type::Primitive::Enum::i32);
         }
         PANIC;
     }

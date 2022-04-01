@@ -28,30 +28,9 @@ namespace evoBasic{
         ref,ftn,vftn,sftn,record,array,boolean,character,delegate
     };
 
-    namespace vm{
-
-        class Data{
-        public:
-            enum Value{
-                void_=0,boolean,i8,i16,i32,i64,f32,f64,u8,u16,u32,u64,raw_string,memory
-            };
-        private:
-            Value value_;
-            static std::vector<std::string> to_string;
-            static std::vector<int> to_size;
-            static std::vector<data::u8> to_hex;
-        public:
-            Data(Value value){value_ = value;}
-            Value getValue(){return value_;}
-            void setValue(Value value){value_ = value;}
-            std::string toString();
-            data::u8 toHex();
-            int getSize();
-            static Data fromHex(data::u8 hex);
-            static Data ptr;
-            bool operator==(const Data &data);
-        };
-    }
+    // std::vector<data::u8> Data::to_hex = {
+    //     0xD0,0xD1,0xD2,0xD3,0xD4,0xD5,0xD6,0xD7,0xD8,0xD9,0xDA,0xDB,0xDC,0xDD
+    // };
 }
 
 

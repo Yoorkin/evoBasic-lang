@@ -19,18 +19,18 @@ namespace evoBasic{
             case type::SymbolKind::Function:    return {DataTypeEnum::delegate};
             case type::SymbolKind::Primitive:{
                 auto primitive = type->as<type::Primitive*>();
-                switch(primitive->getDataKind().getValue()){
-                    case vm::Data::i8:      return {DataTypeEnum::i8};
-                    case vm::Data::i16:     return {DataTypeEnum::i16};
-                    case vm::Data::i32:     return {DataTypeEnum::i32};
-                    case vm::Data::i64:     return {DataTypeEnum::i64};
-                    case vm::Data::u8:      return {DataTypeEnum::u8};
-                    case vm::Data::u16:     return {DataTypeEnum::u16};
-                    case vm::Data::u32:     return {DataTypeEnum::u32};
-                    case vm::Data::u64:     return {DataTypeEnum::u64};
-                    case vm::Data::f32:     return {DataTypeEnum::f32};
-                    case vm::Data::f64:     return {DataTypeEnum::f64};
-                    case vm::Data::boolean: return {DataTypeEnum::boolean};
+                switch(primitive->getDataKind()){
+                    case type::Primitive::i8:      return {DataTypeEnum::i8};
+                    case type::Primitive::i16:     return {DataTypeEnum::i16};
+                    case type::Primitive::i32:     return {DataTypeEnum::i32};
+                    case type::Primitive::i64:     return {DataTypeEnum::i64};
+                    case type::Primitive::u8:      return {DataTypeEnum::u8};
+                    case type::Primitive::u16:     return {DataTypeEnum::u16};
+                    case type::Primitive::u32:     return {DataTypeEnum::u32};
+                    case type::Primitive::u64:     return {DataTypeEnum::u64};
+                    case type::Primitive::f32:     return {DataTypeEnum::f32};
+                    case type::Primitive::f64:     return {DataTypeEnum::f64};
+                    case type::Primitive::boolean: return {DataTypeEnum::boolean};
                     default: PANIC;
                 }
             }

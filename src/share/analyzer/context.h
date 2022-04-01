@@ -30,8 +30,9 @@ namespace evoBasic{
         friend CompileTimeContext;
         explicit BuiltIn();
 
-        using Primitive = type::primitive::Primitive;
-        std::vector<Primitive*> primitive_vector;
+        type::Primitive *pmt_bool,*pmt_i8,*pmt_i16,*pmt_i32,*pmt_i64,
+                  *pmt_u8,*pmt_u16,*pmt_u32,*pmt_u64,*pmt_f32,*pmt_f64;
+
         std::vector<unicode::Utf8String> operators_name;
         type::primitive::VariantClass *variant_class = nullptr;
         type::Error *error_symbol = nullptr;
@@ -41,7 +42,7 @@ namespace evoBasic{
         static BuiltIn builtin;
     public:
         type::VariantClass *getVariantClass()const;
-        Primitive *getPrimitive(vm::Data kind)const;
+        type::Primitive *getPrimitive(type::Primitive::Enum kind)const;
         type::Class *getObjectClass()const;
         type::Class *getStringClass()const;
         type::Error *getErrorPrototype()const;

@@ -12,28 +12,26 @@
 using namespace std;
 using namespace evoBasic::type;
 using namespace evoBasic::type::primitive;
-namespace evoBasic{
 
+namespace evoBasic{
 
     BuiltIn::BuiltIn() {
         error_symbol = new Error;
         error_symbol->setName("< Error >");
 
         //void,boolean,i8,i16,i32,i64,f32,f64,u8,u16,u32,u64
-        primitive_vector = {
-            nullptr,
-            new Primitive("boolean", vm::Data(vm::Data::boolean)),
-            new Primitive("byte", vm::Data(vm::Data::i8)),
-            new Primitive("short", vm::Data(vm::Data::i16)),
-            new Primitive("integer", vm::Data(vm::Data::i32)),
-            new Primitive("long", vm::Data(vm::Data::i64)),
-            new Primitive("single", vm::Data(vm::Data::f32)),
-            new Primitive("double", vm::Data(vm::Data::f64)),
-            new Primitive("u8", vm::Data(vm::Data::u8)),
-            new Primitive("u16", vm::Data(vm::Data::u16)),
-            new Primitive("u32", vm::Data(vm::Data::u32)),
-            new Primitive("u64", vm::Data(vm::Data::u64)),
-        };
+
+        pmt_bool = new Primitive("boolean", Primitive::boolean);
+        pmt_i8 = new Primitive("byte", Primitive::i8);
+        pmt_i16 = new Primitive("short", Primitive::i16);
+        pmt_i32 = new Primitive("integer", Primitive::i32);
+        pmt_i64 = new Primitive("long", Primitive::i64);
+        pmt_f32 = new Primitive("single", Primitive::f32);
+        pmt_f64 = new Primitive("double", Primitive::f64);
+        pmt_u8 = new Primitive("u8", Primitive::u8);
+        pmt_u16 = new Primitive("u16", Primitive::u16);
+        pmt_u32 = new Primitive("u32", Primitive::u32);
+        pmt_u64 = new Primitive("u64", Primitive::u64);
 
         variant_class = new VariantClass();
         variant_class->setName("variant");
@@ -58,8 +56,22 @@ namespace evoBasic{
         return error_symbol;
     }
 
-    BuiltIn::Primitive *BuiltIn::getPrimitive(vm::Data data) const {
-        return primitive_vector[(int)data.getValue()];
+    type::Primitive *BuiltIn::getPrimitive(type::Primitive::Enum data) const {
+        using enum type::Primitive::Enum;
+        switch(data){
+            case boolean: return pmt_bool;
+            case i8: return pmt_i8;
+            case i16: return pmt_i16;
+            case i32: return pmt_i32;
+            case i64: return pmt_i64;
+            case u8: return pmt_u8;
+            case u16: return pmt_u16;
+            case u32: return pmt_u32;
+            case u64: return pmt_u64;
+            case f32: return pmt_f32;
+            case f64: return pmt_f64;
+            default: PANIC;
+        }
     }
 
     type::Class *BuiltIn::getObjectClass() const {
@@ -79,13 +91,13 @@ namespace evoBasic{
         enum Types {bin=0,i08,i16,i32,i64,f32,f64,_n_};
         auto& in = *builtIn;
         vector<Prototype*> enumToPrototype = {
-                in.getPrimitive(vm::Data::boolean),
-                in.getPrimitive(vm::Data::i8),
-                in.getPrimitive(vm::Data::i16),
-                in.getPrimitive(vm::Data::i32),
-                in.getPrimitive(vm::Data::i64),
-                in.getPrimitive(vm::Data::f32),
-                in.getPrimitive(vm::Data::f64)
+                in.getPrimitive(type::Primitive::boolean),
+                in.getPrimitive(type::Primitive::i8),
+                in.getPrimitive(type::Primitive::i16),
+                in.getPrimitive(type::Primitive::i32),
+                in.getPrimitive(type::Primitive::i64),
+                in.getPrimitive(type::Primitive::f32),
+                in.getPrimitive(type::Primitive::f64)
         };
 
         //explicit conversion
@@ -220,13 +232,13 @@ namespace evoBasic{
         auto& in = getBuiltIn();
         global->add(in.getObjectClass());
         global->add(in.getStringClass());
-        global->add(in.getPrimitive(vm::Data::boolean));
-        global->add(in.getPrimitive(vm::Data::i8));
-        global->add(in.getPrimitive(vm::Data::i16));
-        global->add(in.getPrimitive(vm::Data::i32));
-        global->add(in.getPrimitive(vm::Data::i64));
-        global->add(in.getPrimitive(vm::Data::f32));
-        global->add(in.getPrimitive(vm::Data::f64));
+        global->add(in.getPrimitive(type::Primitive::boolean));
+        global->add(in.getPrimitive(type::Primitive::i8));
+        global->add(in.getPrimitive(type::Primitive::i16));
+        global->add(in.getPrimitive(type::Primitive::i32));
+        global->add(in.getPrimitive(type::Primitive::i64));
+        global->add(in.getPrimitive(type::Primitive::f32));
+        global->add(in.getPrimitive(type::Primitive::f64));
     }
 
 

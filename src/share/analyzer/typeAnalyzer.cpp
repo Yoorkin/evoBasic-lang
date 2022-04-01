@@ -364,7 +364,7 @@ namespace evoBasic{
     std::any TypeAnalyzer::visitLoop(parseTree::stmt::Loop *loop_node, TypeAnalyzerArgs args) {
         auto ast_node = new ast::Loop;
         auto ast_condition = any_cast<ast::Expression*>(visitExpression(loop_node->condition,args));
-        if(!ast_condition->type->getPrototype()->equal(args.context->getBuiltIn().getPrimitive(vm::Data::boolean))){
+        if(!ast_condition->type->getPrototype()->equal(args.context->getBuiltIn().getPrimitive(type::Primitive::boolean))){
             Logger::error(loop_node->condition->location, lang->msgExpExpectedBoolean());
         }
         ast_node->condition = ast_condition;
@@ -389,7 +389,7 @@ namespace evoBasic{
             if(iter->condition){
                 auto ast_case_condition = any_cast<ast::Expression*>(visitExpression(iter->condition,args));
                 ast_case->condition = ast_case_condition;
-                if(!ast_case_condition->type->getPrototype()->equal(args.context->getBuiltIn().getPrimitive(vm::Data::boolean))){
+                if(!ast_case_condition->type->getPrototype()->equal(args.context->getBuiltIn().getPrimitive(type::Primitive::boolean))){
                     Logger::error(iter->location, lang->fmtIfConditionExpectedBooleanButA(ast_case_condition->type->getPrototype()->getName()));
                 }
             }
@@ -510,7 +510,7 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitDigit(parseTree::expr::Digit *digit_node, TypeAnalyzerArgs args) {
-        auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::i32);
+        auto primitive = args.context->getBuiltIn().getPrimitive(type::Primitive::i32);
         auto ast_node = new ast::Digit;
         ast_node->value = digit_node->value;
         ast_node->type = new ExpressionType(primitive,ExpressionType::rvalue);
@@ -518,7 +518,7 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitDecimal(parseTree::expr::Decimal *decimal_node, TypeAnalyzerArgs args) {
-        auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::f64);
+        auto primitive = args.context->getBuiltIn().getPrimitive(type::Primitive::f64);
         auto ast_node = new ast::Decimal;
         ast_node->value = decimal_node->value;
         ast_node->type = new ExpressionType(primitive,ExpressionType::rvalue);
@@ -526,7 +526,7 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitBoolean(parseTree::expr::Boolean *bl_node, TypeAnalyzerArgs args) {
-        auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::boolean);
+        auto primitive = args.context->getBuiltIn().getPrimitive(type::Primitive::boolean);
         auto ast_node = new ast::Boolean;
         ast_node->value = bl_node->value;
         ast_node->type = new ExpressionType(primitive,ExpressionType::rvalue);
@@ -534,7 +534,7 @@ namespace evoBasic{
     }
 
     std::any TypeAnalyzer::visitChar(parseTree::expr::Char *ch_node, TypeAnalyzerArgs args) {
-        auto primitive = args.context->getBuiltIn().getPrimitive(vm::Data::u16);
+        auto primitive = args.context->getBuiltIn().getPrimitive(type::Primitive::u16);
         auto ast_node = new ast::Char;
         ast_node->value = ch_node->value;
         ast_node->type = new ExpressionType(primitive,ExpressionType::rvalue);
@@ -556,7 +556,7 @@ namespace evoBasic{
         if(ast_lhs->type->value_kind == ExpressionType::error || ast_rhs->type->value_kind == ExpressionType::error)
             return ast::Expression::error;
 
-        auto boolean_prototype = args.context->getBuiltIn().getPrimitive(vm::Data::boolean);
+        auto boolean_prototype = args.context->getBuiltIn().getPrimitive(type::Primitive::boolean);
         auto is_boolean = [&](ExpressionType *type,Location *location)->bool{
             if(!type->getPrototype()->equal(boolean_prototype)){
                 Logger::error(location, lang->msgExpExpectedBoolean());
@@ -773,7 +773,7 @@ namespace evoBasic{
         Prototype *dst_prototype = nullptr,*ret_prototype = nullptr;
         switch(ast_target->type->getPrototype()->getKind()){
             case SymbolKind::Array:
-                dst_prototype = args.context->getBuiltIn().getPrimitive(vm::Data::i32);
+                dst_prototype = args.context->getBuiltIn().getPrimitive(type::Primitive::i32);
                 ret_prototype = ast_target->type->getPrototype()->as<Array*>()->getElementPrototype();
                 break;
             case SymbolKind::Class:{

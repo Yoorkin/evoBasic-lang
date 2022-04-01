@@ -366,14 +366,21 @@ namespace evoBasic::type{
             explicit VariantClass();
         };
 
-
         class Primitive : public Class {
-            vm::Data kind_;
         public:
-            explicit Primitive(unicode::Utf8String name,vm::Data data_kind);
+            enum Enum{
+                boolean,i8,i16,i32,i64,f32,f64,
+                u8,u16,u32,u64,rune,address
+            };
+        private:
+            Enum kind_;
+        public:
+
+            explicit Primitive(unicode::Utf8String name,Enum data_kind);
             bool equal(Prototype *ptr)override;
             DebugInfo *debug()override;
-            vm::Data getDataKind();
+            Enum getDataKind();
+            static int getByteLength(Enum e);
         };
 
     }
@@ -398,7 +405,7 @@ namespace evoBasic::type{
     public:
         EnumMember(const Enumeration&)=delete;
         explicit EnumMember(int index): Prototype(SymbolKind::EnumMember),index(index){
-            setByteLength(vm::Data::ptr.getSize());
+            setByteLength(Primitive::getByteLength(Primitive::Enum::address));
         }
         int getIndex()const{return index;}
         DebugInfo *debug()override;

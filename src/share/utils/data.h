@@ -25,4 +25,6 @@ namespace evoBasic::data{
     using address = u64;
     using size = u64;
 }
+
+
 #endif //EVOBASIC_DATADEF_H
