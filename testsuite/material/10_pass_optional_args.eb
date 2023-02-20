@@ -1,0 +1,83 @@
+Sub Expect1(optional a As Integer)
+    if optional a then
+        if a<>1 then Println("failed, expect a==1")
+        a = 100
+    else
+        Println("failed, optional a missing")
+    end if
+End Sub
+
+Sub Expect1AndChangeTo100(optional byref a as integer)
+    if optional a then
+        if a<>1 then Println("failed, expect a==1")
+        a = 100
+    else
+        Println("failed, optional a missing")
+    end if
+end sub
+
+Dim gv as Integer
+
+Sub Main()
+    // pass local variable
+    dim lv as integer = 1
+    Expect1(a = lv)
+    if lv<>1 then println("failed, expect lv==1")
+    lv = 1
+    Expect1AndChangeTo100(a = lv)
+    if lv<>100 then println("failed, expect lv==100")
+
+    // pass global variable
+    gv = 1
+    Expect1(a = gv)
+    if gv<>1 then println("failed, expect gv==1")
+    gv = 1
+    Expect1AndChangeTo100(a = gv)
+    if gv<>100 then println("failed, expect gv==100")
+
+    // pass argument variable
+    ArgumentVariableTest(1, lv)
+
+    // pass class field
+    dim cls as MyClass = New MyClass()
+    Expect1(a = cls.field)
+    if cls.field<>1 then println("failed, expect cls.field==1")
+    cls.field = 1
+    Expect1AndChangeTo100(a = cls.field)
+    if cls.field<>100 then println("failed, expect cls.field==100")
+
+    // pass static field
+    Expect1(a = MyClass.sfld)
+    if MyClass.sfld<>1 then println("failed, expect MyClass.sfld==1")
+    MyClass.sfld = 1
+    Expect1AndChangeTo100(a = MyClass.sfld)
+    if MyClass.sfld<>100 then println("failed, expect MyClass.sfld==100")
+
+    Println("<terminate>")
+End Sub
+
+Sub ArgumentVariableTest(byval av as integer, byref rv as integer)
+    Expect1(a = av)
+    if av<>1 then println("failed, expect av==1")
+    av = 1
+    Expect1AndChangeTo100(a = av)
+    if av<>100 then println("failed, expect av==100")
+
+    Expect1(a = rv)
+    if rv<>1 then println("failed, expect rv==1")
+    rv = 1
+    Expect1AndChangeTo100(a = rv)
+    if rv<>100 then println("failed, expect rv==100")
+End Sub
+
+Class MyClass
+    Public New()
+        field = 1
+        MyClass.sfld = 1
+    End New
+
+    Public Dim field As Integer
+
+    Public Static Dim sfld As Integer
+
+End Class

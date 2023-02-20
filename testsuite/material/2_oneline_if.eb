@@ -1,0 +1,4 @@
+Sub Main()
+    If True Then Println("pass") Else Println("failed")
+    Println("<terminate>")
+End Sub

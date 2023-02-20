@@ -1,0 +1,10 @@
+Sub Main()
+    If False Then
+        Println("failed")
+    ElseIf True Then
+        Println("pass")
+    Else
+        Println("failed")
+    End If
+    Println("<terminate>")
+End Sub

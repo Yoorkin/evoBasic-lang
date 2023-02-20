@@ -1,0 +1,25 @@
+Sub Main()
+    if 1==1 then Println("pass") else Println("failed")
+    if 1<>2 then Println("pass") else Println("failed")
+    if 1<2 then Println("pass") else Println("failed")
+    if 1<=1 then Println("pass") else Println("failed")
+    if 2>1 then Println("pass") else Println("failed")
+    if 1>=1 then Println("pass") else Println("failed")
+
+    if 1+1 == 2 then Println("pass") else Println("failed")
+    if 1-1 == 2 then Println("pass") else Println("failed")
+    if 2*10 == 10 then Println("pass") else Println("failed")
+    if 100/5 == 20 then Println("pass") else Println("failed")
+    if 8 mod 5 == 3 then Println("pass") else Println("failed")
+
+    if True And True then Println("pass") else Println("failed")
+    if False And True then Println("failed") else Println("pass")
+    if False Or True then Println("pass") else Println("failed")
+    if False Or False then Println("failed") else Println("pass")
+    if False xor True then Println("pass") else Println("failed")
+    if Not False then Println("pass") else Println("failed")
+
+    if (True And True) Or Not False then Println("pass") else Println("failed")
+
+    Println("<terminate>")
+End Sub

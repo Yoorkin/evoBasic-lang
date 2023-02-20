@@ -1,0 +1,78 @@
+Private Declare Sub Trap(Byval c As Integer, Byval x as Object)
+
+Public Class Exception Extend Object
+    Dim Message As String, Name As String, Trace As String
+
+    Public New(Byval Msg As String)
+        Self.Message = Msg
+    End New
+
+    Public Function GetMessage() As String
+        Return Message
+    End Function
+
+    Public Override Function ToString() As String
+        Return Name.Concat(": ").Concat(Message).Concat("\n").Concat(Trace)
+    End Function
+
+    Public Function PrintTrace() As String
+        Println(ToString())
+    End Function
+
+End Class
+
+
+Public Class NullPointerException Extend Exception
+    Public New(Byval Pointer As String) 
+        Extend(Pointer.Concat(" is null."))
+    End New
+End Class
+
+
+Public Class ConversionException Extend Exception
+    Public New(Byval src As String, Byval dst As String)
+        Extend("invalid conversion from ".Concat(src).Concat(" to ").Concat(dst))
+    End New
+End Class
+
+
+Public Class OutOfRangeException Extend Exception
+    Public New(Byval index As Integer, Byval length As Integer)
+        Extend(Text.Format("Index was out of range. Length of array is {}, but try to accees index {}.",length,index))
+    End New
+End Class
+
+Public Class OptionMissingException Extend Exception
+    Public New(Byval optionName As String)
+        Extend(Text.Format("cannot access missing option '{}'.", optionName))
+    End New
+End Class
+
+Public Class DivideByZeroException Extend Exception
+    Public New() Extend("")
+    End New
+End Class
+
+Public Class NotImplementedException Extend Exception
+    Public New(Byval FunctionDescription As String)
+        Extend(Text.Format("{} is not implemented.", FunctionDescription))
+    End New
+End Class
+
+Public Class EvmInternalException Extend Exception
+    Public New(Byval Msg As String)
+        Extend(Msg)
+    End New
+End Class
+
+Public Class FFIModuleNotFoundException Extend Exception
+    Public New(Library As String)
+        Extend(Text.Format("ffi module '{}' not found",Library))
+    End New
+End Class
+
+Public Class FFIEntryNotFoundException Extend Exception
+    Public New(Library As String, EntryName As String) 
+        Extend(Text.Format("ffi entry '{}' not found in module '{}'",EntryName,Library))
+    End New
+End Class

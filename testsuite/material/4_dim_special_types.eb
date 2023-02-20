@@ -1,0 +1,6 @@
+Sub Main()
+    Dim a As Byte,b As Short,c As Integer,d As Long,e As Single,f As Double,g As Boolean,h As Rune
+    Dim i As UShort,j As UInteger,k As ULong
+    Dim l As Object,m As Array,n As Exception
+    Println("<terminate>")
+End Sub

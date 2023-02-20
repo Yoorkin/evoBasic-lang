@@ -1,0 +1,39 @@
+Declare Sub PinIntrinsic(x As Object)
+Declare Sub UnpinIntrinsic(x As Object)
+
+Public Class Object
+    Dim Klass As Long
+    Dim forward As Long
+    Dim pined As Byte
+    Dim age As Byte
+
+    Public Virtual Function ToString() As String
+        Throw New NotImplementedException("IndexGet")
+    End Function
+
+    Public Function IsPined() As Boolean
+        Return pined==1
+    End Function
+
+    Public Sub Pin()
+        PinIntrinsic(Self)
+    End Sub
+
+    Public Sub Unpin()
+        UnpinIntrinsic(Self)
+    End Sub
+
+End Class
+
+Public Class Array Extend Object
+    Dim ArrayLength As Integer
+
+    Public Function Length() As Integer
+        Return ArrayLength
+    End Function
+
+    Public Override Function ToString() As String
+        Return "Array"
+    End Function
+End Class
+

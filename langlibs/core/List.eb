@@ -1,0 +1,54 @@
+
+Public Class List
+    Dim Elements As Object[], Used As Integer
+
+    Public New(ParamArray Byval xs As Object[])
+        Elements = xs
+        Used = Len(xs)
+    End New
+
+    Public Function IndexGet(Byval i As Integer) As Object
+        Return Elements[i]
+    End Function
+
+    Public Sub IndexSet(Byval i As Integer,Byval value As Object)
+        Elements[i] = value
+    End Sub
+
+    Public Function Length() As Integer
+        Return Used
+    End Function
+
+    Public Function Capacity() As Integer
+        Return Len(Elements)
+    End Function
+
+    Public Sub Add(Byval Value As Object)
+        If Used==Capacity() Then
+            Expand()
+        End If
+        Elements[Used] = Value
+        Used = Used + 1
+    End Sub
+
+    Public Sub Expand()
+        Dim newAry As Object[]
+        newAry = new Object[Capacity() * 2]
+        For Dim i = 0 To Len(Elements)-1
+            newAry[i] = Elements[i]
+        Next
+        Elements = newAry
+    End Sub
+
+    Public Override Function ToString() As String
+        Dim tmp As String[]
+        tmp = New String[Elements.Length()]
+
+        For Dim i = 0 To Elements.Length()-1
+            tmp[i] = Elements[i].ToString()
+        Next
+
+        Return Text.Format("[{}]", String.Fold(tmp, Separator: ','))
+    End Function
+
+End Class

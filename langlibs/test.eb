@@ -1,0 +1,35 @@
+
+Function ToString(Byval arr As Rune[]) As String
+	Dim ret As String
+	ret = ""
+	For Dim i = 0 To arr.Length()-1
+		ret = ret.Append(arr[i])
+	Next
+	Return ret
+End Function
+
+Class Shop
+	Public Virtual Sub Buy()
+		Println("这里啥也不卖！")
+	End Sub
+End Class
+
+Class MyShop Extend Shop
+	Public Override Sub Buy()
+		Println("吐血大甩卖！")
+	End Sub
+End Class
+
+Sub Main()
+	Dim mShop As Shop
+	mShop = New MyShop()
+	mShop.Buy()
+End Sub
+
+
+
+
+
+
+
+

@@ -1,0 +1,4 @@
+Sub Main()
+    Println("hello world")
+    Println("<terminate>")
+End Sub

@@ -1,0 +1,90 @@
+
+Public Class LinkedNode
+    Public Dim Previous As LinkedNode, Succeed As LinkedNode
+    Public Dim Value As Object
+
+    Public New()
+        Previous = Nothing
+        Succeed = Nothing
+        Value = Nothing
+    End New
+End Class
+
+
+Public Class LinkedList 
+    Dim Head As LinkedNode, Tail As LinkedNode
+    Dim Count As Integer
+
+    Public New()
+        Head = Nothing
+        Tail = Nothing
+        Count = 0
+    End New
+
+    Public Function Length() As Integer
+        Return Count
+    End Function
+
+    Public Sub Add(Byval Value As Object)
+        PushBack(value)
+    End Sub
+
+    Public Sub PushBack(Byval Value As Object)
+        Dim a As LinkedNode
+        a = new LinkedNode()
+        a.Value = Value
+        If Head==Nothing Then
+            Head = a
+            Tail = a
+        Else
+            a.Previous = Tail
+            Tail.Succeed = a
+            Tail = a
+        End If
+        Count = Count + 1
+    End Sub
+
+    Public Sub PushFront(Byval Value As Object)
+        Dim a As LinkedNode
+        a = new LinkedNode()
+        a.Value = Value
+        If Head==Nothing Then
+            Head = a
+            Tail = a
+        Else
+            a.Succeed = Head
+            Head.Previous = a
+            Head = a
+        End If
+        Count = Count + 1
+    End Sub
+
+    Public Sub RemoveBack()
+        Tail = Tail.Previous
+        Tail.Succeed = Nothing
+        Count = Count - 1
+    End Sub
+
+    Public Sub RemoveFront()
+        Head = Head.Succeed
+        Head.Previous = Nothing
+        Count = Count - 1
+    End Sub
+
+    Public Function Back() As Object
+        Return Tail.Value
+    End Function
+
+    Public Function Front() As Object
+        Return Head.Value
+    End Function
+
+    Public Function FrontNode() As LinkedNode
+        Return Head
+    End Function
+
+    Public Function BackNode() As LinkedNode
+        Return Tail
+    End Function
+
+End Class

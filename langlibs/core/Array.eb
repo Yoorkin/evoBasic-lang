@@ -1,0 +1,3 @@
+Function Len(Byval Target As Array) As Integer
+    Return Target.Length()
+End Function

@@ -1,0 +1,46 @@
+Enum MessageType
+    Open
+    Close = 10
+    Restart
+    Error
+    None
+End Enum
+
+Type Message
+    id As Integer
+    msg as MessageType
+    number as Long
+    valid as Boolean
+End Type
+
+
+Sub Test(msg as Message)
+    if msg.id<>123 or msg.msg<>MessageType.Close or msg.number<>114514 or msg.valid<>True then 
+        Println("failed,19")
+    end if
+End Sub
+
+Sub TestRef(byref msg as Message)
+    if msg.id<>123 or msg.msg<>MessageType.Close or msg.number<>114514 or msg.valid<>True then 
+        Println("failed,25")
+    end if
+    msg.id = 321
+    msg.number = 1919180
+    msg.msg = MessageType.None
+    msg.valid = false
+End Sub
+
+Sub Main()
+    dim m as Message
+    m.id = 123
+    m.msg = MessageType.Close
+    m.number = 114514
+    m.valid = True
+    Test(m)
+    TestRef(m)
+    if msg.id<>321 or msg.msg<>MessageType.None or msg.number<>1919180 or msg.valid<>False then 
+        Println("failed,42")
+    end if
+    Println("<terminate>")
+End Sub
+

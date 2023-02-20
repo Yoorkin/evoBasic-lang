@@ -1,0 +1,20 @@
+//https://en.wikipedia.org/wiki/Linear_congruential_generator
+
+Public Class Random
+    Private Dim max As UInteger
+    Private Dim num As UInteger,lbound As Integer,range As Integer
+    Public New(lbound As Integer, ubound As Integer, seed As UInteger)
+        max = 0 As UInteger
+        max = max - 1 As UInteger
+        Self.num = seed
+        Self.lbound = lbound
+        Self.range = ubound - lbound + 1
+    End New
+
+    Public Function GetNext() As Integer
+        num = num * 65539 as UInteger
+        return ((num As Double)/max as Double) * range + lbound
+    End Function 
+End Class
+
+

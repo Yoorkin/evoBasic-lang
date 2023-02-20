@@ -1,0 +1,6 @@
+Sub Main()
+    Dim b As Byte = 100
+    Dim a As Integer = 114514
+    if a == 114514 And Byte == 100 then Println("pass")
+    Println("<terminate>")
+End Sub
