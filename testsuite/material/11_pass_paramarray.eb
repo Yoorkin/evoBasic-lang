@@ -1,0 +1,14 @@
+sub expect321(ParamArray a as object[])
+    if a.length()<>3 then Println("failed, expect a.length()==3")
+    if a[0] as integer <> 3 or a[1] as integer <> 2 or a[2] as integer <> 3 then Println("failed, expect [3,2,1]")
+end sub
+
+sub forwardParamArray(ParamArray a as object[])
+    expect321(a)
+end sub
+
+sub main()
+    expect321([3,2,1])
+    forwardParamArray([3,2,1])
+    Println("<terminate>")
+end sub

@@ -1,0 +1,77 @@
+Import "math"
+
+Sub Swap(Byref a As Integer,Byref b As Integer)
+	Dim t As Integer
+	t = a
+	a = b
+	b = t
+End Sub
+
+Sub SelectionSort(Byval arr As Integer[])
+	Dim A As Integer
+	For Dim i = 0 To arr.Length()-1
+		Dim m As Integer
+		m = i
+		For Dim j = i+1 To arr.Length()-1
+			If arr[m] > arr[j] then m = j
+		Next
+		Swap(arr[i], arr[m])
+		//PrintArray(arr)
+	Next
+End Sub
+
+Sub PrintArray(Byval ls As Integer[])
+	For Dim i = 0 To ls.length()-1
+		Print(ls[i],",")
+	Next
+	Println(";")
+End Sub
+
+/*
+Sub Main()
+	Dim gen As Random = New Random(0,100,5 As UInteger)
+	For Dim t = 0 To 10000
+		Println("time:",t)
+		Dim arr As Integer[] = New Integer[10]
+		For Dim i = 0 To 9
+			arr[i] = gen.GetNext()
+		Next
+		Print("Generate: ")
+		PrintArray(arr)
+		SelectionSort(arr)
+		Print("Sorted: ")
+		PrintArray(arr)
+	Next
+End Sub
+*/
+
+Sub Main()
+	Dim gen As Random = New Random(10,20,5 As UInteger)
+	Dim sum As Integer[] = New Integer[100]
+	For Dim i = 0 To 10000
+		Dim number As Integer = gen.GetNext()
+		sum[number] = sum[number] + 1
+	Next
+	For Dim i = 0 To 99
+		Print(Text.Format("({},{})",i,sum[i]))
+		if i mod 10 == 0 then Print("\n")
+	Next
+End Sub
+
+
+
+
+evobasic 1.1更新内容
+- 支持声明立即赋值（Dim gen As Random = New Random(10,20,5 As UInteger)）
+- 重新实现异常处理
+- 添加UShort,UInteger,ULong无符号内建类型
+- 增加除零异常检测
+- 移除整型溢出异常
+- 修改Import语义
+- 完善标记清扫GC
+- 加入math.bkg语言库（Random随机数类）
+
+
+
+
+

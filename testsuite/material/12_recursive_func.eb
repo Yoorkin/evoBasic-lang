@@ -1,0 +1,8 @@
+function f(x as integer) as integer
+    if x == 0 or x == 1 then return x else return f(x-1) + f(x-2)
+end function
+
+sub main()
+    if f(0) <> 0 or f(1)<>1 or f(2)<>1 or f(3)<>2 or f(11)<>89 then Println("failed")
+    Println("<terminate>")
+end sub

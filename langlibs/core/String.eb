@@ -1,0 +1,78 @@
+Public Class String
+    Dim Sequence As Rune[]
+
+    Public New(Byval Sequence As Rune[])
+        Self.Sequence = Sequence
+    End New
+
+    Public Function Length() As Integer
+        Return Len(Sequence)
+    End Function
+
+    Public Function IndexGet(Byval i As Integer) As Rune
+        Return Sequence[i]
+    End Function
+    
+    Public Override Function ToString() As String
+        Return Self
+    End Function
+
+    Public Function Concat(Byval str As String) As String
+        Dim nl As Integer
+        nl = Length() + str.Length()
+        Dim ns As Rune[]
+        ns = New Rune[nl]
+
+        For Dim i = 0 To Length()-1
+            ns[i] = IndexGet(i)
+        Next
+
+        For Dim i = 0 To str.Length()-1
+            ns[i+Length()] = str.IndexGet(i)
+        Next
+
+        Return New String(ns)
+    End Function
+
+    Public Function Append(Byval r As Rune) As String
+        Dim nl As Integer
+        nl = Length() + 1
+        Dim ns As Rune[]
+        ns = New Rune[nl]
+
+        For Dim i = 0 To Length()-1
+            ns[i] = IndexGet(i)
+        Next
+
+        ns[Length()] = r
+        Return New String(ns)
+    End Function
+
+    Public Static Function Fold(Byval ls As String[], Optional Byval Separator As Rune) As String
+        Dim nl As Integer
+        nl = 0
+        For Dim i = 0 To Len(ls)-1
+            nl = nl + ls[i].Length()
+        Next
+
+        If Optional Separator Then nl = nl + ls.Length() - 1
+
+        Dim ns As Rune[]
+        ns = New Rune[nl]
+
+        Dim dst As Integer
+        dst = 0
+        For Dim i = 0 To Len(ls)-1
+            For Dim j = 0 To ls[i].Length()-1
+                ns[dst] = ls[i].IndexGet(j)
+                dst = dst + 1
+            Next
+            If Optional Separator And i <> ls.Length()-1 Then
+                ns[dst] = Separator
+                dst = dst + 1
+            End If
+        Next
+
+        Return New String(ns)
+    End Function
+End Class

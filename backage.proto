@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package Backage;
+
+message Dependency{
+    string text = 1;
+}
+
+message TextToken{
+    string text = 1;
+}
+
+message ConstructedToken{
+    repeated uint32 tokens = 1;
+}
+
+message ArrayToken{
+    uint32 typeToken = 1;
+}
+
+message TokenDefinition {
+    uint32 id = 1;
+    oneof definition{
+        TextToken textToken = 2;
+        ConstructedToken constructedToken = 3;
+        ArrayToken arrayToken = 4;
+    }
+}
+
+message Package {
+    repeated Dependency dependencies = 1;
+    repeated TokenDefinition tokens = 2;
+    repeated Declaration declarations = 3;
+    string identity = 4;
+    uint64 version = 5;
+}
+
+message Declaration{
+    oneof Member{
+        ClassDecl classDecl = 1;
+        RecordDecl recordDecl = 2;
+        EnumDecl enumDecl = 3;
+        EnumConstant enumConstant = 4;
+        VariableDecl varaibleDecl = 5;
+        ModuleDecl moduleDecl = 6;
+        MethodDecl methodDecl = 7;
+        CtorDecl ctorDecl = 8;
+        ForeignEntryDecl foreignEntryDecl = 9;        
+    }
+}
+
+message ClassDecl{
+    uint32 flag = 1;
+    uint32 nameToken = 2;
+    uint32 baseToken = 3;
+    repeated uint32 implToken = 4;
+    repeated Declaration declarations = 5;
+}
+
+message RecordDecl{
+    uint32 flag = 1;
+    uint32 nameToken = 2;
+    repeated Declaration declarations = 3;
+}
+
+message EnumDecl{
+    uint32 flag = 1;
+    uint32 nameToken = 2;
+    repeated EnumConstant constants = 3;
+}
+
+message EnumConstant{
+    uint32 nameToken = 1;
+    uint32 value = 2;
+}
+
+message VariableDecl{
+    uint32 flag = 1;
+    uint32 nameToken = 2;
+    uint32 typeToken = 3;
+    optional bytes initial = 4;
+}
+
+message ParameterDecl{
+    uint32 flag = 1;
+    uint32 nameToken = 2;
+    uint32 typeToken = 3;
+    optional bytes initial = 4;
+}
+
+message ModuleDecl{
+    uint32 flag = 1;
+    uint32 nameToken = 2;
+    repeated Declaration declarations = 3;
+}
+
+message LocalIndex {
+    uint32 id = 1;
+    uint32 typeToken = 2;
+}
+
+message MethodDecl{
+    uint32 flag = 1;
+    uint32 nameToken = 2;
+    repeated ParameterDecl params = 3;
+    uint32 retTypeToken = 4;
+    repeated LocalIndex localIndex = 5;
+    bytes block = 6;
+    repeated LineNumber lineNumbers = 7;
+    repeated ExceptionEntry exceptionEntry = 8;
+}
+
+message CtorDecl{
+    uint32 flag = 1;
+    repeated ParameterDecl params = 2;
+    repeated LocalIndex localIndex = 3;
+    bytes block = 4;
+    repeated LineNumber lineNumbers = 5;
+    repeated ExceptionEntry exceptionEntry = 6;
+}
+
+message ForeignEntryDecl{
+    uint32 flag = 1;
+    uint32 nameToken = 2;
+    repeated ParameterDecl params = 3;
+    uint32 retTypeToken = 4;
+    bytes block = 5;
+    optional bytes lib = 6;
+    optional bytes alias = 7;
+}
+
+message LineNumber{
+    uint32 line = 1;
+    uint32 offset = 2;
+}
+
+message ExceptionEntry{
+    uint32 offset = 1;
+    uint32 length = 2;
+    uint32 target = 3;
+    uint32 typeToken = 4;
+}
+

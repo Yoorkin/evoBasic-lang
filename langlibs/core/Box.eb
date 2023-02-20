@@ -1,0 +1,162 @@
+Declare Function BooleanToString(Byval Value As Boolean) As String
+Declare Function ByteToString(Byval Value As Byte) As String
+Declare Function UShortToString(Byval Value As UShort) As String
+Declare Function ShortToString(Byval Value As Short) As String
+Declare Function UIntegerToString(Byval Value As UInteger) As String
+Declare Function IntegerToString(Byval Value As Integer) As String
+Declare Function ULongToString(Byval Value As ULong) As String
+Declare Function LongToString(Byval Value As Long) As String
+Declare Function SingleToString(Byval Value As Single) As String
+Declare Function DoubleToString(Byval Value As Double) As String
+
+
+Public Class BooleanBox
+    Dim Value As Boolean
+    Public New(Byval Value As Boolean)
+        Self.Value = Value        
+    End New
+    Public Function Unbox() As Boolean
+        Return Value
+    End Function
+    Public Override Function ToString() As String
+        Return BooleanToString(value)
+    End Function
+End Class
+
+Public Class ByteBox
+    Dim Value As Byte
+    Public New(Byval Value As Byte)
+        Self.Value = Value        
+    End New
+    Public Function Unbox() As Byte
+        Return Value
+    End Function
+    Public Override Function ToString() As String
+        Return ByteToString(Value)
+    End Function
+End Class
+
+Public Class ShortBox
+    Dim Value As Short
+    Public New(Byval Value As Short)
+        Self.Value = Value        
+    End New
+    Public Function Unbox() As Short
+        Return Value
+    End Function
+    Public Override Function ToString() As String
+        Return ShortToString(Value)
+    End Function
+End Class
+
+Public Class UShortBox
+    Dim Value As UShort
+    Public New(Byval Value As UShort)
+        Self.Value = Value        
+    End New
+    Public Function Unbox() As UShort
+        Return Value
+    End Function
+    Public Override Function ToString() As String
+        Return UShortToString(Value)
+    End Function
+End Class
+
+Public Class RuneBox
+    Dim Value As Rune
+    Public New(Byval Value As Rune)
+        Self.Value = Value        
+    End New
+    Public Function Unbox() As Rune
+        Return Value
+    End Function
+    Public Override Function ToString() As String
+        Return "Rune"
+    End Function
+End Class
+
+Public Class IntegerBox
+    Dim Value As Integer
+    Public New(Byval Value As Integer)
+        Self.Value = Value        
+    End New
+    Public Function Unbox() As Integer
+        Return Value
+    End Function
+    Public Override Function ToString() As String
+        Return IntegerToString(Value)
+    End Function
+End Class
+
+Public Class UIntegerBox
+    Dim Value As UInteger
+    Public New(Byval Value As UInteger)
+        Self.Value = Value        
+    End New
+    Public Function Unbox() As UInteger
+        Return Value
+    End Function
+    Public Override Function ToString() As String
+        Return UIntegerToString(Value)
+    End Function
+End Class
+
+Public Class LongBox
+    Dim Value As Long
+    Public New(Byval Value As Long)
+        Self.Value = Value        
+    End New
+    Public Function Unbox() As Long
+        Return Value
+    End Function
+    Public Override Function ToString() As String
+        Return LongToString(Value)
+    End Function
+End Class
+
+Public Class ULongBox
+    Dim Value As ULong
+    Public New(Byval Value As ULong)
+        Self.Value = Value        
+    End New
+    Public Function Unbox() As ULong
+        Return Value
+    End Function
+    Public Override Function ToString() As String
+        Return ULongToString(Value)
+    End Function
+End Class
+
+Public Class SingleBox
+    Dim Value As Single
+    Public New(Byval Value As Single)
+        Self.Value = Value        
+    End New
+    Public Function Unbox() As Single
+        Return Value
+    End Function
+    Public Override Function ToString() As String
+        Return SingleToString(Value)
+    End Function
+End Class
+
+Public Class DoubleBox
+    Dim Value As Double
+    Public New(Byval Value As Double)
+        Self.Value = Value        
+    End New
+    Public Function Unbox() As Double
+        Return Value
+    End Function
+    Public Override Function ToString() As String
+        Return DoubleToString(Value)
+    End Function
+End Class
+
+
+
+
+
+
+
+

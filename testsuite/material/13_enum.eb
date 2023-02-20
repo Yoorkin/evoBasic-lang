@@ -1,0 +1,19 @@
+Enum Message
+    Open
+    Close = 10
+    Restart
+    Error
+    None
+End Enum
+
+Function ExpectRestartAndReturnNone(msg as Message)As Message
+    if msg<>Message.Restart then Println("failed,expect msg==Message.Restart")
+    return Message.None
+End Function
+
+Sub Main()
+    Dim a as Message
+    a = ExpectRestartAndReturnNone(Message.Restart)
+    if a<>Message.None then Println("failed,expect a==Message.None")
+    Println("<terminate>")
+End Sub

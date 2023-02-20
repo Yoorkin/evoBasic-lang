@@ -1,0 +1,83 @@
+Function Expect110(A As Byte, b As Integer) As Integer
+    if a + b <> 110 then println("failed")
+    return 220
+End Function
+
+Sub PassByValExpect1(a As Integer)
+    if a<>1 then println("failed,arg 'a' in PassByValExpect1 should be 1.")
+    a = 100
+End Sub
+
+Sub PassByRefExpect1AndChangeTo100(Byref a As Integer)
+    if a<>1 then println("failed,arg 'a' in PassByRefExpect1AndChangeTo100 should be 1.")
+    a = 100
+End Sub
+
+dim gv As Integer
+
+Sub Main()
+
+    if test(100, 10) <> 220 then println("failed, test(100,10) should be 220")
+
+    // pass local variable
+    dim v As Integer = 1
+    PassByValExpect1(v)
+    if v<>1 then println("failed,v should not be changed by PassByValExpect1")
+    v = 1
+    PassByRefExpect1AndChangeTo100(v)
+    if v<>100 then println("failed,v should be 100")
+
+    // pass global variable
+    gv = 111
+    PassByValExpect1(gv)
+    if gv<>1 then println("failed, gv should not be changed by PassByValExpect1")
+    gv = 1
+    PassByRefExpect1AndChangeTo100(gv)
+    if gv<>100 then println("failed, expect gv==100")
+
+    // pass argument variable
+    ArgumentVariableTest(1,v)
+
+    // pass class field
+    Dim cls As MyClass = new MyClass()
+    PassByValExpect1(cls.field)
+    if cls.field<>1 then println("failed, expect cls.field==1")
+    cls.field = 1
+    PassByRefExpect1AndChangeTo100(cls.field)
+    if cls.field<>100 then println("failed, expect cls.field==100")
+
+    // pass static field
+    PassByValExpect1(MyClass.sfld)
+    if MyClass.sfld<>1 then println("failed, expect MyClass.sfld==1")
+    MyClass.sfld = 1
+    PassByRefExpect1AndChangeTo100(MyClass.sfld)
+    if MyClass.sfld<>100 then println("failed. expect MyClass.sfld==100")
+
+    Println("<terminate>")
+End Sub
+
+Sub ArgumentVariableTest(byval a As Integer, byref b as integer)
+    PassByValExpect1(a)
+    if a<>1 then println("failed, expect a==1")
+    a = 1
+    PassByRefExpect1AndChangeTo100(a)
+    if a<>100 then println("failed, expect a==100")
+
+    PassByValExpect1(b)
+    if b<>1 then println("failed, expect b==1")
+    b = 1
+    PassByRefExpect1AndChangeTo100(a)
+    if b<>100 then println("failed, expect b==100")
+End Sub
+
+Class MyClass
+    Public New()
+        field = 1
+        MyClass.sfld = 1
+    End New
+
+    Public Dim field As Integer
+
+    Public Static Dim sfld As Integer
+
+End Class

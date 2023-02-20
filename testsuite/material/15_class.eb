@@ -1,0 +1,32 @@
+Class Base
+    Public Dim number As Integer
+    Public New(x as Integer)
+        Self.number = x
+    End New
+
+    Public Virtual Function Sum() As Integer
+        Return number
+    End Function
+End Class
+
+Class Derived Extend Base
+    Public Dim number2 As Integer
+    Public New(a as integer, b as integer) Extend(a)
+        self.number2 = b
+    End New
+    
+    Public Override Function Sum() As Integer
+        Return number2
+    End Function
+End Class
+
+Sub main()
+    Dim a as Base = New Base(100), b as Base = New Derived(100,101)
+    if a.Sum()<>100 then Println("failed, expect a.sum()==100")
+    if b.Sum()<>101 then Println("failed, expect b.sum()==101")
+    Dim c as Derived = b as Derived
+    if c.number2<>101 then Println("failed, expect c.number2==101")
+    Println("<terminate>")
+End Sub
+
+

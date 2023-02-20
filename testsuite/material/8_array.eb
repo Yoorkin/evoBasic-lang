@@ -1,0 +1,17 @@
+Sub Main()
+    Dim a As Integer[] = [1,2,3,4,5,6]
+    Dim b As Array = a, c As Object = a
+    
+    if b is Integer[] then Println("pass") else Println("failed")
+    if c is Integer[] then Println("pass") else Println("failed")
+    if a.length() == 6 then Println("pass") else Println("failed")
+    
+    if a[0]==1 then Println("pass") else Println("failed")
+    if a[1]==2 then Println("pass") else Println("failed")
+    if a[2]==3 then Println("pass") else Println("failed")
+    if a[3]==4 then Println("pass") else Println("failed")
+    if a[4]==5 then Println("pass") else Println("failed")
+    if a[5]==6 then Println("pass") else Println("failed")
+
+    Println("<terminate>")
+End Sub

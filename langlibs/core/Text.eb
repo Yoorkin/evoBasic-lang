@@ -1,0 +1,48 @@
+Public Module Text
+
+    Public Function Format(Byval fmt As String,ParamArray Byval args As Object[]) As String
+
+        Dim size As Integer,argCount As Integer
+        size = fmt.Length()
+        argCount = 0
+        For Dim i = 0 To fmt.Length()-1
+            if fmt.IndexGet(i)=='{' then
+                size = size - 2
+                argCount = argCount + 1
+            end if
+        Next
+
+        For Dim i = 0 To argCount-1
+            size = size + args[i].ToString().Length()
+        Next
+
+        Dim seq As Rune[]
+        seq = new Rune[size]
+        
+        Dim src As Integer,dst As Integer
+        src = 0
+        dst = 0
+        For Dim a = 0 To argCount-1
+            While fmt.IndexGet(src)<>'{'
+                seq[dst] = fmt.IndexGet(src)
+                dst = dst + 1
+                src = src + 1
+            Wend
+            src = src + 2
+            Dim argStr As String
+            argStr = args[a].ToString()
+            For Dim j = 0 To argStr.Length()-1
+                seq[dst] = argStr.IndexGet(j)
+                dst = dst + 1
+            Next
+        Next
+
+        For Dim rest = src To fmt.Length()-1
+            seq[dst] = fmt.IndexGet(rest)
+            dst = dst + 1
+        Next
+
+        Return New String(seq)
+    End Function
+
+End Module

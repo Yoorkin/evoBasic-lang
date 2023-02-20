@@ -1,0 +1,26 @@
+
+Public Class Stack
+    Dim Data As List, Top As Integer
+
+    Public New()
+        Data = New List()
+        Top = 0
+    End New
+
+    Public Function Pop() As Object
+        Top = Top - 1
+        Return Data.IndexGet(Top)
+    End Function
+
+    Public Sub Push(Byval Value As Object)
+        If Top == Data.Capacity() Then
+            Data.Expand()
+        End If
+        Data.IndexSet(Top, Value)
+    End Sub
+
+    Public Function Empty() As Boolean
+        Return Top==0
+    End Function
+
+End Class

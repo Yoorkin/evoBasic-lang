@@ -1,0 +1,38 @@
+
+Private Declare Sub PutRune(Byval x as Rune)
+
+Public Sub Print(ParamArray Byval xs As Object[])
+    For Dim i = 0 To Len(xs)-1
+        Dim x As Object
+        x = xs[i]
+        Dim str As String
+        if x is String then
+            str = x As String
+        elseif x is Rune then
+            str = new String([x as Rune])
+        else
+            str = x.ToString()
+        end if
+
+        For Dim i = 0 To str.Length()-1
+            PutRune(str.IndexGet(i))
+        Next
+
+        If i <> Len(xs)-1 Then
+            PutRune(' ')
+        End If
+    Next
+End Sub
+
+
+Public Sub Println(ParamArray Byval xs As Object[])
+    Print(xs)
+    Print('\n')
+End Sub
+
+
+Public Sub PrintFmt(Byval fmt As String, ParamArray Byval args As Object[])
+    Print(Text.Format(fmt,args))
+End Sub
+
+
