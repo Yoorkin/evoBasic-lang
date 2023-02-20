@@ -5,20 +5,20 @@
 #include "parseTree.h"
 #include <utils/nullSafe.h>
 #include <ostream>
-#include <string>
+#include <utils/unicode.h>
 #include <utils/utils.h>
 
 using namespace std;
 namespace evoBasic::parseTree{
-    std::vector<std::string> AccessFlagToString={
+    std::vector<unicode::Utf8String> AccessFlagToString={
         "Public","Private","Friend","Protected"
     };
 
-    const std::string prefix_unit = "\033[32m│  \033[0m";
+    const unicode::Utf8String prefix_unit = "\033[32m│  \033[0m";
 
 
-    void debugTree(ostream &stream,DebugInfo *info,string prefix,bool is_last){
-        const string indent_unit = "\t";
+    void debugTree(ostream &stream,DebugInfo *info,unicode::Utf8String prefix,bool is_last){
+        const unicode::Utf8String indent_unit = "\t";
         stream<<prefix;
         if(is_last)stream<<"└─";else stream<<"├─";
         stream<<info->text<<endl;
@@ -30,7 +30,7 @@ namespace evoBasic::parseTree{
         }
     }
 
-    string debugParseTree(parseTree::Node *ast){
+    unicode::Utf8String debugParseTree(parseTree::Node *ast){
         stringstream stream;
         auto info = ast->debug();
         debugTree(stream,info,"",true);
@@ -49,7 +49,7 @@ namespace evoBasic::parseTree{
     }
 
     DebugInfo *Class::debug() {
-        string text = Format() << "Class"
+        unicode::Utf8String text = Format() << "Class"
                                << " " << AccessFlagToString[(int)access];
         auto ret = new DebugInfo{text,{name->debug()}};
         if(extend)ret->childs.push_back(extend->debug());
@@ -62,7 +62,7 @@ namespace evoBasic::parseTree{
     }
 
     DebugInfo *Module::debug() {
-        string text = Format() << "Module "
+        unicode::Utf8String text = Format() << "Module "
                                << " " << AccessFlagToString[(int)access];
         auto ret = new DebugInfo{text,{name->debug()}};
         auto iter = member;
@@ -75,7 +75,7 @@ namespace evoBasic::parseTree{
 
 
     DebugInfo *Interface::debug() {
-        string text = Format() << "Interface "
+        unicode::Utf8String text = Format() << "Interface "
                                << " " << AccessFlagToString[(int)access];
         auto ret = new DebugInfo{text,{name->debug()}};
         Member *iter = function;
@@ -91,7 +91,7 @@ namespace evoBasic::parseTree{
     }
 
     DebugInfo *Dim::debug() {
-        string text = Format() << "Dim"
+        unicode::Utf8String text = Format() << "Dim"
                                << " " << AccessFlagToString[(int)access]
                                << (is_const?" Const":"")
                                << (is_static?" Static":"");
@@ -113,7 +113,7 @@ namespace evoBasic::parseTree{
 
     DebugInfo *Function::debug() {
         vector flag = {" Virtual"," Override",""};
-        string text = Format() << "Function"
+        unicode::Utf8String text = Format() << "Function"
                                << " " << AccessFlagToString[(int)access]
                                << flag[(int)method_flag]
                                << (is_static?" Static":"");
@@ -150,7 +150,7 @@ namespace evoBasic::parseTree{
     }
 
     DebugInfo *Enum::debug() {
-        string text = Format() << "Enum"
+        unicode::Utf8String text = Format() << "Enum"
                                << " " << AccessFlagToString[(int)access];
         auto ret = new DebugInfo{text,{name->debug()}};
         auto iter = member;
@@ -162,7 +162,7 @@ namespace evoBasic::parseTree{
     }
 
     DebugInfo *Type::debug() {
-        string text = Format() << "Type"
+        unicode::Utf8String text = Format() << "Type"
                                << " " << AccessFlagToString[(int)access];
         auto ret = new DebugInfo{text,{name->debug()}};
         auto iter = member;
@@ -174,7 +174,7 @@ namespace evoBasic::parseTree{
     }
 
     DebugInfo *Parameter::debug() {
-        string text = "Parameter";
+        unicode::Utf8String text = "Parameter";
 
         if(is_byval)text += " ByVal";
         else text += " ByRef";
@@ -244,7 +244,7 @@ namespace evoBasic::parseTree{
     }
 
     DebugInfo *stmt::Exit::debug() {
-        vector<string> flag = {"For","While","Sub"};
+        vector<unicode::Utf8String> flag = {"For","While","Sub"};
         return new DebugInfo{Format() << "Exit " << flag[exit_flag]};
     }
 
@@ -288,7 +288,7 @@ namespace evoBasic::parseTree{
     }
 
     DebugInfo *expr::Binary::debug() {
-        vector<string> OpStr = {"Empty","And","Or","Xor","Not","'=='","'<>'","'>='","'<='","'>='","'<'",
+        vector<unicode::Utf8String> OpStr = {"Empty","And","Or","Xor","Not","'=='","'<>'","'>='","'<='","'>='","'<'",
                         "'+'","'-'","'*'","'/'","'\\'","'='","'.'","Index"};
         return new DebugInfo{OpStr[op],{lhs->debug(),rhs->debug()}};
     }
@@ -298,7 +298,7 @@ namespace evoBasic::parseTree{
     }
 
     DebugInfo *expr::Unary::debug() {
-        vector<string> OpStr = {"Empty","'-'","'+'"};
+        vector<unicode::Utf8String> OpStr = {"Empty","'-'","'+'"};
         return new DebugInfo{Format() << "Unary " << OpStr[op], {terminal->debug()}};
     }
 
@@ -311,7 +311,7 @@ namespace evoBasic::parseTree{
     }
 
     DebugInfo *expr::Argument::debug() {
-        vector<string> PassKindStr{"Undefined","ByRef","ByVal"};
+        vector<unicode::Utf8String> PassKindStr{"Undefined","ByRef","ByVal"};
         return new DebugInfo{Format() << "Parameter " << PassKindStr[pass_kind], {expr->debug()}};
     }
 

@@ -8,32 +8,25 @@
 #include <cctype>
 #include <utils/format.h>
 #include <utils/nullSafe.h>
+#include <utils/unicode.h>
 using namespace std;
+using namespace evoBasic::unicode;
 namespace evoBasic{
 
-
-    bool isDigit(char c) {
-        return c <= '9' && c >= '0';
-    }
-
-    bool isLetter(char c) {
-        return c >= 'a' && c <= 'z';
-    }
-
-    bool isNewLine(char c) {
+    bool isNewLine(Utf8Char &c) {
         return c == '\n' || c == '\r';
     }
 
-    bool isWhiteSpace(char c) {
+    bool isWhiteSpace(Utf8Char &c) {
         return c == '\t' || c == ' ' || isNewLine(c);
     }
 
-    char toLower(char c) {
-        if (c >= 'A' && c <= 'Z') return c - 'A' + 'a';
-        else return c;
+    bool isValidCharForID(Utf8Char &c){
+        return isAlpha(c) || isBasicHan(c);
     }
 
-    Lexer::Lexer(Source *source) : source_(source) {
+    Lexer::Lexer(Source *source) : source_(source), iter(source->getSource().begin()) {
+
         NotNull(source);
         map<Token::Enum, Token::Enum> merge = {
                 {Token::if_,       Token::END_IF},
@@ -89,7 +82,7 @@ namespace evoBasic{
         else throw SyntaxException(*getNextToken(),kind);
     }
 
-    void Lexer::match(Token::Enum kind,std::set<Token::Enum> follows,std::string message){
+    void Lexer::match(Token::Enum kind,std::set<Token::Enum> follows,unicode::Utf8String message){
         if(getNextToken()->getKind() == kind){
             Logger::print(Channel::Tokens,Format() << "match: " << getNextToken()->toString() << '\n');
             next_token++;
@@ -128,7 +121,7 @@ namespace evoBasic{
 
         auto error = [&](){
             state = START;
-            Logger::error(new Location(begin_x,x,begin_y,source_),"TokenRef error");
+            Logger::error(new Location(begin_x,x,begin_y,source_),"Token error");
         };
 
 
@@ -138,11 +131,24 @@ namespace evoBasic{
                 if(isNewLine(c)){
                     y++;x=1;
                 }
-                else x++;
-                lexeme_char = source_->getStream().get();
-                c = toLower(lexeme_char);
+                else {
+                    x++;
+                }
+
+                if(iter==source_->getSource().end()) {
+                    lexeme_char.clear();
+                    c.clear();
+                }
+                else{
+                    lexeme_char = *iter;
+                    c = toLowerCase(lexeme_char);
+                    iter++;
+                }
+
             }
-            else resume_char = true;
+            else {
+                resume_char = true;
+            }
 
             switch (state) {
                 case Err:
@@ -152,7 +158,7 @@ namespace evoBasic{
                     begin_x = x;
                     begin_y = y;
                     if(isDigit(c))           state = NUM;
-                    else if(isLetter(c))     state = ID1;
+                    else if(isValidCharForID(c))     state = ID1;
                     else if(c == '/')        state = COM1;
                     else if(c == '"')        state = STR;
                     else if(c == '\'')       state = CHAR1;
@@ -172,7 +178,7 @@ namespace evoBasic{
                     else if(c == '[')        endState(true,Token::LB);
                     else if(c == ']')        endState(true,Token::RB);
                     else if(c == ':')        endState(true,Token::COLON);
-                    else if(c == -1)         endState(false,Token::EOF_);
+                    else if(c.empty())       endState(false,Token::EOF_);
                     else error();
                     break;
                 case NUM:
@@ -196,13 +202,13 @@ namespace evoBasic{
                     else endState(false,Token::DECIMAL);
                     break;
                 case ID1:
-                    if(isLetter(c))     state = ID1;
+                    if(isValidCharForID(c))     state = ID1;
                     else if(isDigit(c)) state = ID2;
                     else endState(false,Token::ID);
                     break;
                 case ID2:
                     if(isDigit(c))      state = ID2;
-                    else if(isLetter(c))state = ID1;
+                    else if(isValidCharForID(c))state = ID1;
                     else endState(false,Token::ID);
                     break;
                 case COM1:
@@ -248,8 +254,10 @@ namespace evoBasic{
                 case END:
                     resume_char = false;
                     if(result_kind == Token::ID){
-                        string tmp = lexeme;
-                        std::transform(tmp.begin(),tmp.end(),tmp.begin(),[](unsigned char c){return tolower(c);});
+                        Utf8String tmp;
+                        for(auto c : lexeme){
+                            tmp.push_back(toLowerCase(c));
+                        }
                         auto ret = Token::reserved_words.find(tmp);
                         if(ret != Token::reserved_words.end()){
                             result_kind = ret->second;

@@ -4,6 +4,8 @@
 
 #include "processor.h"
 #include <loader/bytecode.h>
+#include <execution/intrinsic.h>
+
 namespace evoBasic::vm{
 
     template<template <typename P> class Operation>
@@ -468,7 +470,7 @@ namespace evoBasic::vm{
                     forEachType(OpLoadHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Starg:
-                    forEachType(OpLdargHandler, operand, getCurrentEnv());
+                    forEachType(OpStargHandler, operand, getCurrentEnv());
                     break;
                 case Bytecode::Store:
                     forEachType(OpStoreHandler, operand, getCurrentEnv());
@@ -512,12 +514,12 @@ namespace evoBasic::vm{
                     getCurrentEnv().consume<data::Byte>();
                     auto token_id = getCurrentEnv().consume<il::TokenDef::ID>();
                     auto rt = getCurrentEnv().getFunction()->getTokenTable()->getRuntime<Runtime>(token_id);
-                    //todo
+                    PANIC;
                     break;
                 }
                 case Bytecode::Intrinsic:{
                     auto index = getCurrentEnv().consume<data::Byte>();
-                    intrinsic::getHandler((IntrinsicEnum)index)(&operand);
+                    intrinsic::callHandler((IntrinsicEnum)index,&operand,context);
                     break;
                 }
                 case Bytecode::Ldflda:{
@@ -530,11 +532,10 @@ namespace evoBasic::vm{
                     break;
                 }
                 case Bytecode::Ldsflda:{
-                    auto klass = *((Class**)operand.pop<data::Byte*>());
                     getCurrentEnv().consume<data::Byte>();
                     auto token_id = getCurrentEnv().consume<il::TokenDef::ID>();
                     auto field_slot = getCurrentEnv().getFunction()->getTokenTable()->getRuntime<StaticFieldSlot>(token_id);
-                    auto address = klass->address<data::Byte*>(field_slot);
+                    auto address = field_slot->getAddress();
                     operand.push(address);
                     break;
                 }

@@ -11,7 +11,6 @@ add_executable(
 	${EVO_SHARE_SOURCE_DIR}/analyzer/detailCollector.cpp
 	${EVO_SHARE_SOURCE_DIR}/analyzer/type.cpp
 	${EVO_SHARE_SOURCE_DIR}/analyzer/typeAnalyzer.cpp
-	${EVO_SHARE_SOURCE_DIR}/loader/bytecode.cpp
 	${EVO_SHARE_SOURCE_DIR}/loader/il.cpp
 	${EVO_SHARE_SOURCE_DIR}/loader/loader.cpp
 	${EVO_SHARE_SOURCE_DIR}/codegen/ilGen.cpp
@@ -22,6 +21,7 @@ add_executable(
 	${EVO_SHARE_SOURCE_DIR}/parser/lexer.cpp
 	${EVO_SHARE_SOURCE_DIR}/parser/parser.cpp
 	${EVO_SHARE_SOURCE_DIR}/parser/parseTree.cpp
-)
+	${EVO_SHARE_SOURCE_DIR}/utils/unicode.cpp
+	)
 
 

@@ -30,9 +30,10 @@ namespace evoBasic{
         friend CompileTimeContext;
         explicit BuiltIn();
 
-        using Primitive = type::primitive::Primitive;
-        std::vector<Primitive*> primitive_vector;
-        std::vector<std::string> operators_name;
+        type::Primitive *pmt_bool,*pmt_i8,*pmt_i16,*pmt_i32,*pmt_i64,
+                  *pmt_u8,*pmt_u16,*pmt_u32,*pmt_u64,*pmt_f32,*pmt_f64;
+
+        std::vector<unicode::Utf8String> operators_name;
         type::primitive::VariantClass *variant_class = nullptr;
         type::Error *error_symbol = nullptr;
         type::Class *object_class = nullptr;
@@ -41,11 +42,11 @@ namespace evoBasic{
         static BuiltIn builtin;
     public:
         type::VariantClass *getVariantClass()const;
-        Primitive *getPrimitive(vm::Data kind)const;
+        type::Primitive *getPrimitive(type::Primitive::Enum kind)const;
         type::Class *getObjectClass()const;
         type::Class *getStringClass()const;
         type::Error *getErrorPrototype()const;
-        std::string getOperatorName()const;
+        unicode::Utf8String getOperatorName()const;
     };
 
     class ConversionRules{
@@ -79,7 +80,7 @@ namespace evoBasic{
 
         CompileTimeContext(const CompileTimeContext&)=delete;
         CompileTimeContext();
-        type::Symbol *findSymbol(std::list<std::string> full_name);
+        type::Symbol *findSymbol(std::list<unicode::Utf8String> full_name);
         type::Module *getGlobal();
         type::Function *getEntrance();
         void setEntrance(type::Function *function);

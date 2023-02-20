@@ -3,10 +3,10 @@
 //
 
 #include "runtime.h"
-#include <execution/intrinsic.h>
+#include "intrinsic.h"
 
 namespace evoBasic::vm{
-    Runtime *NameSpace::find(std::string name) {
+    Runtime *NameSpace::find(unicode::Utf8String name) {
         auto target = childs.find(name);
         if(target == childs.end())return nullptr;
         else return target->second;
@@ -14,12 +14,12 @@ namespace evoBasic::vm{
 
     NameSpace::NameSpace(TokenTable *table) : Runtime(table) {}
 
-    const std::map<std::string, Runtime *> &NameSpace::getChilds() {
+    const std::map<unicode::Utf8String, Runtime *> &NameSpace::getChilds() {
         return childs;
     }
 
     void TokenTable::loadCache(data::u64 idx) {
-        Runtime *target = context;
+        Runtime *target = context->getGlobalRuntime();
         auto fullname = tokens[idx]->getFullName();
         auto first = fullname.front();
         fullname.pop_front();
@@ -211,7 +211,7 @@ namespace evoBasic::vm{
                 }
             }
 
-            mod->static_field_memory = (char*)malloc(static_field_size);
+            mod->static_field_memory = (data::Byte*)malloc(static_field_size);
 
             for(auto [_,child] : mod->childs){
                 fillModuleStaticField(child);
@@ -232,8 +232,8 @@ namespace evoBasic::vm{
                 }
                 break;
             }
-            case RuntimeKind::Context:
-                for(auto [_,child] : dynamic_cast<RuntimeContext*>(runtime)->childs){
+            case RuntimeKind::Global:
+                for(auto [_,child] : dynamic_cast<Global*>(runtime)->childs){
                     collectDetailRecursively(child);
                 }
                 break;
@@ -261,9 +261,31 @@ namespace evoBasic::vm{
         }
     }
 
-    RuntimeContext::RuntimeContext(std::list<il::Document*> &documents) : NameSpace(nullptr) {
+    void RuntimeContext::fillGlobalStaticFields(std::list<std::pair<TokenTable*,il::Document*>> &document_list) {
+        data::u64 global_field_size = 0;
+        for(auto [token_table,document] : document_list){
+            for(auto member : document->getMembers()){
+                switch(member->getKind()){
+                    case il::MemberKind::SFld:{
+                        auto sfld = dynamic_cast<il::SFld*>(member);
+                        auto sfld_name = sfld->getNameToken()->getDef()->getName();
+                        auto type_token_id = sfld->getTypeToken()->getID();
+                        global_field_size += token_table->getRuntime<Sizeable>(type_token_id)->getByteLength();
+                        auto slot = new StaticFieldSlot(global,global_field_size,sfld);
+                        global->childs.insert({sfld_name,slot});
+                        break;
+                    }
+                }
 
-        std::vector<std::pair<std::string,vm::BuiltIn*>> builtin_list = {
+            }
+        }
+        global->global_static_field_memory = (data::Byte*)malloc(global_field_size);
+    }
+
+    RuntimeContext::RuntimeContext(std::list<il::Document*> &documents){
+        global = new Global();
+
+        std::vector<std::pair<unicode::Utf8String,vm::BuiltIn*>> builtin_list = {
             {"boolean",new BuiltIn(BuiltInKind::boolean)},
             {"byte",new BuiltIn(BuiltInKind::i8)},
             {"short",new BuiltIn(BuiltInKind::i16)},
@@ -276,7 +298,7 @@ namespace evoBasic::vm{
             {"u64",new BuiltIn(BuiltInKind::u64)}
         };
 
-        for(auto builtin : builtin_list) childs.insert(builtin);
+        for(auto builtin : builtin_list) global->childs.insert(builtin);
 
         std::list<std::pair<TokenTable*,il::Document*>> tmp;
         for(auto document : documents){
@@ -289,7 +311,7 @@ namespace evoBasic::vm{
             for(auto member : document->getMembers()){
                 auto child = collectSymbolRecursively(token_table,member);
                 if(child.has_value()){
-                    this->childs.insert(child.value());
+                    global->childs.insert(child.value());
                 }
             }
         }
@@ -297,8 +319,8 @@ namespace evoBasic::vm{
         Dependencies<Class*> inherit_dependencies;
         Dependencies<Record*> include_dependencies;
 
-        for(auto [_,runtime] : childs){
-            collectDependencies(this,runtime,inherit_dependencies,include_dependencies);
+        for(auto [_,runtime] : global->childs){
+            collectDependencies(global,runtime,inherit_dependencies,include_dependencies);
         }
 
         include_dependencies.solve();
@@ -306,16 +328,52 @@ namespace evoBasic::vm{
             recordFieldsResolution(record);
         }
 
-        for(auto [_,runtime] : childs){
+        for(auto [_,runtime] : global->childs){
             fillModuleStaticField(runtime);
         }
+
+        fillGlobalStaticFields(tmp);
 
         inherit_dependencies.solve();
         for(auto cls : inherit_dependencies.getTopologicalOrder()){
             classFieldsAndVTableResolution(cls);
         }
 
-        collectDetailRecursively(this);
+        collectDetailRecursively(global);
+    }
+
+    RuntimeContext::~RuntimeContext() {
+        delete global;
+    }
+
+    Function *RuntimeContext::getEntrance() {
+        return dynamic_cast<Function*>(global->find("main"));
+    }
+
+    Global *RuntimeContext::getGlobalRuntime() {
+        return global;
+    }
+
+
+    void debugRuntimeSymbol(DebugInfo *info,std::ostream &stream,unicode::Utf8String indent){
+        stream << indent << info->text;
+        if(!info->childs.empty()){
+            stream << " {\n";
+            for(auto i : info->childs){
+                debugRuntimeSymbol(i,stream,indent + "    ");
+            }
+            stream << indent << "}";
+        }
+        stream << '\n';
+    }
+
+
+    unicode::Utf8String RuntimeContext::debug() {
+        auto info = global->toStructuredInfo();
+        std::stringstream stream;
+        stream << "# Runtime Symbol \n";
+        debugRuntimeSymbol(info,stream,"");
+        return stream.str();
     }
 
 
@@ -396,14 +454,58 @@ namespace evoBasic::vm{
         return params_length;
     }
 
-    ForeignFunction::ForeignFunction(std::string library, std::string name, il::Ext *info)
+    DebugInfo *Function::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " Function";
+        Format p;
+        p << "Param(" << getParamsStackFrameLength() << "):";
+        for(int i=0;i<getParams().size();i++){
+            p << getParamOffset(i);
+            if(i!=getParams().size()-1){
+                p << ',';
+            }
+        }
+
+        Format l;
+        l << "Local(" << getLocalsStackFrameLength() << "):";
+        for(int i=0;i<getLocals().size();i++){
+            l << getLocalOffset(i);
+            if(i!=getLocals().size()-1){
+                l << ',';
+            }
+        }
+
+        return new DebugInfo{
+            fmt,{
+                new DebugInfo{p},
+                new DebugInfo{l}
+            }
+        };
+    }
+
+    ForeignFunction::ForeignFunction(unicode::Utf8String library, unicode::Utf8String name, il::Ext *info)
         : Runtime(nullptr),name(name),il_info(info){}
+
+    DebugInfo *ForeignFunction::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " FFI(\"" << library << "\",\"" << name << "\")";
+        return new DebugInfo{fmt};
+    }
 
     VirtualFtnSlot::VirtualFtnSlot(data::u64 offset, il::VFtn *info)
         : Runtime(nullptr),offset(offset),il_info(info){}
 
     data::u64 VirtualFtnSlot::getOffset() {
         return offset;
+    }
+
+    DebugInfo *VirtualFtnSlot::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " VirtualFtnSlot(" << offset << ")";
+        return new DebugInfo{fmt};
     }
 
     FieldSlot::FieldSlot(data::u64 offset, il::Fld *info)
@@ -413,19 +515,38 @@ namespace evoBasic::vm{
         return offset;
     }
 
+    DebugInfo *FieldSlot::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " FieldSlot(" << offset << ")";
+        return new DebugInfo{fmt};
+    }
+
     StaticFieldSlot::StaticFieldSlot(Module *owner,data::u64 offset, il::SFld *info)
             : Runtime(nullptr),offset(offset),il_info(info),owner(owner){}
 
     StaticFieldSlot::StaticFieldSlot(Class *owner,data::u64 offset, il::SFld *info)
         : Runtime(nullptr),offset(offset),il_info(info),owner(owner){}
 
+    StaticFieldSlot::StaticFieldSlot(Global *owner,data::u64 offset, il::SFld *info)
+            : Runtime(nullptr),offset(offset),il_info(info),owner(owner){}
+
     data::Byte *StaticFieldSlot::getAddress() {
         switch(owner->getKind()){
             case RuntimeKind::Module:
-                return dynamic_cast<Module*>(owner)->address<data::Byte*>(this);
+                return dynamic_cast<Module*>(owner)->getStaticFieldPtr(offset);
             case RuntimeKind::Class:
-                return dynamic_cast<Class*>(owner)->address<data::Byte*>(this);
+                return dynamic_cast<Class*>(owner)->getStaticFieldPtr(offset);
+            case RuntimeKind::Global:
+                return dynamic_cast<Global*>(owner)->getStaticFieldPtr(offset);
         }
+    }
+
+    DebugInfo *StaticFieldSlot::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " StaticFieldSlot(" << offset << ")";
+        return new DebugInfo{fmt};
     }
 
     Module::Module(TokenTable *table, il::Module *info)
@@ -436,14 +557,35 @@ namespace evoBasic::vm{
             free(static_field_memory);
     }
 
+    data::Byte *Module::getStaticFieldPtr(data::u64 offset) {
+        return static_field_memory + offset;
+    }
+
+    DebugInfo *Module::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " Module";
+        auto ret =  new DebugInfo{fmt};
+        for(auto [_,rt] : getChilds())
+            ret->childs.push_back(rt->toStructuredInfo());
+        return ret;
+    }
+
     Record::Record(TokenTable *table, il::Record *info)
         : NameSpace(table),il_info(info){}
+
+    DebugInfo *Record::toStructuredInfo() {
+        return new DebugInfo{
+            Format() << il_info->getNameToken()->getDef()->getName()
+                     << " Record(" << byte_length << ")"
+        };
+    }
 
 
     Class::Class(TokenTable *table, il::Class *info)
         : NameSpace(table),il_info(info){}
 
-    Runtime *Class::find(std::string name) {
+    Runtime *Class::find(unicode::Utf8String name) {
          auto target = NameSpace::find(name);
          if(target)return target;
          else return base_class->find(name);
@@ -458,8 +600,29 @@ namespace evoBasic::vm{
             free(static_field_memory);
     }
 
+    data::Byte *Class::getStaticFieldPtr(data::u64 offset) {
+        return static_field_memory + offset;
+    }
+
+    DebugInfo *Class::toStructuredInfo() {
+        Format fmt;
+        fmt << il_info->getNameToken()->getDef()->getName()
+            << " Class";
+        auto ret =  new DebugInfo{fmt};
+        for(auto [_,rt] : getChilds())
+            ret->childs.push_back(rt->toStructuredInfo());
+        return ret;
+    }
+
     Enum::Enum(TokenTable *table, il::Enum *info)
         : NameSpace(table),il_info(info){}
+
+    DebugInfo *Enum::toStructuredInfo() {
+        return new DebugInfo{
+            Format() << il_info->getNameToken()->getDef()->getName()
+                     << " Enum"
+        };
+    }
 
     BuiltInKind BuiltIn::getBuiltInKind() {
         return kind;
@@ -486,6 +649,14 @@ namespace evoBasic::vm{
         size = getBuiltInSize(kind);
     }
 
+    std::vector<unicode::Utf8String> builtin_to_string = {"boolean","u8","u16","u32","u64","i8","i16","i32","i64","f32","f64"};
+    DebugInfo *BuiltIn::toStructuredInfo() {
+        Format fmt;
+        fmt << std::to_string((data::u64)this)
+            << " BuiltIn " << builtin_to_string[(int)kind];
+        return new DebugInfo{fmt};
+    }
+
     Array::Array(Runtime *element, data::u64 count)
             : Runtime(nullptr),element_type(element),count(count){
         size = count * dynamic_cast<Sizeable*>(element)->getByteLength();
@@ -497,6 +668,32 @@ namespace evoBasic::vm{
 
     data::u64 Array::getElementCount() {
         return count;
+    }
+
+    DebugInfo *Array::toStructuredInfo() {
+        Format fmt;
+        fmt << std::to_string((data::u64)this)
+            << " Array["<<count<<"]"
+            << std::to_string((data::u64)element_type);
+        return new DebugInfo{fmt};
+    }
+
+
+    data::Byte *Global::getStaticFieldPtr(data::u64 offset) {
+        return global_static_field_memory + offset;
+    }
+
+    Global::~Global() {
+        free(global_static_field_memory);
+    }
+
+    DebugInfo *Global::toStructuredInfo() {
+        Format fmt;
+        fmt << "Global";
+        auto ret =  new DebugInfo{fmt};
+        for(auto [_,rt] : getChilds())
+            ret->childs.push_back(rt->toStructuredInfo());
+        return ret;
     }
 }
 

@@ -6,7 +6,6 @@
 #define EVOBASIC_TYPE_H
 #include <map>
 #include <set>
-#include <string>
 #include <list>
 #include <utility>
 #include <vector>
@@ -22,6 +21,7 @@
 #include <loader/bytecode.h>
 #include <utils/enums.h>
 #include <utils/nullSafe.h>
+#include <utils/unicode.h>
 
 namespace evoBasic::il{
     class Document;
@@ -38,13 +38,6 @@ namespace evoBasic{
 
 namespace evoBasic::type{
 
-/*
- *  谁用宏在项目中搞花样谁就是没事找抽 8/10/2021
-    STRING_ENUM_DECLARE(InstanceEnum,INSTANCE_ENUM_LIST);
-    STRING_ENUM_DECLARE(FunctionEnum,FUNCTION_ENUM_LIST);
-    STRING_ENUM_DECLARE(DeclarationEnum,DECLARATION_ENUM_LIST);
-*/
-
     class Domain;
     class Class;
     class Symbol;
@@ -56,7 +49,7 @@ namespace evoBasic::type{
     class Operator;
     class Parameter;
 
-    void strToLowerByRef(std::string& str);
+    void strToLowerByRef(unicode::Utf8String& str);
 
     enum class SymbolKind{
         Error,Class,Enum,EnumMember,Record,Function,Module,
@@ -66,8 +59,8 @@ namespace evoBasic::type{
     class Symbol {
     private:
         friend Domain;
-        std::string name;
-        std::string mangling_name;
+        unicode::Utf8String name;
+        unicode::Utf8String mangling_name;
         SymbolKind kind;
         Location *location_ = nullptr;
         AccessFlag access = AccessFlag::Private;
@@ -75,13 +68,13 @@ namespace evoBasic::type{
         Domain *parent = nullptr;
         bool is_extern = false;
     public:
-        const std::string indent_unit = "\t";
+        const unicode::Utf8String indent_unit = "\t";
 
         Symbol(const Symbol&)=delete;
         explicit Symbol(SymbolKind kind): kind(kind){}
 
-        virtual std::string getName();
-        virtual void setName(std::string str);
+        virtual unicode::Utf8String getName();
+        virtual void setName(unicode::Utf8String str);
 
         SymbolKind getKind(){return kind;}
 
@@ -99,8 +92,8 @@ namespace evoBasic::type{
             return dynamic_cast<T>(this);
         }
 
-        std::string mangling(char separator = '$');
-        virtual std::list<std::string> getFullName();
+        unicode::Utf8String mangling(char separator = '$');
+        virtual std::list<unicode::Utf8String> getFullName();
 
         virtual DebugInfo *debug()=0;
 
@@ -163,7 +156,7 @@ namespace evoBasic::type{
 
     //domain interface
     class Domain : public Prototype{
-        using MemberMap = std::map<std::string,Symbol*>;
+        using MemberMap = std::map<unicode::Utf8String,Symbol*>;
         MemberMap childs;
     protected:
         std::vector<Variable*> memory_layout;
@@ -187,9 +180,9 @@ namespace evoBasic::type{
         Domain(const Domain&)=delete;
         explicit Domain(SymbolKind kind) : Prototype(kind){}
         virtual void add(Symbol *symbol);
-        virtual Symbol *find(const std::string& name);
-        Symbol *findInDomainOnly(const std::string& name); //search object in members
-        virtual Symbol *lookUp(const std::string& name); //search object in members and importedModule
+        virtual Symbol *find(const unicode::Utf8String& name);
+        Symbol *findInDomainOnly(const unicode::Utf8String& name); //search object in members
+        virtual Symbol *lookUp(const unicode::Utf8String& name); //search object in members and importedModule
         iterator begin();
         iterator end();
         virtual void updateMemoryLayout();
@@ -228,7 +221,7 @@ namespace evoBasic::type{
     protected:
         std::vector<Parameter*> args_signature;
         std::vector<Parameter*> args_options;
-        std::map<std::string,int> option_map;
+        std::map<unicode::Utf8String,int> option_map;
         Prototype *ret_signature = nullptr;
         Parameter *param_array = nullptr;
         std::size_t tmp_domain_count = 0;
@@ -239,7 +232,7 @@ namespace evoBasic::type{
         void add(Symbol *symbol)override;
         std::vector<Parameter*>& getArgsSignature();
         std::vector<Parameter*>& getArgsOptions();
-        std::optional<int> findOptionIndex(const std::string &name);
+        std::optional<int> findOptionIndex(const unicode::Utf8String &name);
         Parameter *getParamArray();
 
         Prototype *getRetSignature();
@@ -254,14 +247,14 @@ namespace evoBasic::type{
     class Operator : public Function{
     public:
         enum Kind{Get,Compare,Times,Div,Plus,Minus,UnaryPlus,UnaryMinus,Invoke};
-        static std::vector<std::string> KindString;
+        static std::vector<unicode::Utf8String> KindString;
     private:
         Kind kind;
     public:
         void setOperatorKind(Kind kind);
         Kind getOperatorKind();
-        std::string getName()override;
-        void setName(std::string)override;
+        unicode::Utf8String getName()override;
+        void setName(unicode::Utf8String)override;
         FunctionKind getFunctionKind()override;
     };
 
@@ -288,25 +281,25 @@ namespace evoBasic::type{
 
 
     class ExternalFunction: public Function{
-        std::string library,alias;
+        unicode::Utf8String library,alias;
     public:
         ExternalFunction(const ExternalFunction&)=delete;
-        explicit ExternalFunction(std::string library,std::string alias);
+        explicit ExternalFunction(unicode::Utf8String library,unicode::Utf8String alias);
         FunctionKind getFunctionKind()override;
-        std::string getLibName();
-        std::string getAlias();
+        unicode::Utf8String getLibName();
+        unicode::Utf8String getAlias();
         DebugInfo *debug()override;
     };
 
     class VirtualTable{
         VirtualTable *base = nullptr;
         std::vector<std::pair<Function*,UserFunction*>> slot;
-        std::map<std::string,int> slot_map;
+        std::map<unicode::Utf8String,int> slot_map;
     public:
         explicit VirtualTable(VirtualTable *base);
         explicit VirtualTable() = default;
         void addSlot(Function *function);
-        std::optional<int> findSlot(const std::string& name);
+        std::optional<int> findSlot(const unicode::Utf8String& name);
         void fill(int slot,UserFunction *function);
         bool hasEmptySlot();
     };
@@ -316,11 +309,11 @@ namespace evoBasic::type{
         Class *base_class = nullptr;
 
         std::multimap<Operator::Kind,Operator> operator_overload;
-        std::set<std::string> operator_signature;
+        std::set<unicode::Utf8String> operator_signature;
         Constructor *constructor = nullptr;
         VirtualTable *vtable = nullptr;
-        std::map<std::string,VirtualTable*> impl_vtables;
-        std::map<std::string,Interface*> impl_interface;
+        std::map<unicode::Utf8String,VirtualTable*> impl_vtables;
+        std::map<unicode::Utf8String,Interface*> impl_interface;
         bool is_abstract_class = true;
     public:
         Class(const Class&)=delete;
@@ -338,9 +331,9 @@ namespace evoBasic::type{
         void setConstructor(Constructor *constructor);
 
         void addImpl(Interface *interface);
-        Interface* getImpl(std::string mangling_name);
+        Interface* getImpl(unicode::Utf8String mangling_name);
 
-        const std::map<std::string,Interface*>& getImplMap();
+        const std::map<unicode::Utf8String,Interface*>& getImplMap();
 
         //Operator *findOperator(Operator::Kind kind,)
 
@@ -348,7 +341,7 @@ namespace evoBasic::type{
         void updateMemoryLayout()override;
 
         DebugInfo *debug()override;
-        Symbol *find(const std::string& name)override;
+        Symbol *find(const unicode::Utf8String& name)override;
 
         bool isAbstract();
         
@@ -373,14 +366,21 @@ namespace evoBasic::type{
             explicit VariantClass();
         };
 
-
         class Primitive : public Class {
-            vm::Data kind_;
         public:
-            explicit Primitive(std::string name,vm::Data data_kind);
+            enum Enum{
+                boolean,i8,i16,i32,i64,f32,f64,
+                u8,u16,u32,u64,rune,address
+            };
+        private:
+            Enum kind_;
+        public:
+
+            explicit Primitive(unicode::Utf8String name,Enum data_kind);
             bool equal(Prototype *ptr)override;
             DebugInfo *debug()override;
-            vm::Data getDataKind();
+            Enum getDataKind();
+            static int getByteLength(Enum e);
         };
 
     }
@@ -405,7 +405,7 @@ namespace evoBasic::type{
     public:
         EnumMember(const Enumeration&)=delete;
         explicit EnumMember(int index): Prototype(SymbolKind::EnumMember),index(index){
-            setByteLength(vm::Data::ptr.getSize());
+            setByteLength(Primitive::getByteLength(Primitive::Enum::address));
         }
         int getIndex()const{return index;}
         DebugInfo *debug()override;
@@ -418,7 +418,7 @@ namespace evoBasic::type{
         ast::Argument *default_argument = nullptr;
         //Location *initial_location = nullptr;
     public:
-        Parameter(std::string name, Prototype *prototype, bool isByval, bool isOptional, bool isParamArray = false);
+        Parameter(unicode::Utf8String name, Prototype *prototype, bool isByval, bool isOptional, bool isParamArray = false);
         DebugInfo *debug()override;
         bool isByval();
         bool isOptional();
@@ -439,8 +439,8 @@ namespace evoBasic::type{
         DebugInfo *debug()override;
         data::ptr getByteLength()override;
         data::ptr getSize(){return size_;}
-        std::list<std::string> getFullName()override;
-        std::string getName()override;
+        std::list<unicode::Utf8String> getFullName()override;
+        unicode::Utf8String getName()override;
     };
 
 
@@ -453,7 +453,7 @@ namespace evoBasic::type{
         DebugInfo *debug()override;
     };
 
-    std::string debugSymbolTable(DebugInfo *info);
+    unicode::Utf8String debugSymbolTable(DebugInfo *info);
 
 }
 

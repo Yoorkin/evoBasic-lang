@@ -6,6 +6,8 @@
 #define EVOBASIC_LOADER_H
 #include <list>
 #include <string>
+#include <utils/unicode.h>
+
 namespace evoBasic{
 
     namespace il{
@@ -16,7 +18,7 @@ namespace evoBasic{
 
     class Loader {
         std::list<il::Document*> packages;
-        std::list<std::string> waiting_package;
+        std::list<unicode::Utf8String> waiting_package;
     public:
         void addToWaitingDeque(std::string package_path);
         void loadPackages();

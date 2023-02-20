@@ -4,46 +4,42 @@
 #include "token.h"
 #include <utils/nullSafe.h>
 using namespace std;
+using namespace evoBasic::unicode;
 namespace evoBasic{
 
     void Source::load(std::istream &stream){
-        string line;
+        unicode::Utf8String line;
         while(getline(stream,line)){
+            source_+=line;
+            source_+='\n';
             codes.push_back(line);
         }
-        codes.push_back("< end of file >");
-        stream.clear();
-        stream.seekg(ios::beg);
+        codes.push_back("< end of file >"_utf8);
     }
 
-    const std::string &Source::getLine(int idx) const {
+    const unicode::Utf8String &Source::getLine(int idx) const {
         return codes[idx];
     }
 
+    unicode::Utf8String &Source::getSource() {
+        return source_;
+    }
 
-    FileSource::FileSource(const string &path)
-            : stream(path),file_path(path) {
+
+    FileSource::FileSource(const unicode::Utf8String &path)
+            : stream(path.getBytes()),file_path(path) {
         load(stream);
     }
 
 
-    const std::string &FileSource::getPath() const {
+    const unicode::Utf8String &FileSource::getPath() const {
         return file_path;
     }
 
-    std::istream &FileSource::getStream() {
-        return stream;
-    }
 
-    StringSource::StringSource(std::string code)
-            : str_stream(code){
+    StringSource::StringSource(unicode::Utf8String code){
         load(str_stream);
     }
-
-    std::istream &StringSource::getStream() {
-        return str_stream;
-    }
-
 
     Location::Location(int beginX, int endX, int y,Source *source) {
         NotNull(source);
@@ -80,11 +76,11 @@ namespace evoBasic{
         return end_y;
     }
 
-    std::string Location::toString() const {
+    unicode::Utf8String Location::toString() const {
         return Format() << '('
-                        << "x:" << to_string(begin_x)
-                        << ",y:" << to_string(begin_y)
-                        << ",w:" << to_string(end_x - begin_x) << ')';
+                        << "x:" << unicode::to_string(begin_x)
+                        << ",y:" << unicode::to_string(begin_y)
+                        << ",w:" << unicode::to_string(end_x - begin_x) << ')';
     }
 
     Source *Location::getSource() const {
@@ -92,7 +88,7 @@ namespace evoBasic{
     }
 
 
-    map<string,Token::Enum> Token::reserved_words = {
+    map<unicode::Utf8String,Token::Enum> Token::reserved_words = {
         {"dim",Enum::dim_},
         {"module",Enum::module_},
         {"class",Enum::class_},
@@ -147,7 +143,7 @@ namespace evoBasic{
         {"paramarray",Enum::paramArray_}
     };
 
-    vector<string> Token::enum_to_string = {
+    vector<unicode::Utf8String> Token::enum_to_string = {
         "< Error >","ID","DIGIT","DECIMAL","STRING","CHAR","DOT","COMMA","COLON",
         "LE","GE","EQ","LT","GT","NE","LP","RP","LB","RB",
         "MUL","DIV","FDIV","MINUS","ADD","ASSIGN","< EOF >",
@@ -162,14 +158,14 @@ namespace evoBasic{
         "End Select","End New","End Operator","End Interface"
     };
 
-    Token::Token(Location location, Enum kind, std::string lexeme)
+    Token::Token(Location location, Enum kind, unicode::Utf8String lexeme)
         : location_(location),kind_(kind),lexeme_(lexeme){}
 
     Location *Token::getLocation() {
         return &location_;
     }
 
-    const std::string &Token::getLexeme() const {
+    unicode::Utf8String &Token::getLexeme() {
         return lexeme_;
     }
 
@@ -177,7 +173,7 @@ namespace evoBasic{
         return kind_;
     }
 
-    std::string Token::toString() {
+    unicode::Utf8String Token::toString() {
         return Format() << setiosflags(ios::left)
                         << setw(15) << enum_to_string[(int)kind_]
                         << setw(20) << lexeme_

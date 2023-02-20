@@ -4,16 +4,16 @@
 
 #ifndef EVOBASIC2_NULLSAFE_H
 #define EVOBASIC2_NULLSAFE_H
-#include<exception>
-#include<string>
-#include"format.h"
+#include <exception>
+#include <utils/unicode.h>
+#include "format.h"
 #define DEBUG
 #ifdef DEBUG
 
 class AssertionException : public std::exception{
-    std::string msg;
+     evoBasic::unicode::Utf8String msg;
 public:
-    AssertionException(std::string file,std::string func,int line,std::string message){
+    AssertionException(std::string file,evoBasic::unicode::Utf8String func,int line,evoBasic::unicode::Utf8String message){
         msg = Format() << "In file '" << file << "' function '" << func << "' line '" << line << "'," << message;
     }
     const char * what() const noexcept override{

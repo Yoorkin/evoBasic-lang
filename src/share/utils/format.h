@@ -4,8 +4,8 @@
 
 #ifndef EVOVM_FORMATOR_H
 #define EVOVM_FORMATOR_H
-#include<sstream>
-#include<string>
+#include <sstream>
+#include "unicode.h"
 
 class Format{
 public:
@@ -15,8 +15,8 @@ public:
         stream<<t;
         return *this;
     }
-    operator std::string(){
-        return move(stream.str());
+    operator evoBasic::unicode::Utf8String(){
+        return evoBasic::unicode::Utf8String(stream.str().c_str());
     }
 };
 

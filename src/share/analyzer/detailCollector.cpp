@@ -158,7 +158,7 @@ namespace evoBasic{
     }
 
     std::any DetailCollector::visitFunction(parseTree::Function *function_node, DetailArgs args) {
-        string name;
+        unicode::Utf8String name;
         if(function_node->name){
             name = getID(function_node->name);
         }

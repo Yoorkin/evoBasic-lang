@@ -8,7 +8,6 @@
 #include <utility>
 #include <vector>
 #include <map>
-#include <string>
 #include <utils/logger.h>
 #include <utils/utils.h>
 #include <utils/enums.h>
@@ -16,6 +15,7 @@
 #include <loader/bytecode.h>
 
 using namespace std;
+using namespace evoBasic::unicode;
 namespace evoBasic::type{
 
     vector AccessFlagString = {"Public","Private","Friend","Protected"};
@@ -23,11 +23,15 @@ namespace evoBasic::type{
 
 
     void write_ptr(stringstream &stream,data::ptr ptr){
-        stream.write((const char*)&ptr,vm::Data::ptr.getSize());
+        stream.write((const char*)&ptr,type::Primitive::getByteLength(type::Primitive::address));
     }
     
-    void strToLowerByRef(string& str){
-        transform(str.begin(),str.end(),str.begin(),[](unsigned char c){ return std::tolower(c); });
+    void strToLowerByRef(unicode::Utf8String& str){
+        unicode::Utf8String tmp;
+        for(auto c:str){
+            tmp.push_back(toLowerCase(c));
+        }
+        str = tmp;
     }
 
 
@@ -52,8 +56,8 @@ namespace evoBasic::type{
     }
 
 
-    Enumeration::Enumeration() : Class(SymbolKind::Enum) {
-        setByteLength(vm::Data::ptr.getSize());
+    Enumeration::Enumeration() : Class(SymbolKind::Enum){
+        setByteLength(type::Primitive::getByteLength(type::Primitive::i32));
     }
 
 
@@ -63,7 +67,7 @@ namespace evoBasic::type{
     }
 
 
-    Parameter::Parameter(std::string name,Prototype *prototype, bool isByval, bool isOptional ,bool isParamArray)
+    Parameter::Parameter(unicode::Utf8String name,Prototype *prototype, bool isByval, bool isOptional ,bool isParamArray)
             : Variable(SymbolKind::Parameter), is_byval(isByval), is_optional(isOptional), is_param_array(isParamArray){
         setName(move(name));
         if(isParamArray)is_byval = true;
@@ -88,7 +92,7 @@ namespace evoBasic::type{
             return Variable::getRealByteLength();
         }
         else{
-            return vm::Data::ptr.getSize();
+            return type::Primitive::getByteLength(type::Primitive::address);
         }
     }
 
@@ -154,7 +158,7 @@ namespace evoBasic::type{
     void Function::add(Symbol *symbol){
         switch(symbol->getKind()){
             case SymbolKind::Parameter:
-                if(symbol->as<Parameter*>()->getName()!="self"){
+                if(symbol->as<Parameter*>()->getName() != "self"_utf8){
                     auto param = symbol->as<Parameter*>();
                     if(param->isOptional()){
                         args_options.push_back(param);
@@ -190,7 +194,7 @@ namespace evoBasic::type{
         return args_options;
     }
 
-    optional<int> Function::findOptionIndex(const std::string &name) {
+    optional<int> Function::findOptionIndex(const unicode::Utf8String &name) {
         auto target = option_map.find(name);
         if(target == option_map.end())return {};
         return target->second;
@@ -247,18 +251,18 @@ namespace evoBasic::type{
     }
 
 
-    ExternalFunction::ExternalFunction(std::string library, std::string alias)
+    ExternalFunction::ExternalFunction(unicode::Utf8String library, unicode::Utf8String alias)
         : library(std::move(library)),alias(std::move(alias)){}
 
     FunctionKind ExternalFunction::getFunctionKind() {
         return FunctionKind::External;
     }
 
-    std::string ExternalFunction::getLibName() {
+    unicode::Utf8String ExternalFunction::getLibName() {
         return library;
     }
 
-    std::string ExternalFunction::getAlias() {
+    unicode::Utf8String ExternalFunction::getAlias() {
         return alias;
     }
 
@@ -274,11 +278,11 @@ namespace evoBasic::type{
         Domain::add(variable);
     }
 
-    std::string Symbol::getName() {
+    unicode::Utf8String Symbol::getName() {
         return this->name;
     }
 
-    void Symbol::setName(std::string str) {
+    void Symbol::setName(unicode::Utf8String str) {
         strToLowerByRef(str);
         this->name=std::move(str);
     }
@@ -309,9 +313,9 @@ namespace evoBasic::type{
         return location_;
     }
 
-    std::string Symbol::mangling(char separator) {
+    unicode::Utf8String Symbol::mangling(char separator) {
         if(mangling_name.empty()){
-            if(getParent()==nullptr || getParent()->getName() == "global" || getParent()->getKind() == SymbolKind::TmpDomain) {
+            if(getParent()==nullptr || getParent()->getName() == "global"_utf8 || getParent()->getKind() == SymbolKind::TmpDomain) {
                 return mangling_name = getName();
             }
             else{
@@ -334,15 +338,15 @@ namespace evoBasic::type{
     }
 
 
-    std::list<std::string> Symbol::getFullName() {
-        list<string> ls;
+    std::list<unicode::Utf8String> Symbol::getFullName() {
+        list<unicode::Utf8String> ls;
         if(getParent()) ls = getParent()->getFullName();
         ls.push_back(getName());
         return ls;
     }
 
 
-    Symbol *Domain::lookUp(const string &name) {
+    Symbol *Domain::lookUp(const unicode::Utf8String &name) {
         Domain *ptr = static_cast<Domain*>(this);
         Domain *global = nullptr;
         while(ptr){
@@ -369,16 +373,16 @@ namespace evoBasic::type{
 
     void Domain::add(Symbol *symbol) {
         NotNull(symbol);
-        ASSERT(symbol->getName() == "","symbol name is empty");
+        ASSERT(symbol->getName() == ""_utf8,"symbol name is empty");
         childs.emplace(symbol->getName(),symbol);
         symbol->setParent(this->as<Domain*>());
     }
 
-    Symbol *Domain::find(const string &name) {
+    Symbol *Domain::find(const unicode::Utf8String &name) {
         return findInDomainOnly(name);
     }
 
-    Symbol *Domain::findInDomainOnly(const string &name) {
+    Symbol *Domain::findInDomainOnly(const unicode::Utf8String &name) {
         auto target = childs.find(name);
         if(target == childs.end())return nullptr;
         return target->second;
@@ -422,7 +426,7 @@ namespace evoBasic::type{
         this->impl_interface.insert({interface->mangling(),interface});
     }
 
-    Interface *Class::getImpl(std::string mangling_name) {
+    Interface *Class::getImpl(unicode::Utf8String mangling_name) {
         auto target = impl_interface.find(mangling_name);
         if(target == impl_interface.end())return nullptr;
         return target->second;
@@ -446,7 +450,7 @@ namespace evoBasic::type{
         return base_class;
     }
 
-    Symbol *Class::find(const string &name) {
+    Symbol *Class::find(const unicode::Utf8String &name) {
         auto target = Domain::findInDomainOnly(name);
         if(target)return target;
         if(getExtend()!=nullptr)
@@ -464,7 +468,7 @@ namespace evoBasic::type{
         Prototype::setByteLength(size);
     }
 
-    const std::map<std::string, Interface *> &Class::getImplMap() {
+    const std::map<unicode::Utf8String, Interface *> &Class::getImplMap() {
         return impl_interface;
     }
 
@@ -574,20 +578,42 @@ namespace evoBasic::type{
             setAccessFlag(AccessFlag::Public);
         }
 
-        Primitive::Primitive(std::string name, vm::Data data_kind)
+        Primitive::Primitive(unicode::Utf8String name, Primitive::Enum data_kind)
           : Class(SymbolKind::Primitive),kind_(data_kind){
             setName(std::move(name));
             setAccessFlag(AccessFlag::Public);
-            setByteLength(data_kind.getSize());
+            setByteLength(getByteLength(data_kind));
         }
 
         bool Primitive::equal(Prototype *ptr) {
             auto p = ptr->as<Primitive*>();
-            return p && p->kind_.operator==(kind_);
+            return p && p->kind_ == kind_;
         }
 
-        vm::Data Primitive::getDataKind() {
+        Primitive::Enum Primitive::getDataKind() {
             return this->kind_;
+        }
+
+        int Primitive::getByteLength(Primitive::Enum e){
+            switch(e){
+                case boolean:
+                case i8:
+                case u8:
+                    return 1;
+                case i16:
+                case u16:
+                case rune:
+                    return 2;
+                case i32:
+                case u32:
+                case f32:
+                    return 4;
+                case i64:
+                case u64:
+                case f64:
+                case address:
+                    return 8;
+            }
         }
 
     }
@@ -650,9 +676,9 @@ namespace evoBasic::type{
                 return prototype->getByteLength();
             case SymbolKind::Class:
             case SymbolKind::Function:
-                return vm::Data::ptr.getSize();
+                return Primitive::getByteLength(type::Primitive::Enum::address);
             case SymbolKind::Enum:
-                return vm::Data(vm::Data::i32).getSize();
+                return Primitive::getByteLength(type::Primitive::Enum::i32);
         }
         PANIC;
     }
@@ -737,18 +763,18 @@ namespace evoBasic::type{
         byte_length = value;
     }
     
-    vector<string> Operator::KindString = {"Get","Compare","Times","Div","Plus","Minus","UnaryPlus","UnaryMinus","Invoke"};
+    vector<unicode::Utf8String> Operator::KindString = {"Get","Compare","Times","Div","Plus","Minus","UnaryPlus","UnaryMinus","Invoke"};
 
-    std::string Operator::getName() {
+    unicode::Utf8String Operator::getName() {
         auto str = Format();
         str<<KindString[(int)kind];
         for(auto parameter : getArgsSignature()){
             str<< '-' << parameter->getName();
         }
-        return (string)str;
+        return (unicode::Utf8String)str;
     }
 
-    void Operator::setName(std::string) {
+    void Operator::setName(unicode::Utf8String) {
         PANIC;
     }
 
@@ -789,7 +815,7 @@ namespace evoBasic::type{
         }
     }
 
-    std::optional<int> VirtualTable::findSlot(const string& name) {
+    std::optional<int> VirtualTable::findSlot(const unicode::Utf8String& name) {
         auto target = slot_map.find(name);
         if(target == slot_map.end())return {};
         return target->second;
@@ -816,8 +842,8 @@ namespace evoBasic::type{
 
 
 
-    DebugInfo * makeDebugInfo(std::string name,std::string type,
-                              list<string> property = {},list<DebugInfo*> childs = {}){
+    DebugInfo * makeDebugInfo(unicode::Utf8String name,unicode::Utf8String type,
+                              list<unicode::Utf8String> property = {},list<DebugInfo*> childs = {}){
         auto ret = new DebugInfo;
         Format fmt;
         fmt << name << " : " << type;
@@ -827,8 +853,8 @@ namespace evoBasic::type{
         return ret;
     }
 
-    DebugInfo * makeDebugInfo(std::string type,Domain *domain){
-        list<string> p;
+    DebugInfo * makeDebugInfo(unicode::Utf8String type,Domain *domain){
+        list<unicode::Utf8String> p;
         list<DebugInfo*> info;
         if(domain->isStatic())p.emplace_back("Static");
         p.emplace_back(AccessFlagString[(int)domain->getAccessFlag()]);
@@ -845,7 +871,7 @@ namespace evoBasic::type{
     }
 
     DebugInfo *Variable::debug() {
-        list<string> p;
+        list<unicode::Utf8String> p;
         if(isStatic())p.emplace_back("Static");
         p.emplace_back(AccessFlagString[(int)getAccessFlag()]);
         return makeDebugInfo(getName(),getPrototype()->mangling('.'),p);
@@ -894,11 +920,11 @@ namespace evoBasic::type{
     }
 
     DebugInfo *EnumMember::debug() {
-        return new DebugInfo{getName() + " = " + to_string(index)};
+        return new DebugInfo{getName() + " = " + unicode::to_string(index)};
     }
 
     DebugInfo *Parameter::debug() {
-        list<string> p;
+        list<unicode::Utf8String> p;
         if(isStatic())p.emplace_back("Static");
         p.emplace_back(isByval() ? "Byval" : "Byref");
         p.emplace_back(AccessFlagString[(int)getAccessFlag()]);
@@ -909,22 +935,22 @@ namespace evoBasic::type{
         return new DebugInfo{getName()};
     }
 
-    std::list<std::string> Array::getFullName() {
+    std::list<unicode::Utf8String> Array::getFullName() {
         auto ret = element_type->getFullName();
-        ret.push_front(to_string(size_));
+        ret.push_front(unicode::to_string(size_));
         ret.push_front("array");
         return ret;
     }
 
-    std::string Array::getName() {
-        return Format()<<element_type->getName()<<'['<<to_string(size_)<<']';
+    unicode::Utf8String Array::getName() {
+        return Format()<<element_type->getName()<<'['<<unicode::to_string(size_)<<']';
     }
 
     DebugInfo *TemporaryDomain::debug() {
         return makeDebugInfo("",this);
     }
 
-    void debugSymbolTable(DebugInfo *info,std::ostream &stream,string indent){
+    void debugSymbolTable(DebugInfo *info,std::ostream &stream,unicode::Utf8String indent){
         stream << indent << info->text;
         if(!info->childs.empty()){
             stream << " {\n";
@@ -936,8 +962,8 @@ namespace evoBasic::type{
         stream << '\n';
     }
 
-    std::string debugSymbolTable(DebugInfo *info){
-        std::stringstream stream;
+    unicode::Utf8String debugSymbolTable(DebugInfo *info){
+        stringstream stream;
         stream << "# SymbolTable \n";
         debugSymbolTable(info,stream,"");
         return stream.str();

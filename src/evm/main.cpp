@@ -19,8 +19,10 @@
 #include <loader/loader.h>
 #include <loader/il.h>
 #include <utils/data.h>
-#include "runtime.h"
+#include "execution/runtime.h"
 #include "processor.h"
+
+#include "utils/unicode.h"
 
 using namespace std;
 using namespace evoBasic;
@@ -49,6 +51,7 @@ void loadTarget(string path){
 int main(int argc,char *argv[]){
     //Logger::enable(Channel::OperandStack);
 
+
     loader = new Loader;
 
     CmdDistributor distributor;
@@ -67,7 +70,8 @@ int main(int argc,char *argv[]){
     }
     else{
         loader->loadPackages();
-        auto entrance = dynamic_cast<Function*>(context.find("main"));
+        //cout << context.debug() << endl;
+        auto entrance = context.getEntrance();
         if(!entrance){
             Logger::error("Sub Main not found.");
         }

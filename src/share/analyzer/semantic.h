@@ -63,8 +63,8 @@ namespace evoBasic{
     public:
         type::Symbol *search_domain = nullptr;
         Location *location = nullptr;
-        std::string search_name;
-        SymbolNotFound(Location *location,type::Symbol *search_domain,std::string search_name)
+        unicode::Utf8String search_name;
+        SymbolNotFound(Location *location,type::Symbol *search_domain,unicode::Utf8String search_name)
                 : search_domain(search_domain),search_name(search_name),location(location){}
     };
 }

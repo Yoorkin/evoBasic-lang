@@ -21,7 +21,7 @@ namespace evoBasic{
         bool need_lookup = false;
         CompileTimeContext *context = nullptr;
         Location *exception_location = nullptr;
-        std::string not_found_name;
+        unicode::Utf8String not_found_name;
     public:
         std::any visitAnnotationUnit(parseTree::AnnotationUnit *unit_node, ARGS args) override{
             auto name = getID(unit_node->name);

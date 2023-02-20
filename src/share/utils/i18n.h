@@ -8,33 +8,34 @@
 #include <functional>
 #include <memory>
 #include "format.h"
+#include "unicode.h"
 
 namespace evoBasic::i18n{
 
-#define Fmt(Name,Stream) virtual std::string fmt##Name(Var##Name){return Format() << Stream;}
-#define Msg(Name,Stream) virtual std::string msg##Name(){return Format() << Stream;}
+#define Fmt(Name,Stream) virtual unicode::Utf8String fmt##Name(Var##Name){return Format() << Stream;}
+#define Msg(Name,Stream) virtual unicode::Utf8String msg##Name(){return Format() << Stream;}
 
 
-#define VarObjectNotFound                   std::string target
-#define VarCtorRedefine                     std::string target
-#define VarOptNotFoundInFtn                 std::string init_name,std::string ftn_name
-#define VarArgCannotMatchParam              std::string param_type,std::string arg_type
-#define VarImplicitCvtFromAToB              std::string a,std::string b
-#define VarLetStmtVariableInitialNotMatch   std::string init_type,std::string anno_type
-#define VarSelectCaseTypeNotMatch           std::string case_type,std::string condition_type
-#define VarIfConditionExpectedBooleanButA   std::string a
-#define VarForStmtBeginExpNotMatch          std::string begin_type,std::string iterator_type
-#define VarForStmtEndExpNotMatch            std::string end_type,std::string iterator_type
-#define VarForStmtStepExpNotMatch           std::string step_type,std::string iterator_type
-#define VarCannotImplicitCvtAToB            std::string a,std::string b
-#define VarNotCallableTarget                std::string target_type
-#define VarCtorUndefined                    std::string cls
-#define VarIsPrivate                        std::string target
-#define VarIsProtected                      std::string target
-#define VarBinaryOpInvalid                  std::string lhs,std::string rhs
+#define VarObjectNotFound                   unicode::Utf8String target
+#define VarCtorRedefine                     unicode::Utf8String target
+#define VarOptNotFoundInFtn                 unicode::Utf8String init_name,unicode::Utf8String ftn_name
+#define VarArgCannotMatchParam              unicode::Utf8String param_type,unicode::Utf8String arg_type
+#define VarImplicitCvtFromAToB              unicode::Utf8String a,unicode::Utf8String b
+#define VarLetStmtVariableInitialNotMatch   unicode::Utf8String init_type,unicode::Utf8String anno_type
+#define VarSelectCaseTypeNotMatch           unicode::Utf8String case_type,unicode::Utf8String condition_type
+#define VarIfConditionExpectedBooleanButA   unicode::Utf8String a
+#define VarForStmtBeginExpNotMatch          unicode::Utf8String begin_type,unicode::Utf8String iterator_type
+#define VarForStmtEndExpNotMatch            unicode::Utf8String end_type,unicode::Utf8String iterator_type
+#define VarForStmtStepExpNotMatch           unicode::Utf8String step_type,unicode::Utf8String iterator_type
+#define VarCannotImplicitCvtAToB            unicode::Utf8String a,unicode::Utf8String b
+#define VarNotCallableTarget                unicode::Utf8String target_type
+#define VarCtorUndefined                    unicode::Utf8String cls
+#define VarIsPrivate                        unicode::Utf8String target
+#define VarIsProtected                      unicode::Utf8String target
+#define VarBinaryOpInvalid                  unicode::Utf8String lhs,unicode::Utf8String rhs
 #define VarFtnCallTooManyArg                int params_count,int args_count
 #define VarFtnCallTooFewArg                 int params_count,int args_count
-#define VarStaticAccessInvalid              std::string lhs_state,std::string rhs_state
+#define VarStaticAccessInvalid              unicode::Utf8String lhs_state,unicode::Utf8String rhs_state
 
 
 

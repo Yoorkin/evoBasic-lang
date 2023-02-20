@@ -4,8 +4,7 @@
 
 #ifndef EVOBASIC_DATADEF_H
 #define EVOBASIC_DATADEF_H
-#include <vector>
-#include <string>
+
 namespace evoBasic::data{
 
     using boolean = bool;
@@ -26,4 +25,6 @@ namespace evoBasic::data{
     using address = u64;
     using size = u64;
 }
+
+
 #endif //EVOBASIC_DATADEF_H

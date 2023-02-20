@@ -4,6 +4,7 @@
 
 #include "ilGen.h"
 #include<variant>
+#include<execution/intrinsic.h>
 
 namespace evoBasic{
     using namespace il;
@@ -18,18 +19,18 @@ namespace evoBasic{
             case type::SymbolKind::Function:    return {DataTypeEnum::delegate};
             case type::SymbolKind::Primitive:{
                 auto primitive = type->as<type::Primitive*>();
-                switch(primitive->getDataKind().getValue()){
-                    case vm::Data::i8:      return {DataTypeEnum::i8};
-                    case vm::Data::i16:     return {DataTypeEnum::i16};
-                    case vm::Data::i32:     return {DataTypeEnum::i32};
-                    case vm::Data::i64:     return {DataTypeEnum::i64};
-                    case vm::Data::u8:      return {DataTypeEnum::u8};
-                    case vm::Data::u16:     return {DataTypeEnum::u16};
-                    case vm::Data::u32:     return {DataTypeEnum::u32};
-                    case vm::Data::u64:     return {DataTypeEnum::u64};
-                    case vm::Data::f32:     return {DataTypeEnum::f32};
-                    case vm::Data::f64:     return {DataTypeEnum::f64};
-                    case vm::Data::boolean: return {DataTypeEnum::boolean};
+                switch(primitive->getDataKind()){
+                    case type::Primitive::i8:      return {DataTypeEnum::i8};
+                    case type::Primitive::i16:     return {DataTypeEnum::i16};
+                    case type::Primitive::i32:     return {DataTypeEnum::i32};
+                    case type::Primitive::i64:     return {DataTypeEnum::i64};
+                    case type::Primitive::u8:      return {DataTypeEnum::u8};
+                    case type::Primitive::u16:     return {DataTypeEnum::u16};
+                    case type::Primitive::u32:     return {DataTypeEnum::u32};
+                    case type::Primitive::u64:     return {DataTypeEnum::u64};
+                    case type::Primitive::f32:     return {DataTypeEnum::f32};
+                    case type::Primitive::f64:     return {DataTypeEnum::f64};
+                    case type::Primitive::boolean: return {DataTypeEnum::boolean};
                     default: PANIC;
                 }
             }
@@ -134,7 +135,7 @@ namespace evoBasic{
         }
 
         for(auto iter : function->getArgsOptions()){
-            auto block = new il::BasicBlock(document);
+            auto block = new il::BasicBlock(document,"optional");
             visitExpression(iter->getDefaultArgument()->expr,block);
             auto name = document->getTokenRef(iter->getName());
             auto type = document->getTokenRef(iter->getPrototype()->getFullName());
@@ -207,7 +208,7 @@ namespace evoBasic{
     }
 
     il::FunctionDefine *ILGen::visitFunction(ast::Function *function_node) {
-        auto entry = new il::BasicBlock(document);
+        auto entry = new il::BasicBlock(document,"function");
         blocks.clear();
         blocks.push_back(entry);
         auto symbol = function_node->function_symbol->as<type::UserFunction*>();
@@ -222,7 +223,8 @@ namespace evoBasic{
         }
 
         list<il::Local*> locals;
-        for(auto variable : symbol->getMemoryLayout()){
+        for(int i=parameter.size();i<symbol->getMemoryLayout().size();i++){
+            auto &variable = symbol->getMemoryLayout()[i];
             auto name = document->getTokenRef(variable->getName());
             auto type = document->getTokenRef(variable->getPrototype()->getFullName());
             auto local = new Local(document,name,type,locals.size());
@@ -267,7 +269,7 @@ namespace evoBasic{
     }
 
     il::Ctor *ILGen::visitConstructor(ast::Constructor *ctor_node) {
-        auto entry = new il::BasicBlock(document);
+        auto entry = new il::BasicBlock(document,"ctor");
         blocks.clear();
         blocks.push_back(entry);
         auto parameter = visitParameter(ctor_node->constructor_symbol);
@@ -275,7 +277,8 @@ namespace evoBasic{
         tail_block->Ret();
 
         list<il::Local*> locals;
-        for(auto variable : ctor_node->constructor_symbol->getMemoryLayout()){
+        for(int i=parameter.size();i<ctor_node->constructor_symbol->getMemoryLayout().size();i++){
+            auto &variable = ctor_node->constructor_symbol->getMemoryLayout()[i];
             auto name = document->getTokenRef(variable->getName());
             auto type = document->getTokenRef(variable->getPrototype()->getFullName());
             auto local = new Local(document,name,type,locals.size());
@@ -340,9 +343,9 @@ namespace evoBasic{
     }
 
     il::BasicBlock *ILGen::visitLoop(ast::Loop *loop_node, il::BasicBlock *current, JumpOption jump_option) {
-        auto cond_block = new il::BasicBlock(document),
-             loop_block = new il::BasicBlock(document),
-             after_block = new il::BasicBlock(document);
+        auto cond_block = new il::BasicBlock(document,"while_cond"),
+             loop_block = new il::BasicBlock(document,"while_loop"),
+             after_block = new il::BasicBlock(document,"while_succ");
 
         blocks.push_back(cond_block);
         blocks.push_back(loop_block);
@@ -365,14 +368,14 @@ namespace evoBasic{
     }
 
     il::BasicBlock *ILGen::visitCase(ast::Case *case_node, il::BasicBlock *current, JumpOption jump_option) {
-        auto after_block = new il::BasicBlock(document);
+        auto after_block = new il::BasicBlock(document,"case_succ");
         blocks.push_back(after_block);
 
         map<ast::Case*,il::BasicBlock*> case_blocks;
         bool has_else_case = false;
         FOR_EACH(iter,case_node){
             if(iter->condition){
-                auto bl = new il::BasicBlock(document);
+                auto bl = new il::BasicBlock(document,"case");
                 blocks.push_back(bl);
                 case_blocks.insert({iter,bl});
             }
@@ -384,7 +387,7 @@ namespace evoBasic{
         FOR_EACH(iter,case_node){
             auto case_block = case_blocks.find(iter);
             if(case_block != case_blocks.end()){
-                visitExpression(iter->condition,current);
+                loadExpressionValue(iter->condition,current);
                 current->Jif(case_block->second);
                 auto case_tail_block = visitStatement(iter->statement,case_block->second,jump_option);
                 case_tail_block->Br(after_block);
@@ -456,9 +459,9 @@ namespace evoBasic{
             current->Stloc(iter_il_type);
         }
 
-        auto stmt_block = new il::BasicBlock(document);
-        auto cond_block = new il::BasicBlock(document);
-        auto after_block = new il::BasicBlock(document);
+        auto stmt_block = new il::BasicBlock(document,"for_loop");
+        auto cond_block = new il::BasicBlock(document,"for_cond");
+        auto after_block = new il::BasicBlock(document,"for_succ");
 
         blocks.push_back(stmt_block);
         blocks.push_back(cond_block);
@@ -556,7 +559,7 @@ namespace evoBasic{
     }
 
     void ILGen::visitReturn(ast::Return *return_node, il::BasicBlock *current) {
-        visitExpression(return_node->expr,current);
+        loadExpressionValue(return_node->expr,current);
         current->Ret();
     }
 
@@ -654,6 +657,7 @@ namespace evoBasic{
             case ast::Expression::Digit:
             case ast::Expression::Decimal:
             case ast::Expression::Char:
+            case ast::Expression::Boolean:
                 visitExpression(terminal,current);
                 break;
             case ast::Expression::Assign:{
@@ -949,7 +953,6 @@ namespace evoBasic{
             case ast::Expression::Binary:
             case ast::Expression::Cast:
             case ast::Expression::Parentheses:
-            case ast::Expression::Element:
             case ast::Expression::Ftn:
             case ast::Expression::VFtn:
             case ast::Expression::SFtn:
@@ -966,6 +969,12 @@ namespace evoBasic{
                 auto assign = static_cast<ast::Assign*>(cast_node->expr);
                 visitAssign(assign,current);
                 loadAssignLhsValue(assign,current);
+                break;
+            }
+            case ast::Expression::Element:{
+                auto element = static_cast<ast::ArrayElement*>(cast_node->expr);
+                visitArrayElement(element,current);
+                current->Ldelem(mapILType(element->type));
                 break;
             }
             case ast::Expression::Local:{
@@ -1076,6 +1085,7 @@ namespace evoBasic{
             }
             case ast::Expression::ArgUse:{
                 auto arg = static_cast<ast::Arg*>(element_node->offset);
+                visitArg(arg,current);
                 if(arg->is_ref){
                     current->Ldarg(DataTypeEnum::ref)
                             .Load(mapILType(arg->type));
@@ -1310,7 +1320,7 @@ namespace evoBasic{
         auto ext_symbol = static_cast<type::ExternalFunction*>(ext_node->function);
         if(ext_symbol->getLibName() == "intrinsic"){
             auto alias = ext_symbol->getAlias();
-            current->Intrinsic((vm::IntrinsicEnum)stoi(alias.substr(1, alias.length()-1)));
+            current->Intrinsic((vm::IntrinsicEnum)stoi(alias.substr(1, alias.count()-1)));
         }
         else{
             current->Invoke(document->getTokenRef(ext_node->function->getFullName()));
@@ -1429,7 +1439,7 @@ namespace evoBasic{
     }
 
     void ILGen::visitBoolean(ast::Boolean *boolean_node, il::BasicBlock *current) {
-        current->Push(DataTypeEnum::boolean, boolean_node->value);
+        current->Push(DataTypeEnum::boolean, (data::boolean)boolean_node->value);
     }
 
 }

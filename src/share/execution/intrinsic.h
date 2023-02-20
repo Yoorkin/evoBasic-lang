@@ -6,29 +6,17 @@
 #define EVOBASIC_INTRINSIC_H
 #include "memory.h"
 #include <functional>
+#include "runtime.h"
 
 namespace evoBasic::vm{
 
-    enum class IntrinsicEnum {PutChar,GetChar,MemSet,ItNotInRange};
+    enum class IntrinsicEnum {PutChar,GetChar,MemSet,ItNotInRange,DebugInt,DebugBool,MAlloc,Free};
 
     using IntrinsicHandler = std::function<void(Stack*)>;
 
     namespace intrinsic{
-
-        IntrinsicHandler getHandler(IntrinsicEnum handler_enum);
-
-        void putchar_(Stack *operand);
-
-        void getchar_(Stack *operand);
-
-        void memset_(Stack *operand);
-
-        void isIteratorNotInRange(Stack *operand);
-
+        void callHandler(IntrinsicEnum index,Stack *operand,RuntimeContext *context);
     }
-
-
-
 
 }
 

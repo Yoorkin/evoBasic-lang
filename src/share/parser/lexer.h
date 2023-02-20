@@ -7,9 +7,10 @@
 #include "token.h"
 #include <utils/format.h>
 #include <set>
+#include <utils/unicode.h>
 namespace evoBasic{
     class SyntaxException:public std::exception{
-        std::string tmp;
+        unicode::Utf8String tmp;
     public:
         const Token& token;
         explicit SyntaxException(Token& token,Token::Enum expected):token(token),expected(expected){
@@ -26,9 +27,10 @@ namespace evoBasic{
     class Lexer {
         int begin_x,begin_y;
         int x=-1,y=1;
-        char c = -1,lexeme_char = -1;
+        unicode::Utf8String::iterator iter;
+        unicode::Utf8Char c = 0,lexeme_char = 0;
         bool resume_char = true;
-        std::string lexeme;
+        unicode::Utf8String lexeme;
 
         Source *source_;
         Token *LL();
@@ -39,7 +41,7 @@ namespace evoBasic{
         Token* getNextToken();
         Token* getToken();
         void match(Token::Enum kind);
-        void match(Token::Enum kind,std::set<Token::Enum> follows,std::string message);
+        void match(Token::Enum kind,std::set<Token::Enum> follows,unicode::Utf8String message);
         bool predict(Token::Enum kind);
         void skipUntil(std::set<Token::Enum> follows);
     };

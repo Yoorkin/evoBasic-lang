@@ -7,15 +7,16 @@
 #include <string>
 #include <exception>
 #include <list>
+#include "unicode.h"
 namespace evoBasic{
 
     struct DebugInfo{
-        std::string text;
+        unicode::Utf8String text;
         std::list<DebugInfo*> childs;
         void add(DebugInfo *info){
             childs.push_back(info);
         }
-        void add(std::string text){
+        void add(unicode::Utf8String text){
             childs.push_back(new DebugInfo{text});
         }
         ~DebugInfo(){
