@@ -2,34 +2,34 @@
 欢迎把玩evoBasic！这是一个以学习和实践编译原理和虚拟机设计与实践的项目。该项目目前实现和未实现的功能如下：
 
 1. 编译器
-- [ ] 原始类型如：无符号整形(Byte)、有符号整型(Short,Integer,Long)、浮点(Single,Double)、布尔型(Boolean)、以及存储Unicode codepoint的Rune。 
-- [ ] 原始类型的隐式转换与装箱
-- [x] 用户定义Type类型(类似Struct)
-- [ ] 枚举类型
-- [ ] 数组
-- [ ] 字符串
-- [ ] 前向引用
-- [ ] 控制流程语句： if..then..else, while..wend, for..next, return 等
-- [ ] 函数：Function与Sub、参数按值(Byval)或地址(Byref)传递语义、可选参数(Optional)、变长参数(ParamArray)
-- [ ] 运算符与表达式：+, -, *, /, mod, and, or, xor, not
-- [x] 运算符重载
-- [ ] 模块化：Module、二进制包生成、二进制包导入(import)、可见性控制(Public和Private)
-- [ ] 面向对象特性：类、继承、虚函数、多态
-- [x] 接口
-- [ ] 错误处理：throw、try..catch语句
-- [x] 函数作为参数传递
+- [x] 原始类型如：无符号整形(Byte)、有符号整型(Short,Integer,Long)、浮点(Single,Double)、布尔型(Boolean)、以及存储Unicode codepoint的Rune。 
+- [x] 原始类型的隐式转换与装箱
+- [ ] 用户定义Type类型(类似Struct)
+- [x] 枚举类型
+- [x] 数组
+- [x] 字符串
+- [x] 前向引用
+- [x] 控制流程语句： if..then..else, while..wend, for..next, return 等
+- [x] 函数：Function与Sub、参数按值(Byval)或地址(Byref)传递语义、可选参数(Optional)、变长参数(ParamArray)
+- [x] 运算符与表达式：+, -, *, /, mod, and, or, xor, not
+- [ ] 运算符重载
+- [x] 模块化：Module、二进制包生成、二进制包导入(import)、可见性控制(Public和Private)
+- [x] 面向对象特性：类、继承、虚函数、多态
+- [ ] 接口
+- [x] 错误处理：throw、try..catch语句
+- [ ] 函数作为参数传递
 - [x] 可选参数默认值
-- [x] 局部变量类型推导
+- [ ] 局部变量类型推导
 
 编译器目前无任何代码优化。
 
 2. 虚拟机
-- [ ] 二进制包加载和执行
-- [x] 二进制包兼容性检查
-- [ ] 标记-清扫式GC
-- [x] 分代GC
-- [ ] 错误处理与部分安全(空指针、下标越界等)检查
-- [x] 外部函数调用
+- [x] 二进制包加载和执行
+- [ ] 二进制包兼容性检查
+- [x] 标记-清扫式GC
+- [ ] 分代GC
+- [x] 错误处理与部分安全(空指针、下标越界等)检查
+- [x] 外部函数调用(FFI)
 
 ## evoBasic原理概览
 
