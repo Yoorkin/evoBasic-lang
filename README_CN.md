@@ -5,6 +5,7 @@
 EvoBasic，即“基于VB6的进化”。它是跨平台、面向对象以及强类型的玩具编程语言，目标是拥有简单的语法和现代语言的特性。
 EvoBasic的代码被编译成字节码（.bkg文件），然后运行在自制的简单虚拟机上。
 
+[语言手册](/doc/tutorial.md)
 
 # 主要特性
 
@@ -56,7 +57,9 @@ Public Module UI
 End Module
 
 Sub Main()
-    Let btn = New UI.Button, msg = UI.Message.Update
+    Dim btn As UI.Button, msg As UI.Message
+    btn = New UI.Button
+    msg = UI.Message.Update
     btn.OnMessage(msg)
 End Sub
 ```
@@ -69,24 +72,5 @@ End Sub
 - [x] 语义检查
 - [x] 中间代码生成
 - [ ] 包文件 (.bkg) 生成和加载
-- [ ] evoBasic 虚拟机
-- [ ] 运行时
+- [x] evoBasic 虚拟机
 
-目前还没法跑任何evobasic的代码，但是可以使用`--dev-info`选项，让evoBasic的编译器在编译时输出语法树、符号表和中间表示等信息，来确定编译器是否工作。
-
-# 如何编译
-
-环境要求:
-- clang 或者 MSVC （需要 c++20 支持）
-- cmake
-- git
-
-```
-    git clone https://github.com/Yoorkin/evoBasic-lang.git
-    cd evoBasic-lang
-    cmake -B"build" .
-    cd build
-    make
-```
-
-~~之前尝试写英文readme的时候一度自闭。直到今天加了这段中文版的。。太棒了！还以为只是英文水平不行，原来是中文也不太行啊~~
